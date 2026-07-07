@@ -1,6 +1,7 @@
 import type { NextAuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import { api } from '@/lib/api/client'
+import type { Role } from '@/lib/api/types'
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -48,7 +49,7 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       session.user.id = token.id as string
-      session.user.role = token.role as string
+      session.user.role = token.role as Role
       session.user.accessToken = token.accessToken as string
       return session
     },

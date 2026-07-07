@@ -49,7 +49,7 @@ export function Modal({
         {onConfirm && (
           <div className="flex gap-3 pt-2">
             <Button
-              variant={variant === 'danger' ? 'danger' : 'default'}
+              variant={variant === 'danger' ? 'danger' : 'primary'}
               onClick={onConfirm}
               loading={loading}
               className="flex-1"
