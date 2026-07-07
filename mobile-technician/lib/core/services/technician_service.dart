@@ -1,0 +1,70 @@
+import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../network/api_client.dart';
+import '../models/service_request.dart';
+import '../models/earning.dart';
+
+class TechnicianService {
+  final Dio _dio;
+  TechnicianService(this._dio);
+
+  Future<List<ServiceRequest>> getAssignedJobs() async {
+    final r = await _dio.get('/technician/service-requests');
+    return (r.data as List).map((e) => ServiceRequest.fromJson(e)).toList();
+  }
+
+  Future<ServiceRequest> getJob(String id) async {
+    final r = await _dio.get('/technician/service-requests/$id');
+    return ServiceRequest.fromJson(r.data);
+  }
+
+  Future<ServiceRequest> updateStatus(String id, String status, {String? notes}) async {
+    final r = await _dio.patch(
+      '/technician/service-requests/$id/status',
+      data: {'status': status, if (notes != null) 'notes': notes},
+    );
+    return ServiceRequest.fromJson(r.data);
+  }
+
+  Future<void> sendQuote(String serviceRequestId, {
+    required String description,
+    required double laborCost,
+    double materialsCost = 0,
+  }) async {
+    await _dio.post('/technician/service-requests/$serviceRequestId/quote', data: {
+      'description': description,
+      'laborCost': laborCost,
+      'materialsCost': materialsCost,
+    });
+  }
+
+  Future<void> uploadProofPhotos(String serviceRequestId, List<String> urls) async {
+    await _dio.post(
+      '/technician/service-requests/$serviceRequestId/proofs',
+      data: {'urls': urls},
+    );
+  }
+
+  Future<void> setAvailability(bool available) async {
+    await _dio.patch('/technician/availability', data: {
+      'status': available ? 'AVAILABLE' : 'BUSY',
+    });
+  }
+
+  Future<EarningsSummary> getEarnings({String period = 'month'}) async {
+    final r = await _dio.get('/technician/earnings', queryParameters: {'period': period});
+    return EarningsSummary.fromJson(r.data);
+  }
+}
+
+final technicianServiceProvider = Provider<TechnicianService>((ref) {
+  return TechnicianService(ref.read(dioProvider));
+});
+
+final assignedJobsProvider = FutureProvider<List<ServiceRequest>>((ref) {
+  return ref.read(technicianServiceProvider).getAssignedJobs();
+});
+
+final jobDetailProvider = FutureProvider.family<ServiceRequest, String>((ref, id) {
+  return ref.read(technicianServiceProvider).getJob(id);
+});

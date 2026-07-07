@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "target": "ES2021",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true
+  }
+}

@@ -1,0 +1,550 @@
+generator client {
+  provider      = "prisma-client-js"
+  // "native" para dev local; o alvo linux-musl-openssl-3.0.x é para a imagem
+  // Docker (node:alpine com OpenSSL 3.x) usada no deploy (Railway).
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── ENUMS ───────────────────────────────────────────────────────────────────
+
+enum Role {
+  CLIENT
+  TECHNICIAN
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum Specialty {
+  ELECTRICITY
+  PLUMBING
+  HVAC
+  APPLIANCES
+}
+
+enum TechnicianStatus {
+  AVAILABLE
+  BUSY
+  UNAVAILABLE
+  ON_LEAVE
+}
+
+enum ServiceStatus {
+  DRAFT
+  AWAITING_PAYMENT
+  PAID
+  IN_DISTRIBUTION
+  ASSIGNED
+  IN_TRANSIT
+  ARRIVED
+  IN_DIAGNOSIS
+  QUOTE_SENT
+  QUOTE_APPROVED
+  IN_EXECUTION
+  COMPLETED
+  CANCELLED
+  QUOTE_REJECTED
+  EXPIRED
+}
+
+enum QuoteStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+enum PaymentType {
+  DISPLACEMENT
+  SERVICE
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+enum PhotoType {
+  PROBLEM
+  PROOF
+}
+
+enum NotificationType {
+  SERVICE_ASSIGNED
+  TECHNICIAN_IN_TRANSIT
+  TECHNICIAN_ARRIVED
+  QUOTE_RECEIVED
+  QUOTE_EXPIRING
+  QUOTE_APPROVED
+  QUOTE_REJECTED
+  SERVICE_COMPLETED
+  PAYMENT_CONFIRMED
+  SUBSCRIPTION_EXPIRING
+  SLA_ALERT
+  NEW_SERVICE_REQUEST
+  ANNOUNCEMENT
+}
+
+enum SlaMetric {
+  FIRST_RESPONSE
+  ARRIVAL
+  RESOLUTION
+  QUOTE_EXPIRY
+}
+
+enum AlertLevel {
+  WARNING
+  CRITICAL
+}
+
+enum DevicePlatform {
+  ANDROID
+  IOS
+  WEB
+}
+
+// ─── USER ────────────────────────────────────────────────────────────────────
+
+model User {
+  id           String     @id @default(uuid())
+  email        String     @unique
+  passwordHash String     @map("password_hash")
+  role         Role
+  status       UserStatus @default(ACTIVE)
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  client          Client?
+  technician      Technician?
+  fcmTokens       FcmToken[]
+  notifications   Notification[]
+  statusChanges   ServiceStatusHistory[]
+  supportMessages SupportMessage[]      @relation("ClientSupportMessages")
+
+  @@map("users")
+}
+
+// ─── CLIENT ──────────────────────────────────────────────────────────────────
+
+model Client {
+  id           String   @id @default(uuid())
+  userId       String   @unique @map("user_id")
+  firstName    String   @map("first_name")
+  lastName     String   @map("last_name")
+  phone        String?
+  nif          String?
+  referralCode String?  @unique @map("referral_code")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  addresses       Address[]
+  serviceRequests ServiceRequest[]
+  subscriptions   Subscription[]
+  reviews         Review[]
+  referralsMade   Referral[]       @relation("ReferralsMade")
+  referredBy      Referral?        @relation("ReferredBy")
+
+  @@map("clients")
+}
+
+model Address {
+  id         String   @id @default(uuid())
+  clientId   String   @map("client_id")
+  label      String
+  street     String
+  number     String
+  floor      String?
+  postalCode String   @map("postal_code")
+  city       String
+  district   String
+  latitude   Float?
+  longitude  Float?
+  isDefault  Boolean  @default(false) @map("is_default")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  client          Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  serviceRequests ServiceRequest[]
+
+  @@map("addresses")
+}
+
+// ─── TECHNICIAN ───────────────────────────────────────────────────────────────
+
+model Technician {
+  id                String           @id @default(uuid())
+  userId            String           @unique @map("user_id")
+  firstName         String           @map("first_name")
+  lastName          String           @map("last_name")
+  phone             String
+  nif               String?
+  status            TechnicianStatus @default(AVAILABLE)
+  dailyServiceLimit Int              @default(8) @map("daily_service_limit")
+  createdAt         DateTime         @default(now()) @map("created_at")
+  updatedAt         DateTime         @updatedAt @map("updated_at")
+
+  user              User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  specialties       TechnicianSpecialty[]
+  coverageDistricts TechnicianDistrict[]
+  serviceRequests   ServiceRequest[]
+  quotes            Quote[]
+  dailySchedules    TechnicianDailySchedule[]
+  reviews           Review[]
+  earnings          Earning[]
+
+  @@map("technicians")
+}
+
+model TechnicianSpecialty {
+  id                  String    @id @default(uuid())
+  technicianId        String    @map("technician_id")
+  specialty           Specialty
+  certificationNumber String?   @map("certification_number")
+  createdAt           DateTime  @default(now()) @map("created_at")
+
+  technician Technician @relation(fields: [technicianId], references: [id], onDelete: Cascade)
+
+  @@unique([technicianId, specialty])
+  @@map("technician_specialties")
+}
+
+model TechnicianDistrict {
+  id           String @id @default(uuid())
+  technicianId String @map("technician_id")
+  district     String
+
+  technician Technician @relation(fields: [technicianId], references: [id], onDelete: Cascade)
+
+  @@unique([technicianId, district])
+  @@map("technician_districts")
+}
+
+model TechnicianDailySchedule {
+  id           String   @id @default(uuid())
+  technicianId String   @map("technician_id")
+  date         DateTime @db.Date
+  serviceCount Int      @default(0) @map("service_count")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  technician Technician @relation(fields: [technicianId], references: [id], onDelete: Cascade)
+
+  @@unique([technicianId, date])
+  @@map("technician_daily_schedules")
+}
+
+// ─── SERVICE REQUEST ──────────────────────────────────────────────────────────
+
+model ServiceRequest {
+  id                          String        @id @default(uuid())
+  clientId                    String        @map("client_id")
+  addressId                   String        @map("address_id")
+  specialty                   Specialty
+  description                 String        @db.Text
+  status                      ServiceStatus @default(DRAFT)
+  scheduledDate               DateTime?     @map("scheduled_date")
+  confirmedDate               DateTime?     @map("confirmed_date")
+  displacementFee             Decimal       @map("displacement_fee") @db.Decimal(10, 2)
+  promoCode                   String?       @map("promo_code")
+  promoDiscount               Decimal?      @map("promo_discount") @db.Decimal(10, 2)
+  isDisplacementFeePaid       Boolean       @default(false) @map("is_displacement_fee_paid")
+  displacementPaymentIntentId String?       @map("displacement_payment_intent_id")
+  technicianId                String?       @map("technician_id")
+  assignedAt                  DateTime?     @map("assigned_at")
+  completedAt                 DateTime?     @map("completed_at")
+  isPriority                  Boolean       @default(false) @map("is_priority")
+  isFreeVisit                 Boolean       @default(false) @map("is_free_visit")
+  subscriptionId              String?       @map("subscription_id")
+  cancellationReason          String?       @map("cancellation_reason") @db.Text
+  createdAt                   DateTime      @default(now()) @map("created_at")
+  updatedAt                   DateTime      @updatedAt @map("updated_at")
+
+  client        Client                 @relation(fields: [clientId], references: [id])
+  address       Address                @relation(fields: [addressId], references: [id])
+  technician    Technician?            @relation(fields: [technicianId], references: [id])
+  subscription  Subscription?          @relation(fields: [subscriptionId], references: [id])
+  photos        ServicePhoto[]
+  quote         Quote?
+  payments      Payment[]
+  statusHistory ServiceStatusHistory[]
+  slaAlerts     SlaAlert[]
+  review        Review?
+  earnings      Earning[]
+
+  @@map("service_requests")
+}
+
+model ServicePhoto {
+  id               String    @id @default(uuid())
+  serviceRequestId String    @map("service_request_id")
+  type             PhotoType
+  url              String
+  uploadedByRole   Role      @map("uploaded_by_role")
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  serviceRequest ServiceRequest @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
+
+  @@map("service_photos")
+}
+
+model ServiceStatusHistory {
+  id               String        @id @default(uuid())
+  serviceRequestId String        @map("service_request_id")
+  oldStatus        ServiceStatus? @map("old_status")
+  newStatus        ServiceStatus @map("new_status")
+  changedByUserId  String?       @map("changed_by_user_id")
+  notes            String?       @db.Text
+  createdAt        DateTime      @default(now()) @map("created_at")
+
+  serviceRequest ServiceRequest @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
+  changedBy      User?          @relation(fields: [changedByUserId], references: [id])
+
+  @@map("service_status_history")
+}
+
+// ─── QUOTE ────────────────────────────────────────────────────────────────────
+
+model Quote {
+  id               String      @id @default(uuid())
+  serviceRequestId String      @unique @map("service_request_id")
+  technicianId     String      @map("technician_id")
+  description      String      @db.Text
+  laborCost        Decimal     @map("labor_cost") @db.Decimal(10, 2)
+  materialsCost    Decimal     @default(0) @map("materials_cost") @db.Decimal(10, 2)
+  vatRate          Decimal     @default(0.23) @map("vat_rate") @db.Decimal(4, 2)
+  totalCost        Decimal     @map("total_cost") @db.Decimal(10, 2)
+  status           QuoteStatus @default(PENDING)
+  expiresAt        DateTime    @map("expires_at")
+  respondedAt      DateTime?   @map("responded_at")
+  rejectionReason  String?     @map("rejection_reason") @db.Text
+  createdAt        DateTime    @default(now()) @map("created_at")
+  updatedAt        DateTime    @updatedAt @map("updated_at")
+
+  serviceRequest ServiceRequest @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
+  technician     Technician     @relation(fields: [technicianId], references: [id])
+
+  @@map("quotes")
+}
+
+// ─── PAYMENT ──────────────────────────────────────────────────────────────────
+
+model Payment {
+  id                    String        @id @default(uuid())
+  serviceRequestId      String        @map("service_request_id")
+  type                  PaymentType
+  amount                Decimal       @db.Decimal(10, 2)
+  currency              String        @default("EUR")
+  status                PaymentStatus @default(PENDING)
+  stripePaymentIntentId String?       @unique @map("stripe_payment_intent_id")
+  stripePaymentMethod   String?       @map("stripe_payment_method")
+  paidAt                DateTime?     @map("paid_at")
+  createdAt             DateTime      @default(now()) @map("created_at")
+
+  serviceRequest ServiceRequest @relation(fields: [serviceRequestId], references: [id])
+
+  @@map("payments")
+}
+
+// ─── SUBSCRIPTION ─────────────────────────────────────────────────────────────
+
+model SubscriptionPlan {
+  id                      String   @id @default(uuid())
+  name                    String
+  yearlyPrice             Decimal  @map("yearly_price") @db.Decimal(10, 2)
+  displacementDiscountPct Decimal  @map("displacement_discount_pct") @db.Decimal(5, 2)
+  freeVisitsCount         Int      @map("free_visits_count")
+  priorityScheduling      Boolean  @default(true) @map("priority_scheduling")
+  isActive                Boolean  @default(true) @map("is_active")
+  createdAt               DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @updatedAt @map("updated_at")
+
+  subscriptions Subscription[]
+
+  @@map("subscription_plans")
+}
+
+model Subscription {
+  id                   String             @id @default(uuid())
+  clientId             String             @map("client_id")
+  planId               String             @map("plan_id")
+  status               SubscriptionStatus @default(ACTIVE)
+  stripeSubscriptionId String?            @unique @map("stripe_subscription_id")
+  startsAt             DateTime           @map("starts_at")
+  expiresAt            DateTime           @map("expires_at")
+  freeVisitsUsed       Int                @default(0) @map("free_visits_used")
+  createdAt            DateTime           @default(now()) @map("created_at")
+  updatedAt            DateTime           @updatedAt @map("updated_at")
+
+  client          Client           @relation(fields: [clientId], references: [id])
+  plan            SubscriptionPlan @relation(fields: [planId], references: [id])
+  serviceRequests ServiceRequest[]
+
+  @@map("subscriptions")
+}
+
+// ─── NOTIFICATION ─────────────────────────────────────────────────────────────
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String           @map("user_id")
+  type      NotificationType
+  title     String
+  body      String
+  data      Json?
+  readAt    DateTime?        @map("read_at")
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model FcmToken {
+  id        String         @id @default(uuid())
+  userId    String         @map("user_id")
+  token     String         @unique
+  platform  DevicePlatform
+  createdAt DateTime       @default(now()) @map("created_at")
+  updatedAt DateTime       @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("fcm_tokens")
+}
+
+// ─── SLA ──────────────────────────────────────────────────────────────────────
+
+model SlaAlert {
+  id               String     @id @default(uuid())
+  serviceRequestId String     @map("service_request_id")
+  metric           SlaMetric
+  level            AlertLevel
+  triggeredAt      DateTime   @default(now()) @map("triggered_at")
+  resolvedAt       DateTime?  @map("resolved_at")
+  acknowledgedById String?    @map("acknowledged_by_id")
+
+  serviceRequest ServiceRequest @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
+
+  @@map("sla_alerts")
+}
+
+// ─── REVIEW ───────────────────────────────────────────────────────────────────
+
+model Review {
+  id               String   @id @default(uuid())
+  serviceRequestId String   @unique @map("service_request_id")
+  clientId         String   @map("client_id")
+  technicianId     String   @map("technician_id")
+  rating           Int
+  comment          String?  @db.Text
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  serviceRequest ServiceRequest @relation(fields: [serviceRequestId], references: [id])
+  client         Client         @relation(fields: [clientId], references: [id])
+  technician     Technician     @relation(fields: [technicianId], references: [id])
+
+  @@map("reviews")
+}
+
+// ─── EARNINGS ─────────────────────────────────────────────────────────────────
+
+model Earning {
+  id               String   @id @default(uuid())
+  technicianId     String   @map("technician_id")
+  serviceRequestId String   @map("service_request_id")
+  type             String
+  amount           Decimal  @db.Decimal(10, 2)
+  earnedAt         DateTime @default(now()) @map("earned_at")
+
+  technician     Technician     @relation(fields: [technicianId], references: [id])
+  serviceRequest ServiceRequest @relation(fields: [serviceRequestId], references: [id])
+
+  @@map("earnings")
+}
+
+// ─── SUPPORT CHAT ─────────────────────────────────────────────────────────────
+
+model SupportMessage {
+  id               String    @id @default(uuid())
+  clientUserId     String    @map("client_user_id")
+  serviceRequestId String?   @map("service_request_id")
+  senderRole       Role      @map("sender_role")
+  body             String    @db.Text
+  readAt           DateTime? @map("read_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  clientUser User @relation("ClientSupportMessages", fields: [clientUserId], references: [id], onDelete: Cascade)
+
+  @@index([clientUserId, createdAt])
+  @@map("support_messages")
+}
+
+// ─── PROMOTIONS & REFERRALS ───────────────────────────────────────────────────
+
+enum DiscountType {
+  PERCENT
+  FIXED
+}
+
+model PromoCode {
+  id            String       @id @default(uuid())
+  code          String       @unique
+  description   String?
+  discountType  DiscountType @map("discount_type")
+  discountValue Decimal      @map("discount_value") @db.Decimal(10, 2)
+  minOrderValue Decimal?     @map("min_order_value") @db.Decimal(10, 2)
+  maxUses       Int?         @map("max_uses")
+  usedCount     Int          @default(0) @map("used_count")
+  expiresAt     DateTime?    @map("expires_at")
+  isActive      Boolean      @default(true) @map("is_active")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+
+  @@map("promo_codes")
+}
+
+model Referral {
+  id               String   @id @default(uuid())
+  referrerClientId String   @map("referrer_client_id")
+  referredClientId String?  @unique @map("referred_client_id")
+  code             String
+  status           String   @default("PENDING") // PENDING | COMPLETED
+  rewardAmount     Decimal? @map("reward_amount") @db.Decimal(10, 2)
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  referrer Client  @relation("ReferralsMade", fields: [referrerClientId], references: [id], onDelete: Cascade)
+  referred Client? @relation("ReferredBy", fields: [referredClientId], references: [id])
+
+  @@map("referrals")
+}
+
+// ─── APP SETTINGS (feature flags / maintenance) ───────────────────────────────
+
+model AppSetting {
+  id                  String   @id @default("app")
+  maintenanceMode     Boolean  @default(false) @map("maintenance_mode")
+  maintenanceMessage  String?  @map("maintenance_message")
+  registrationEnabled Boolean  @default(true)  @map("registration_enabled")
+  paymentsEnabled     Boolean  @default(true)  @map("payments_enabled")
+  paymentsTestMode    Boolean  @default(true)  @map("payments_test_mode")
+  smsVerificationEnabled Boolean @default(false) @map("sms_verification_enabled")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@map("app_settings")
+}

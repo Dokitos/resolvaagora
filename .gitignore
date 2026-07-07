@@ -1,0 +1,48 @@
+# Segredos / ambiente — NUNCA commitar
+.env
+.env.local
+.env.*.local
+**/.env
+!**/.env.example
+
+# Dependências
+node_modules/
+**/node_modules/
+
+# Builds
+dist/
+build/
+.next/
+**/dist/
+**/build/
+
+# Flutter / Android build
+mobile-technician/.dart_tool/
+mobile-technician/build/
+mobile-technician/.flutter-plugins
+mobile-technician/.flutter-plugins-dependencies
+mobile-technician/android/.gradle/
+mobile-technician/android/local.properties
+**/.gradle/
+**/*.iml
+*.apk
+*.aab
+
+# Chaves de assinatura Android — NUNCA commitar
+**/key.properties
+*.keystore
+*.jks
+
+# Prisma / base de dados local
+*.db
+*.sqlite
+
+# Logs / SO / IDE
+*.log
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Obsidian vault
+.obsidian/
