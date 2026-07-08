@@ -9,7 +9,9 @@ import { adminApi } from '@/lib/api/admin'
 import { SPECIALTY_LABELS } from '@/lib/utils'
 import type { Specialty } from '@/lib/api/types'
 
-const SPECIALTIES: Specialty[] = ['ELECTRICITY', 'PLUMBING', 'HVAC', 'APPLIANCES']
+// Deriva da fonte única de verdade (SPECIALTY_LABELS) para não dessincronizar
+// quando se adicionam novas especialidades.
+const SPECIALTIES = Object.keys(SPECIALTY_LABELS) as Specialty[]
 
 const DISTRICTS = [
   'Aveiro', 'Beja', 'Braga', 'Bragança', 'Castelo Branco', 'Coimbra',

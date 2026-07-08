@@ -186,6 +186,20 @@ class BookingNotifier extends StateNotifier<BookingState> {
         return 'HVAC';
       case 'APPLIANCES':
         return 'APPLIANCES';
+      case 'PAINTING':
+        return 'PAINTING';
+      case 'FURNITURE':
+        return 'FURNITURE';
+      case 'CLEANING':
+        return 'CLEANING';
+      case 'LOCKSMITH':
+        return 'LOCKSMITH';
+      case 'GARDEN':
+        return 'GARDEN';
+      case 'FLOORING':
+        return 'FLOORING';
+      case 'TV_ANTENNA':
+        return 'TV_ANTENNA';
       case 'ELECTRICITY':
       default:
         return 'ELECTRICITY';

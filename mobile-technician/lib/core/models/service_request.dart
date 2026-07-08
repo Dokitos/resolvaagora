@@ -8,7 +8,19 @@ enum ServiceStatus {
   COMPLETED, CANCELLED, QUOTE_REJECTED, EXPIRED,
 }
 
-enum Specialty { ELECTRICITY, PLUMBING, HVAC, APPLIANCES }
+enum Specialty {
+  ELECTRICITY,
+  PLUMBING,
+  HVAC,
+  APPLIANCES,
+  PAINTING,
+  FURNITURE,
+  CLEANING,
+  LOCKSMITH,
+  GARDEN,
+  FLOORING,
+  TV_ANTENNA,
+}
 
 class Address {
   final String id;

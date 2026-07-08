@@ -69,6 +69,13 @@ export const SPECIALTY_LABELS: Record<Specialty, string> = {
   PLUMBING: 'Canalização',
   HVAC: 'AVAC / Climatização',
   APPLIANCES: 'Eletrodomésticos',
+  PAINTING: 'Pintura',
+  FURNITURE: 'Montagem de Móveis',
+  CLEANING: 'Limpeza',
+  LOCKSMITH: 'Serralharia',
+  GARDEN: 'Jardinagem',
+  FLOORING: 'Revestimentos',
+  TV_ANTENNA: 'TV e Antenas',
 }
 
 export const SPECIALTY_ICONS: Record<Specialty, string> = {
@@ -76,6 +83,13 @@ export const SPECIALTY_ICONS: Record<Specialty, string> = {
   PLUMBING: '🔧',
   HVAC: '❄️',
   APPLIANCES: '🔌',
+  PAINTING: '🎨',
+  FURNITURE: '🪑',
+  CLEANING: '🧹',
+  LOCKSMITH: '🔑',
+  GARDEN: '🌳',
+  FLOORING: '🧱',
+  TV_ANTENNA: '📺',
 }
 
 export const ALERT_LABELS: Record<AlertLevel, string> = {

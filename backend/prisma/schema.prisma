@@ -29,6 +29,13 @@ enum Specialty {
   PLUMBING
   HVAC
   APPLIANCES
+  PAINTING
+  FURNITURE
+  CLEANING
+  LOCKSMITH
+  GARDEN
+  FLOORING
+  TV_ANTENNA
 }
 
 enum TechnicianStatus {

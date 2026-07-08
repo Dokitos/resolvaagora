@@ -18,6 +18,13 @@ const Map<String, String> specialtyLabels = {
   'PLUMBING': 'Canalização',
   'HVAC': 'AVAC',
   'APPLIANCES': 'Eletrodomésticos',
+  'PAINTING': 'Pintura',
+  'FURNITURE': 'Montagem de Móveis',
+  'CLEANING': 'Limpeza',
+  'LOCKSMITH': 'Serralharia',
+  'GARDEN': 'Jardinagem',
+  'FLOORING': 'Revestimentos',
+  'TV_ANTENNA': 'TV e Antenas',
 };
 
 const Map<String, String> specialtyIcons = {
@@ -25,6 +32,13 @@ const Map<String, String> specialtyIcons = {
   'PLUMBING': '🔧',
   'HVAC': '❄️',
   'APPLIANCES': '🏠',
+  'PAINTING': '🎨',
+  'FURNITURE': '🪑',
+  'CLEANING': '🧹',
+  'LOCKSMITH': '🔑',
+  'GARDEN': '🌳',
+  'FLOORING': '🧱',
+  'TV_ANTENNA': '📺',
 };
 
 const Map<String, String> statusLabels = {
