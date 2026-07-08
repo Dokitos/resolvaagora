@@ -12,21 +12,33 @@ async function bootstrap() {
   const prefix = config.get('API_PREFIX', 'api/v1');
 
   const isDev = config.get('NODE_ENV', 'development') !== 'production';
+  // Configured origins: FRONTEND_URL, ADMIN_URL and an optional comma-separated
+  // CORS_ORIGINS list. Empty/undefined entries are filtered out.
   const allowedOrigins = [
     config.get('FRONTEND_URL', 'http://localhost:3000'),
     config.get('ADMIN_URL', 'http://localhost:3000'),
-  ];
+    ...String(config.get('CORS_ORIGINS', '')).split(',').map((s) => s.trim()),
+  ].filter(Boolean);
 
   // Security
   app.use(helmet());
   app.enableCors({
     origin: (origin, callback) => {
-      // Allow server-to-server requests (no origin) and configured origins.
+      // Allow server-to-server requests (no Origin header, e.g. the mobile app),
+      // configured origins, and any Vercel deployment (*.vercel.app covers the
+      // production alias and per-deploy preview URLs).
       // In development, also allow any localhost port.
-      if (!origin || allowedOrigins.includes(origin) || (isDev && /^http:\/\/localhost(:\d+)?$/.test(origin))) {
+      if (
+        !origin ||
+        allowedOrigins.includes(origin) ||
+        /^https:\/\/([a-z0-9-]+\.)*vercel\.app$/i.test(origin) ||
+        (isDev && /^http:\/\/localhost(:\d+)?$/.test(origin))
+      ) {
         callback(null, true);
       } else {
-        callback(new Error('Not allowed by CORS'));
+        // Clean rejection: no CORS headers so the browser blocks it, instead of
+        // throwing (which the exception filter would turn into a 500).
+        callback(null, false);
       }
     },
     credentials: true,
