@@ -21,7 +21,4 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY prisma ./prisma
 
 EXPOSE 3000
-# Aplica migrações pendentes antes de arrancar. `prisma` está em dependencies,
-# por isso está presente na imagem de produção. Se a migração falhar, o
-# contentor não arranca (o schema tem de estar sincronizado com o código).
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/src/main"]
+CMD ["node", "dist/src/main"]
