@@ -50,9 +50,15 @@ export class CreateOrderPaymentUseCase {
     const settings = await this.settings.get();
     const publishableKey = this.config.get<string>('STRIPE_PUBLISHABLE_KEY') ?? '';
 
-    // ── Modo de teste: simula (marca PAID sem cobrar) ──────────────────────
-    if (settings.paymentsTestMode) {
-      await this.markPaid(serviceRequestId, userId, total, `pi_sim_${Date.now()}`, 'Simulated payment (test mode)');
+    // ── Simula quando: (a) modo de teste ligado, OU (b) a Stripe ainda não
+    //    está realmente configurada (chaves placeholder). Isto evita um fluxo
+    //    "meio-real" partido quando o toggle é desligado antes de colar as
+    //    chaves reais no Railway — passa a cobrar a sério assim que existirem. ─
+    if (settings.paymentsTestMode || !this.stripe.configured) {
+      const note = settings.paymentsTestMode
+        ? 'Simulated payment (test mode)'
+        : 'Simulated payment (Stripe not configured)';
+      await this.markPaid(serviceRequestId, userId, total, `pi_sim_${Date.now()}`, note);
       return { simulated: true, total };
     }
 

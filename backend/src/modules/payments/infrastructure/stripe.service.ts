@@ -19,6 +19,11 @@ export class StripeService {
     }
   }
 
+  /** True quando há uma chave Stripe real configurada (não placeholder). */
+  get configured(): boolean {
+    return !this.isStub;
+  }
+
   async createPaymentIntent(amount: number, currency = 'eur', metadata: Record<string, string> = {}) {
     if (this.isStub) {
       const id = `pi_stub_${Date.now()}`;
