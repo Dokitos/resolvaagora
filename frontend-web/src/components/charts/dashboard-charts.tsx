@@ -16,7 +16,7 @@ import type { ServiceStatus, Specialty } from '@/lib/api/types'
 import { STATUS_LABELS, SPECIALTY_LABELS } from '@/lib/utils'
 
 // Paleta alinhada à marca (vermelho) + acentos frios para diferenciar fatias.
-const PIE_COLORS = ['#CC0000', '#1A56DB', '#F59E0B', '#10B981', '#9333EA', '#06B6D4', '#EC4899', '#64748B']
+const PIE_COLORS = ['#161616', '#F5B301', '#F59E0B', '#10B981', '#9333EA', '#06B6D4', '#EC4899', '#64748B']
 
 export function StatusDonut({ data }: { data: { status: ServiceStatus; count: number }[] }) {
   const chartData = data.map((d) => ({ name: STATUS_LABELS[d.status] ?? d.status, value: d.count }))
@@ -75,7 +75,7 @@ export function SpecialtyBars({ data }: { data: { specialty: Specialty; count: n
           formatter={(v: number) => [`${v} pedido(s)`, 'Total']}
           contentStyle={{ borderRadius: 10, border: '1px solid #E5E7EB', fontSize: 13 }}
         />
-        <Bar dataKey="count" fill="#1A56DB" radius={[6, 6, 0, 0]} maxBarSize={44} />
+        <Bar dataKey="count" fill="#161616" radius={[6, 6, 0, 0]} maxBarSize={44} />
       </BarChart>
     </ResponsiveContainer>
   )

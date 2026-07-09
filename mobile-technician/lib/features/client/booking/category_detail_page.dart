@@ -16,7 +16,7 @@ class CategoryDetailPage extends ConsumerWidget {
         slivers: [
           SliverAppBar(
             pinned: true,
-            backgroundColor: const Color(0xFFCC0000),
+            backgroundColor: const Color(0xFF161616),
             foregroundColor: Colors.white,
             title: Text(category.name),
             leading: IconButton(
@@ -32,7 +32,7 @@ class CategoryDetailPage extends ConsumerWidget {
                 children: [
                   Text(
                     category.name,
-                    style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Color(0xFFCC0000)),
+                    style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Color(0xFF161616)),
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -98,7 +98,7 @@ class _SubcategoryCard extends ConsumerWidget {
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
               child: Text(
                 'Desde €${sub.items.map((i) => i.price).reduce((a, b) => a < b ? a : b).toStringAsFixed(2)}',
-                style: const TextStyle(color: Color(0xFF1A56DB), fontWeight: FontWeight.w600, fontSize: 13),
+                style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w600, fontSize: 13),
               ),
             ),
           const Divider(height: 1),

@@ -8,6 +8,8 @@ class AppSettings {
   final bool paymentsEnabled;
   final bool paymentsTestMode;
   final bool smsVerificationEnabled;
+  final double displacementFee;
+  final String stripePublishableKey;
 
   const AppSettings({
     this.maintenanceMode = false,
@@ -16,6 +18,8 @@ class AppSettings {
     this.paymentsEnabled = true,
     this.paymentsTestMode = true,
     this.smsVerificationEnabled = false,
+    this.displacementFee = 25.0,
+    this.stripePublishableKey = '',
   });
 
   factory AppSettings.fromJson(Map<String, dynamic> j) => AppSettings(
@@ -25,6 +29,8 @@ class AppSettings {
         paymentsEnabled: j['paymentsEnabled'] as bool? ?? true,
         paymentsTestMode: j['paymentsTestMode'] as bool? ?? true,
         smsVerificationEnabled: j['smsVerificationEnabled'] as bool? ?? false,
+        displacementFee: (j['displacementFee'] as num?)?.toDouble() ?? 25.0,
+        stripePublishableKey: j['stripePublishableKey'] as String? ?? '',
       );
 }
 

@@ -52,7 +52,7 @@ class _AddressDetailsPageState extends ConsumerState<AddressDetailsPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFCC0000),
+        backgroundColor: const Color(0xFF161616),
         foregroundColor: Colors.white,
         leading: const SizedBox.shrink(),
         title: const SizedBox.shrink(),
@@ -126,7 +126,7 @@ class _AddressDetailsPageState extends ConsumerState<AddressDetailsPage> {
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.location_on, size: 18, color: Color(0xFFCC0000)),
+                        const Icon(Icons.location_on, size: 18, color: Color(0xFF161616)),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Column(

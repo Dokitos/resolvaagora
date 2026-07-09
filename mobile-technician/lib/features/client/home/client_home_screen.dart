@@ -7,8 +7,9 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/pressable.dart';
 import '../../../data/services_data.dart';
 
-const _red = Color(0xFFCC0000);
-const _blue = Color(0xFF1A56DB);
+const _red = Color(0xFF161616);
+const _blue = Color(0xFF161616); // acento em fundo claro → preto (legível)
+const _yellow = Color(0xFFF5B301); // amarelo de marca (preenchimentos/destaques)
 
 class ClientHomeScreen extends StatelessWidget {
   const ClientHomeScreen({super.key});
@@ -190,33 +191,33 @@ class _SubscriptionBanner extends StatelessWidget {
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [_blue, Color(0xFF3B82F6)],
+              colors: [_yellow, Color(0xFFFFCE3A)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(18),
-            boxShadow: [BoxShadow(color: _blue.withOpacity(0.25), blurRadius: 12, offset: const Offset(0, 4))],
+            boxShadow: [BoxShadow(color: _yellow.withOpacity(0.30), blurRadius: 12, offset: const Offset(0, 4))],
           ),
           child: Row(
             children: [
-              const Icon(Icons.workspace_premium, color: Colors.amber, size: 36),
+              const Icon(Icons.workspace_premium, color: Colors.black87, size: 36),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: const [
                     Text('Plano Premium',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 17)),
+                        style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 17)),
                     SizedBox(height: 3),
                     Text('Desconto na deslocação, visitas grátis e prioridade.',
-                        style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.3)),
+                        style: TextStyle(color: Colors.black87, fontSize: 13, height: 1.3)),
                   ],
                 ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
-                child: const Text('Ver', style: TextStyle(color: _blue, fontWeight: FontWeight.bold, fontSize: 13)),
+                decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(20)),
+                child: const Text('Ver', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
               ),
             ],
           ),
@@ -335,7 +336,7 @@ class _FeaturedServices extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: _blue,
+                          color: Colors.black87,
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
@@ -567,18 +568,14 @@ class _JoinProviderBanner extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 24, 20, 0),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF1A56DB), Color(0xFF3B82F6)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        gradient: AppTheme.brandGradient,
         borderRadius: BorderRadius.circular(16),
       ),
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.handyman, color: Colors.white, size: 40),
+          const Icon(Icons.handyman, color: AppTheme.brandYellow, size: 40),
           const SizedBox(height: 16),
           const Text(
             'Queres prestar serviços com a ResolvaAgora?',
@@ -592,11 +589,11 @@ class _JoinProviderBanner extends StatelessWidget {
           const SizedBox(height: 20),
           SizedBox(
             width: double.infinity,
-            child: OutlinedButton(
+            child: ElevatedButton(
               onPressed: () {},
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.white,
-                side: const BorderSide(color: Colors.white, width: 2),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.brandYellow,
+                foregroundColor: Colors.black,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
               ),

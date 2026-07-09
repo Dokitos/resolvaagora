@@ -75,6 +75,10 @@ class AdminMoreScreen extends ConsumerWidget {
                 );
               }).toList()),
             )),
+            const SizedBox(height: 12),
+
+            // Definições da app (feature flags)
+            const _AdminSettingsSection(),
             const SizedBox(height: 20),
 
             OutlinedButton.icon(
@@ -123,4 +127,60 @@ class AdminMoreScreen extends ConsumerWidget {
       child: Text(ok ? 'Disponível' : s, style: TextStyle(fontSize: 10, color: ok ? const Color(0xFF16A34A) : Colors.grey)),
     );
   }
+}
+
+/// Secção de definições da app (flags) no painel admin mobile.
+class _AdminSettingsSection extends ConsumerWidget {
+  const _AdminSettingsSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(adminSettingsProvider);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.grey.shade200)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('Definições', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        const SizedBox(height: 8),
+        settings.when(
+          loading: () => const LinearProgressIndicator(),
+          error: (e, _) => const Text('Erro a carregar'),
+          data: (s) {
+            Future<void> patch(Map<String, dynamic> data) async {
+              await ref.read(adminServiceProvider).updateSettings(data);
+              ref.invalidate(adminSettingsProvider);
+            }
+            return Column(children: [
+              _toggle('Modo de manutenção', 'Bloqueia novos pedidos.', s['maintenanceMode'] == true,
+                  (v) => patch({'maintenanceMode': v}), danger: true),
+              _toggle('Permitir registo de contas', null, s['registrationEnabled'] != false,
+                  (v) => patch({'registrationEnabled': v})),
+              _toggle('Pagamentos ativos', null, s['paymentsEnabled'] != false,
+                  (v) => patch({'paymentsEnabled': v})),
+              _toggle('Pagamentos em modo de teste', 'Simula pagamentos sem cobrar.', s['paymentsTestMode'] == true,
+                  (v) => patch({'paymentsTestMode': v})),
+            ]);
+          },
+        ),
+      ]),
+    );
+  }
+
+  Widget _toggle(String label, String? desc, bool value, ValueChanged<bool> onChanged, {bool danger = false}) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Row(children: [
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+              if (desc != null) Text(desc, style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+            ]),
+          ),
+          Switch.adaptive(
+            value: value,
+            activeColor: danger ? AppTheme.danger : AppTheme.brandYellow,
+            onChanged: onChanged,
+          ),
+        ]),
+      );
 }

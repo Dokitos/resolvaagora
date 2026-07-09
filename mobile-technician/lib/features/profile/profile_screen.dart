@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/theme/app_theme.dart';
 
@@ -88,6 +89,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         ),
                       ],
                     ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.edit_outlined, color: AppTheme.brandBlack),
+                    tooltip: 'Editar perfil',
+                    onPressed: () => context.push('/profile/edit'),
                   ),
                 ],
               ),

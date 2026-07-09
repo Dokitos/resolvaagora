@@ -1,5 +1,6 @@
 package pt.resolvaagora.app
 
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 
-class MainActivity: FlutterActivity()
+// flutter_stripe (PaymentSheet) requer FlutterFragmentActivity.
+class MainActivity: FlutterFragmentActivity()

@@ -10,23 +10,23 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // ResolvaAgora brand red
+        // ResolvaAgora — marca PRETO (superfícies/primário)
         brand: {
-          50:  '#FFF1F1',
-          100: '#FFE0E0',
-          500: '#E53935',
-          600: '#CC0000',
-          700: '#A30000',
-          900: '#7A0000',
+          50:  '#F4F4F5',
+          100: '#E4E4E7',
+          500: '#3F3F46',
+          600: '#161616',
+          700: '#0A0A0A',
+          900: '#000000',
         },
-        // Secondary accent blue
+        // Acento AMARELO (destaques/preenchimentos)
         accent: {
-          50:  '#EEF2FF',
-          100: '#DBEAFE',
-          500: '#3B82F6',
-          600: '#1A56DB',
-          700: '#1D4ED8',
-          900: '#1E3A8A',
+          50:  '#FFF7E0',
+          100: '#FDE9A8',
+          500: '#F5B301',
+          600: '#D99E00',
+          700: '#B8860B',
+          900: '#7A5A00',
         },
       },
       borderRadius: {

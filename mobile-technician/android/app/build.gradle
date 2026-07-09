@@ -57,6 +57,12 @@ android {
             minifyEnabled = false
             shrinkResources = false
         }
+        debug {
+            // Preview instalável AO LADO da versão da Play Store (assinatura/pacote
+            // diferentes). Não afeta o build de release enviado para a loja.
+            applicationIdSuffix = ".preview"
+            versionNameSuffix = "-preview"
+        }
     }
 }
 

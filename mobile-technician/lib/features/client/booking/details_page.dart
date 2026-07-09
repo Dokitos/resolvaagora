@@ -34,7 +34,7 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFCC0000),
+        backgroundColor: const Color(0xFF161616),
         foregroundColor: Colors.white,
         title: const Text(''),
         leading: const SizedBox.shrink(),

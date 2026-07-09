@@ -16,7 +16,7 @@ class SummaryPage extends ConsumerWidget {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFCC0000),
+        backgroundColor: const Color(0xFF161616),
         foregroundColor: Colors.white,
         leading: const SizedBox.shrink(),
         title: const SizedBox.shrink(),
@@ -138,7 +138,7 @@ class SummaryPage extends ConsumerWidget {
                           const Spacer(),
                           Text(
                             fmt.format(booking.total),
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFFCC0000)),
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF161616)),
                           ),
                         ],
                       ),
@@ -166,7 +166,7 @@ class SummaryPage extends ConsumerWidget {
                 child: ElevatedButton(
                   onPressed: () => context.push('/booking/payment'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFCC0000),
+                    backgroundColor: const Color(0xFF161616),
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                     elevation: 0,
@@ -212,7 +212,7 @@ class _SectionCard extends StatelessWidget {
                   'Editar',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Color(0xFFCC0000),
+                    color: Color(0xFF161616),
                     fontWeight: FontWeight.w600,
                     decoration: TextDecoration.underline,
                   ),

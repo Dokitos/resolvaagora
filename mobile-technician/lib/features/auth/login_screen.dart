@@ -83,11 +83,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     width: 64,
                     height: 64,
                     decoration: BoxDecoration(
-                      color: AppTheme.brandRed,
+                      color: AppTheme.brandBlack,
                       borderRadius: BorderRadius.circular(16),
                     ),
                     alignment: Alignment.center,
-                    child: const Text('RA', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900)),
+                    child: const Text('RA', style: TextStyle(color: AppTheme.brandYellow, fontSize: 22, fontWeight: FontWeight.w900)),
                   ),
                 ),
                 const SizedBox(height: 20),

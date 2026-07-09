@@ -92,7 +92,7 @@ class ConfirmationPage extends ConsumerWidget {
                               const Spacer(),
                               Text(
                                 fmt.format(booking.total),
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFFCC0000)),
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF161616)),
                               ),
                             ],
                           ),
@@ -140,7 +140,7 @@ class ConfirmationPage extends ConsumerWidget {
                         context.go('/client/services');
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFCC0000),
+                        backgroundColor: const Color(0xFF161616),
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                         elevation: 0,

@@ -23,7 +23,7 @@ class ClientShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final location = GoRouterState.of(context).matchedLocation;
     final currentIndex = _indexOf(location);
-    const red = Color(0xFFCC0000);
+    const red = Color(0xFF161616);
 
     return Scaffold(
       body: child,
@@ -32,7 +32,7 @@ class ClientShell extends ConsumerWidget {
         onDestinationSelected: (i) => context.go(_tabs[i].path),
         backgroundColor: Colors.white,
         elevation: 0,
-        indicatorColor: const Color(0xFFFFEBEB),
+        indicatorColor: const Color(0xFFFFF7E0),
         destinations: _tabs.map((tab) => NavigationDestination(
           icon: Icon(tab.icon),
           selectedIcon: Icon(tab.activeIcon, color: red),

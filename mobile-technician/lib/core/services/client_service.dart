@@ -119,6 +119,13 @@ class ClientService {
     await _dio.delete('/service-requests/$id');
   }
 
+  /// Paga o pedido completo (itens + deslocação). Devolve o mapa da resposta:
+  /// { simulated, total, clientSecret?, publishableKey?, paymentIntentId? }.
+  Future<Map<String, dynamic>> payOrder(String id, double itemsTotal) async {
+    final r = await _dio.post('/service-requests/$id/pay', data: {'itemsTotal': itemsTotal});
+    return Map<String, dynamic>.from(r.data as Map);
+  }
+
   /// Avalia um serviço concluído (1–5 estrelas + comentário opcional).
   Future<void> submitReview(String id, int rating, {String? comment}) async {
     await _dio.post('/service-requests/$id/review', data: {

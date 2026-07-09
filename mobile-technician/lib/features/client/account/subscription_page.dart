@@ -113,11 +113,7 @@ class _OfferViewState extends ConsumerState<_OfferView> {
         Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [AppTheme.brandBlue, Color(0xFF3B82F6)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            gradient: AppTheme.brandGradient,
             borderRadius: BorderRadius.circular(20),
           ),
           child: Column(
@@ -125,7 +121,7 @@ class _OfferViewState extends ConsumerState<_OfferView> {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.workspace_premium, color: Colors.amber, size: 28),
+                  const Icon(Icons.workspace_premium, color: AppTheme.brandYellow, size: 28),
                   const SizedBox(width: 8),
                   Text(p.name, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
                 ],
@@ -138,7 +134,7 @@ class _OfferViewState extends ConsumerState<_OfferView> {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(fmt.format(p.yearlyPrice),
-                      style: const TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.bold)),
+                      style: const TextStyle(color: AppTheme.brandYellow, fontSize: 30, fontWeight: FontWeight.bold)),
                   const SizedBox(width: 6),
                   const Padding(
                     padding: EdgeInsets.only(bottom: 5),
@@ -167,8 +163,8 @@ class _OfferViewState extends ConsumerState<_OfferView> {
                 ListTile(
                   leading: Container(
                     width: 40, height: 40,
-                    decoration: BoxDecoration(color: const Color(0xFFEEF2FF), borderRadius: BorderRadius.circular(10)),
-                    child: Icon(b.icon, color: AppTheme.brandBlue, size: 20),
+                    decoration: BoxDecoration(color: AppTheme.brandYellowSoft, borderRadius: BorderRadius.circular(10)),
+                    child: Icon(b.icon, color: AppTheme.brandBlack, size: 20),
                   ),
                   title: Text(b.text, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
                   trailing: const Icon(Icons.check_circle, color: Color(0xFF16A34A), size: 20),
@@ -182,14 +178,14 @@ class _OfferViewState extends ConsumerState<_OfferView> {
           child: ElevatedButton(
             onPressed: _busy ? null : _subscribe,
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.brandRed,
-              foregroundColor: Colors.white,
+              backgroundColor: AppTheme.brandYellow,
+              foregroundColor: Colors.black,
               disabledBackgroundColor: Colors.grey[300],
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
               elevation: 0,
             ),
             child: _busy
-                ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
+                ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.black))
                 : Text('SUBSCREVER POR ${fmt.format(p.yearlyPrice)}/ANO',
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, letterSpacing: 0.5)),
           ),

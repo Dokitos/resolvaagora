@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/services/client_service.dart';
+import '../../../core/services/settings_service.dart';
 import '../../../core/theme/app_theme.dart';
 import 'booking_provider.dart';
 
@@ -18,11 +20,44 @@ class _PaymentConfirmPageState extends ConsumerState<PaymentConfirmPage> {
 
   Future<void> _confirm() async {
     setState(() => _processing = true);
+    final itemsTotal = ref.read(bookingProvider).total; // só os itens
     try {
-      await ref.read(bookingProvider.notifier).submit(ref.read(clientServiceProvider));
-      ref.invalidate(clientServiceRequestsProvider);
+      // 1) Cria o pedido.
+      final sr = await ref.read(bookingProvider.notifier).submit(ref.read(clientServiceProvider));
+      // 2) Cobra o total (itens + deslocação).
+      final res = await ref.read(clientServiceProvider).payOrder(sr.id, itemsTotal);
+
+      // Modo de teste / visita grátis → já ficou pago no servidor.
+      if (res['simulated'] == true) {
+        _done();
+        return;
+      }
+
+      // Pagamento real → PaymentSheet nativa da Stripe.
+      final clientSecret = res['clientSecret'] as String?;
+      final pk = res['publishableKey'] as String?;
+      if (clientSecret == null || pk == null || pk.isEmpty) {
+        throw Exception('Pagamento indisponível de momento.');
+      }
+      Stripe.publishableKey = pk;
+      await Stripe.instance.applySettings();
+      await Stripe.instance.initPaymentSheet(
+        paymentSheetParameters: SetupPaymentSheetParameters(
+          paymentIntentClientSecret: clientSecret,
+          merchantDisplayName: 'ResolvaAgora',
+          style: ThemeMode.light,
+        ),
+      );
+      await Stripe.instance.presentPaymentSheet();
+      // Sucesso — o webhook marca o pedido como PAGO no servidor.
+      _done();
+    } on StripeException catch (_) {
+      // Utilizador fechou/cancelou a folha de pagamento.
       if (!mounted) return;
-      context.pushReplacement('/booking/confirmation');
+      setState(() => _processing = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Pagamento cancelado.')),
+      );
     } catch (_) {
       if (!mounted) return;
       setState(() => _processing = false);
@@ -30,6 +65,12 @@ class _PaymentConfirmPageState extends ConsumerState<PaymentConfirmPage> {
         const SnackBar(content: Text('Não foi possível concluir o pagamento. Tenta novamente.')),
       );
     }
+  }
+
+  void _done() {
+    ref.invalidate(clientServiceRequestsProvider);
+    if (!mounted) return;
+    context.pushReplacement('/booking/confirmation');
   }
 
   String _cancellationDeadline(DateTime? date, String? slot) {
@@ -47,40 +88,39 @@ class _PaymentConfirmPageState extends ConsumerState<PaymentConfirmPage> {
     final booking = ref.watch(bookingProvider);
     final fmt = NumberFormat.currency(locale: 'pt_PT', symbol: '€');
     final categoryName = booking.category?.name ?? 'Serviço';
+    final displacement = ref.watch(appSettingsProvider).valueOrNull?.displacementFee ?? 25.0;
+    final itemsTotal = booking.total;
+    final total = itemsTotal + displacement;
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        backgroundColor: AppTheme.brandRed,
+        backgroundColor: AppTheme.brandBlack,
         foregroundColor: Colors.white,
         leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.pop()),
         title: const SizedBox.shrink(),
-        actions: [
-          IconButton(icon: const Icon(Icons.search), onPressed: () {}),
-          IconButton(icon: const Icon(Icons.share_outlined), onPressed: () {}),
-        ],
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
         children: [
-          // Primary CTA at top (matches print)
+          // CTA principal
           SizedBox(
             height: 56,
             child: ElevatedButton(
               onPressed: _processing ? null : _confirm,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.brandRed,
-                foregroundColor: Colors.white,
-                disabledBackgroundColor: const Color(0xFFF3B5B5),
+                backgroundColor: AppTheme.brandYellow,
+                foregroundColor: Colors.black,
+                disabledBackgroundColor: Colors.grey[300],
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                 elevation: 0,
               ),
               child: _processing
                   ? const SizedBox(
                       height: 24, width: 24,
-                      child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
-                  : const Text('CONFIRMAR PAGAMENTO',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, letterSpacing: 1)),
+                      child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.black))
+                  : Text('PAGAR ${fmt.format(total)}',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, letterSpacing: 1)),
             ),
           ),
           const SizedBox(height: 28),
@@ -104,7 +144,7 @@ class _PaymentConfirmPageState extends ConsumerState<PaymentConfirmPage> {
           ),
           const SizedBox(height: 16),
 
-          // Price card
+          // Cartão de preço (com deslocação sempre incluída)
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(18),
@@ -118,7 +158,9 @@ class _PaymentConfirmPageState extends ConsumerState<PaymentConfirmPage> {
               children: [
                 Text(categoryName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
                 const SizedBox(height: 16),
-                _row('Valor a pagar', fmt.format(booking.total)),
+                _row('Serviço', fmt.format(itemsTotal)),
+                const Divider(height: 24),
+                _row('Taxa de deslocação', fmt.format(displacement)),
                 const Divider(height: 24),
                 _row('IVA', 'incl.', muted: true),
                 const Divider(height: 24),
@@ -126,16 +168,16 @@ class _PaymentConfirmPageState extends ConsumerState<PaymentConfirmPage> {
                   children: [
                     const Text('Total', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                     const Spacer(),
-                    Text(fmt.format(booking.total),
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppTheme.brandBlue)),
+                    Text(fmt.format(total),
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppTheme.brandBlack)),
                   ],
                 ),
                 const SizedBox(height: 20),
                 const Text('Informação sobre pagamento', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                 const SizedBox(height: 8),
                 Text(
-                  'Com o pagamento deste serviço, está a confirmar o seu interesse na contratação '
-                  'de uma equipa profissional ResolvaAgora para a execução do serviço.',
+                  'O valor inclui a taxa de deslocação do técnico. Com o pagamento, confirma o '
+                  'interesse na contratação de uma equipa profissional ResolvaAgora.',
                   style: TextStyle(color: Colors.grey[600], fontSize: 13, height: 1.5),
                 ),
               ],

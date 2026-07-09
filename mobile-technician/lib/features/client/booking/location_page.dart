@@ -54,7 +54,7 @@ class _LocationPageState extends ConsumerState<LocationPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFCC0000),
+        backgroundColor: const Color(0xFF161616),
         foregroundColor: Colors.white,
         leading: const SizedBox.shrink(),
         title: const SizedBox.shrink(),
@@ -102,7 +102,7 @@ class _LocationPageState extends ConsumerState<LocationPage> {
                         ),
                         child: Icon(
                           _isValid ? Icons.location_pin : Icons.location_searching,
-                          color: _isValid ? const Color(0xFFCC0000) : Colors.grey,
+                          color: _isValid ? const Color(0xFF161616) : Colors.grey,
                           size: 32,
                         ),
                       ),

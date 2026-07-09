@@ -12,6 +12,7 @@ import '../../features/job/send_quote_screen.dart';
 import '../../features/job/upload_photos_screen.dart';
 import '../../features/earnings/earnings_screen.dart';
 import '../../features/profile/profile_screen.dart';
+import '../../features/profile/edit_technician_profile.dart';
 import '../../features/shell/app_shell.dart';
 // Admin screens
 import '../../features/admin/admin_shell.dart';
@@ -123,6 +124,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/earnings', builder: (_, __) => const EarningsScreen()),
           GoRoute(path: '/profile',  builder: (_, __) => const ProfileScreen()),
         ],
+      ),
+      GoRoute(
+        path: '/profile/edit',
+        builder: (_, __) => const EditTechnicianProfileScreen(),
       ),
       GoRoute(
         path: '/jobs/:id',

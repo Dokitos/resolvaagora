@@ -5,6 +5,7 @@ import {
   Body,
   Query,
   UseGuards,
+  ConflictException,
 } from '@nestjs/common';
 import { TechnicianStatus } from '@prisma/client';
 import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard';
@@ -34,7 +35,45 @@ export class TechniciansController {
       where: { id: user.id },
       include: { technician: { include: { specialties: true, coverageDistricts: true } } },
     });
-    return u?.technician ?? null;
+    if (!u?.technician) return null;
+    // Inclui o email da conta (vive no User) para o ecrã de edição.
+    return { ...u.technician, email: u.email };
+  }
+
+  /** Editar o próprio perfil: nome, contacto e email. */
+  @Patch('me')
+  async updateProfile(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() body: { firstName?: string; lastName?: string; phone?: string; email?: string },
+  ) {
+    const u = await this.prisma.user.findUnique({
+      where: { id: user.id },
+      include: { technician: true },
+    });
+    if (!u?.technician) throw new ConflictException('Technician not found');
+
+    // Se muda o email, garantir que não está em uso por outra conta.
+    if (body.email && body.email.toLowerCase().trim() !== u.email) {
+      const taken = await this.prisma.user.findUnique({
+        where: { email: body.email.toLowerCase().trim() },
+      });
+      if (taken) throw new ConflictException('Email já está em uso.');
+      await this.prisma.user.update({
+        where: { id: u.id },
+        data: { email: body.email.toLowerCase().trim() },
+      });
+    }
+
+    const tech = await this.prisma.technician.update({
+      where: { id: u.technician.id },
+      data: {
+        firstName: body.firstName?.trim() || undefined,
+        lastName: body.lastName?.trim() || undefined,
+        phone: body.phone?.trim() || undefined,
+      },
+    });
+    const email = body.email?.toLowerCase().trim() || u.email;
+    return { ...tech, email };
   }
 
   @Get('schedule')

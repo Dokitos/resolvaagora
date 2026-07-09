@@ -1,23 +1,35 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  // ResolvaAgora brand colours (shared across the client area).
-  static const Color brandRed = Color(0xFFCC0000);
-  static const Color brandRedDark = Color(0xFF8B0000);
-  static const Color brandRedLight = Color(0xFFFFEBEB);
-  static const Color brandBlue = Color(0xFF1A56DB);
+  // ResolvaAgora — identidade PRETO + AMARELO (novo logótipo).
+  static const Color brandBlack = Color(0xFF161616);
+  static const Color brandBlackDark = Color(0xFF000000);
+  static const Color brandYellow = Color(0xFFF5B301);
+  static const Color brandYellowDark = Color(0xFFC98A00);
+  static const Color brandYellowSoft = Color(0xFFFFF7E0);
 
-  static const Color primary = Color(0xFF2563EB);
-  static const Color primaryLight = Color(0xFFEFF6FF);
+  // Aliases de compatibilidade (código antigo usava brandRed/brandBlue):
+  //   superfícies escuras (barras, hero, botões primários) → preto
+  //   acentos (links, ícones ativos, preços, destaques)   → amarelo
+  static const Color brandRed = brandBlack;
+  static const Color brandRedDark = brandBlackDark;
+  static const Color brandRedLight = brandYellowSoft;
+  // Acento de texto/links em fundos claros → preto (legível). O amarelo é usado
+  // deliberadamente como preenchimento atrás de texto preto ou sobre fundos escuros.
+  static const Color brandBlue = brandBlack;
+
+  static const Color primary = brandBlack;
+  static const Color primaryLight = brandYellowSoft;
+  static const Color accent = brandYellow;
   static const Color success = Color(0xFF16A34A);
   static const Color warning = Color(0xFFD97706);
   static const Color danger = Color(0xFFDC2626);
   static const Color surface = Color(0xFFF9FAFB);
   static const Color border = Color(0xFFE5E7EB);
 
-  /// Gradiente vermelho da marca (topo → hero da home, cabeçalhos de destaque).
+  /// Gradiente preto da marca (topo → hero da home, cabeçalhos de destaque).
   static const LinearGradient brandGradient = LinearGradient(
-    colors: [brandRed, brandRedDark],
+    colors: [Color(0xFF2A2A2A), brandBlackDark],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
@@ -107,7 +119,7 @@ class AppTheme {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
-            borderSide: const BorderSide(color: primary, width: 2),
+            borderSide: const BorderSide(color: brandYellow, width: 2),
           ),
           filled: true,
           fillColor: Colors.white,

@@ -56,7 +56,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFCC0000),
+        backgroundColor: const Color(0xFF161616),
         foregroundColor: Colors.white,
         leading: const SizedBox.shrink(),
         title: const SizedBox.shrink(),

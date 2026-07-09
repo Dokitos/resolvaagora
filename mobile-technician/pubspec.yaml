@@ -36,6 +36,7 @@ dependencies:
   intl: ^0.19.0
   timeago: ^3.6.1
   socket_io_client: ^3.1.6
+  flutter_stripe: ^11.5.0
 
 dev_dependencies:
   flutter_test:
@@ -50,5 +51,5 @@ flutter_launcher_icons:
   android: true
   ios: false
   image_path: "assets/icon/icon.png"
-  adaptive_icon_background: "#CC0000"
+  adaptive_icon_background: "#000000"
   adaptive_icon_foreground: "assets/icon/icon_foreground.png"

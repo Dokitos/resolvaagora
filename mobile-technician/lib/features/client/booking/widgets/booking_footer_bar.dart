@@ -42,9 +42,9 @@ class BookingFooterBar extends ConsumerWidget {
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                     ),
                     const SizedBox(width: 8),
-                    const Text(
+                    Text(
                       'Ver detalhes ↑',
-                      style: TextStyle(color: Color(0xFF1A56DB), fontWeight: FontWeight.w500, fontSize: 13),
+                      style: TextStyle(color: Colors.grey[700], fontWeight: FontWeight.w600, fontSize: 13),
                     ),
                   ],
                 ),
@@ -72,7 +72,7 @@ class BookingFooterBar extends ConsumerWidget {
                   child: ElevatedButton(
                     onPressed: nextEnabled ? onNext : null,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFCC0000),
+                      backgroundColor: const Color(0xFF161616),
                       foregroundColor: Colors.white,
                       disabledBackgroundColor: Colors.grey[300],
                       padding: const EdgeInsets.symmetric(vertical: 14),

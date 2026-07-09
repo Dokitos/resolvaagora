@@ -66,6 +66,17 @@ class AdminService {
     final r = await _dio.post('/admin/clients/$clientUserId/messages', data: {'body': body});
     return Map<String, dynamic>.from(r.data as Map);
   }
+
+  // ── App settings (feature flags) ──────────────────────────────────────────
+  Future<Map<String, dynamic>> settings() async {
+    final r = await _dio.get('/admin/settings');
+    return Map<String, dynamic>.from(r.data as Map);
+  }
+
+  Future<Map<String, dynamic>> updateSettings(Map<String, dynamic> data) async {
+    final r = await _dio.patch('/admin/settings', data: data);
+    return Map<String, dynamic>.from(r.data as Map);
+  }
 }
 
 final adminServiceProvider = Provider<AdminService>((ref) => AdminService(ref.read(dioProvider)));
@@ -96,3 +107,6 @@ final adminClientsProvider =
     FutureProvider.family<List<Map<String, dynamic>>, String?>((ref, search) {
   return ref.read(adminServiceProvider).clients(search: search);
 });
+
+final adminSettingsProvider = FutureProvider<Map<String, dynamic>>(
+    (ref) => ref.read(adminServiceProvider).settings());

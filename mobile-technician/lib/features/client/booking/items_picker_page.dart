@@ -18,7 +18,7 @@ class ItemsPickerPage extends ConsumerWidget {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFCC0000),
+        backgroundColor: const Color(0xFF161616),
         foregroundColor: Colors.white,
         title: Text(booking.category?.name ?? ''),
         leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.pop()),
@@ -136,13 +136,13 @@ class _CircleBtn extends StatelessWidget {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: filled
-              ? const Color(0xFF1A56DB)
+              ? const Color(0xFFF5B301)
               : onTap != null
                   ? Colors.white
                   : Colors.grey[100],
           border: Border.all(
             color: filled
-                ? const Color(0xFF1A56DB)
+                ? const Color(0xFFF5B301)
                 : Colors.grey.shade400,
           ),
         ),
@@ -150,7 +150,7 @@ class _CircleBtn extends StatelessWidget {
           icon,
           size: 18,
           color: filled
-              ? Colors.white
+              ? Colors.black
               : onTap != null
                   ? Colors.black54
                   : Colors.grey[300],

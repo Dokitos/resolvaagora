@@ -44,7 +44,9 @@ export class HandleStripeWebhookUseCase {
         data: { status: 'COMPLETED', paidAt: new Date() },
       });
 
-      if (type === 'DISPLACEMENT') {
+      // Tanto o pagamento só da deslocação como o do pedido completo (ORDER)
+      // marcam o pedido como pago.
+      if (type === 'DISPLACEMENT' || type === 'ORDER') {
         await tx.serviceRequest.update({
           where: { id: serviceRequestId },
           data: {
