@@ -38,6 +38,11 @@ class BookingState {
   final String promoCode;
   final String nif;
   final bool useDifferentBillingAddress;
+  // Billing address (only used when useDifferentBillingAddress is true)
+  final String billingStreet;
+  final String billingNumber;
+  final String billingPostalCode;
+  final String billingCity;
 
   const BookingState({
     this.category,
@@ -59,6 +64,10 @@ class BookingState {
     this.promoCode = '',
     this.nif = '',
     this.useDifferentBillingAddress = false,
+    this.billingStreet = '',
+    this.billingNumber = '',
+    this.billingPostalCode = '',
+    this.billingCity = '',
   });
 
   double get total =>
@@ -88,6 +97,10 @@ class BookingState {
     String? promoCode,
     String? nif,
     bool? useDifferentBillingAddress,
+    String? billingStreet,
+    String? billingNumber,
+    String? billingPostalCode,
+    String? billingCity,
   }) =>
       BookingState(
         category: category ?? this.category,
@@ -109,6 +122,10 @@ class BookingState {
         promoCode: promoCode ?? this.promoCode,
         nif: nif ?? this.nif,
         useDifferentBillingAddress: useDifferentBillingAddress ?? this.useDifferentBillingAddress,
+        billingStreet: billingStreet ?? this.billingStreet,
+        billingNumber: billingNumber ?? this.billingNumber,
+        billingPostalCode: billingPostalCode ?? this.billingPostalCode,
+        billingCity: billingCity ?? this.billingCity,
       );
 }
 
@@ -174,6 +191,13 @@ class BookingNotifier extends StateNotifier<BookingState> {
   void setNif(String nif) => state = state.copyWith(nif: nif);
   void setUseDifferentBillingAddress(bool v) =>
       state = state.copyWith(useDifferentBillingAddress: v);
+  void setBillingAddress({String? street, String? number, String? postalCode, String? city}) =>
+      state = state.copyWith(
+        billingStreet: street,
+        billingNumber: number,
+        billingPostalCode: postalCode,
+        billingCity: city,
+      );
 
   void reset() => state = const BookingState();
 
@@ -264,6 +288,32 @@ class BookingNotifier extends StateNotifier<BookingState> {
       city: city,
       district: district,
     );
+
+    // NIF → guarda no perfil do cliente para aparecer na fatura/recibo.
+    if (state.nif.trim().isNotEmpty) {
+      try {
+        await service.updateProfile(nif: state.nif.trim());
+      } catch (_) {
+        // Não bloqueia o pedido se a atualização do NIF falhar.
+      }
+    }
+
+    // Morada de faturação diferente → grava como morada 'Morada de faturação'
+    // (usada no recibo).
+    if (state.useDifferentBillingAddress && state.billingStreet.trim().isNotEmpty) {
+      try {
+        await service.createAddress(
+          label: 'Morada de faturação',
+          street: state.billingStreet.trim(),
+          number: state.billingNumber.trim().isNotEmpty ? state.billingNumber.trim() : 's/n',
+          postalCode: state.billingPostalCode.trim(),
+          city: state.billingCity.trim().isNotEmpty ? state.billingCity.trim() : city,
+          district: district,
+        );
+      } catch (_) {
+        // Não bloqueia o pedido se a morada de faturação falhar.
+      }
+    }
 
     return service.createServiceRequest(
       addressId: address.id,

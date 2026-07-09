@@ -150,12 +150,22 @@ export class ServiceRequestsController {
       .reduce((s, p) => s + Number(p.amount), 0);
     const total = sr.quote ? Number(sr.quote.totalCost) : paid || Number(sr.displacementFee);
 
+    // Morada de faturação (se o cliente indicou uma diferente da do serviço).
+    const billing = await this.prisma.address.findFirst({
+      where: { clientId: clientUser!.client!.id, label: { contains: 'faturação', mode: 'insensitive' } },
+      orderBy: { createdAt: 'desc' },
+    });
+    const billingAddress = billing
+      ? [billing.street, billing.number, billing.postalCode, billing.city].filter(Boolean).join(', ')
+      : null;
+
     const html = this.email.receiptEmail({
       requestId: sr.id,
       serviceLabel: `Serviço de ${sr.specialty}`,
       date: sr.createdAt.toLocaleDateString('pt-PT'),
       clientName: `${clientUser!.client!.firstName} ${clientUser!.client!.lastName}`,
       nif: clientUser!.client!.nif,
+      billingAddress,
       technicianName: sr.technician ? `${sr.technician.firstName} ${sr.technician.lastName}` : null,
       lines,
       total: eur(total),

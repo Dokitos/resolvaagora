@@ -52,6 +52,7 @@ export class EmailService {
     date: string;
     clientName: string;
     nif?: string | null;
+    billingAddress?: string | null;
     technicianName?: string | null;
     lines: { label: string; value: string }[];
     total: string;
@@ -64,18 +65,19 @@ export class EmailService {
       .join('');
     return `
       <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;border:1px solid #E5E7EB;border-radius:12px;overflow:hidden">
-        <div style="background:#CC0000;color:#fff;padding:20px 24px">
+        <div style="background:#161616;color:#F5B301;padding:20px 24px">
           <h2 style="margin:0">ResolvaAgora</h2>
-          <p style="margin:4px 0 0;opacity:.85">Recibo de serviço</p>
+          <p style="margin:4px 0 0;color:#fff;opacity:.85">Recibo de serviço</p>
         </div>
         <div style="padding:24px">
           <p style="margin:0 0 4px"><strong>${data.serviceLabel}</strong></p>
           <p style="margin:0;color:#6B7280;font-size:13px">Pedido #${data.requestId.slice(0, 8).toUpperCase()} · ${data.date}</p>
           <p style="margin:12px 0 0;font-size:14px">Cliente: ${data.clientName}${data.nif ? ` · NIF ${data.nif}` : ''}</p>
+          ${data.billingAddress ? `<p style="margin:2px 0 0;font-size:14px;color:#374151">Morada de faturação: ${data.billingAddress}</p>` : ''}
           ${data.technicianName ? `<p style="margin:2px 0 0;font-size:14px">Técnico: ${data.technicianName}</p>` : ''}
           <table style="width:100%;margin-top:16px;border-top:1px solid #E5E7EB;font-size:14px">
             ${rows}
-            <tr><td style="padding:10px 0 0;border-top:1px solid #E5E7EB;font-weight:bold">Total</td><td style="padding:10px 0 0;border-top:1px solid #E5E7EB;text-align:right;font-weight:bold;color:#CC0000">${data.total}</td></tr>
+            <tr><td style="padding:10px 0 0;border-top:1px solid #E5E7EB;font-weight:bold">Total</td><td style="padding:10px 0 0;border-top:1px solid #E5E7EB;text-align:right;font-weight:bold;color:#161616">${data.total}</td></tr>
           </table>
           <p style="margin:20px 0 0;color:#9CA3AF;font-size:12px">Obrigado por escolher a ResolvaAgora. Documento não fiscal.</p>
         </div>

@@ -19,6 +19,10 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
   final _phoneCtrl = TextEditingController();
   final _promoCtrl = TextEditingController();
   final _nifCtrl = TextEditingController();
+  final _billStreetCtrl = TextEditingController();
+  final _billNumberCtrl = TextEditingController();
+  final _billPostalCtrl = TextEditingController();
+  final _billCityCtrl = TextEditingController();
   bool _usePromo = false;
   PromoResult? _promo;
   bool _validatingPromo = false;
@@ -31,6 +35,10 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
     _phoneCtrl.text = phone;
     _promoCtrl.text = b.promoCode;
     _nifCtrl.text = b.nif;
+    _billStreetCtrl.text = b.billingStreet;
+    _billNumberCtrl.text = b.billingNumber;
+    _billPostalCtrl.text = b.billingPostalCode;
+    _billCityCtrl.text = b.billingCity;
     _usePromo = b.promoCode.isNotEmpty;
   }
 
@@ -39,6 +47,10 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
     _phoneCtrl.dispose();
     _promoCtrl.dispose();
     _nifCtrl.dispose();
+    _billStreetCtrl.dispose();
+    _billNumberCtrl.dispose();
+    _billPostalCtrl.dispose();
+    _billCityCtrl.dispose();
     super.dispose();
   }
 
@@ -262,6 +274,44 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                   activeColor: AppTheme.brandRed,
                   title: const Text('Usar morada de faturação diferente da morada do serviço.'),
                 ),
+                if (booking.useDifferentBillingAddress) ...[
+                  const SizedBox(height: 4),
+                  TextField(
+                    controller: _billStreetCtrl,
+                    onChanged: (v) => notifier.setBillingAddress(street: v),
+                    textCapitalization: TextCapitalization.words,
+                    decoration: _inputDecoration('Rua / Morada', Icons.location_on_outlined),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _billNumberCtrl,
+                          onChanged: (v) => notifier.setBillingAddress(number: v),
+                          decoration: _inputDecoration('Nº / Andar', Icons.tag),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextField(
+                          controller: _billPostalCtrl,
+                          keyboardType: TextInputType.number,
+                          onChanged: (v) => notifier.setBillingAddress(postalCode: v),
+                          decoration: _inputDecoration('Cód. postal', Icons.markunread_mailbox_outlined),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _billCityCtrl,
+                    onChanged: (v) => notifier.setBillingAddress(city: v),
+                    textCapitalization: TextCapitalization.words,
+                    decoration: _inputDecoration('Localidade', Icons.location_city_outlined),
+                  ),
+                  const SizedBox(height: 8),
+                ],
               ],
             ),
           ),
