@@ -137,16 +137,30 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                   const SizedBox(height: 16),
                 ],
 
-                // Card form
+                // Cartão → os dados são pedidos de forma segura no passo seguinte
+                // (folha de pagamento nativa da Stripe). Não recolhemos aqui o
+                // número do cartão.
                 if (method == 'card') ...[
-                  const _CardField(label: 'Número do cartão', hint: '0000 0000 0000 0000', icon: Icons.credit_card),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: const [
-                      Expanded(child: _CardField(label: 'Validade', hint: 'MM/AA', icon: Icons.date_range)),
-                      SizedBox(width: 12),
-                      Expanded(child: _CardField(label: 'CVV', hint: '000', icon: Icons.lock_outline)),
-                    ],
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppTheme.brandYellowSoft,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppTheme.brandYellow.withOpacity(0.5)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.lock_outline, size: 20, color: AppTheme.brandBlack),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Os dados do cartão são pedidos no passo seguinte, de forma '
+                            'segura, através da Stripe.',
+                            style: TextStyle(color: Colors.grey[800], fontSize: 13, height: 1.4),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 16),
                 ],
@@ -263,25 +277,28 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
               ),
               child: Column(
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Total', style: TextStyle(fontSize: 14, color: Colors.grey)),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.baseline,
-                        textBaseline: TextBaseline.alphabetic,
-                        children: [
-                          if (_promo?.valid == true) ...[
-                            Text(fmt.format(booking.total),
-                                style: const TextStyle(fontSize: 13, color: Colors.grey, decoration: TextDecoration.lineThrough)),
-                            const SizedBox(width: 8),
+                  Builder(builder: (_) {
+                    final displacement =
+                        ref.watch(effectiveDisplacementProvider).valueOrNull ?? 0;
+                    final items = _promo?.valid == true ? _promo!.finalAmount : booking.total;
+                    final grandTotal = items + displacement;
+                    return Column(
+                      children: [
+                        _totalRow('Serviço', fmt.format(booking.total), muted: true),
+                        const SizedBox(height: 4),
+                        _totalRow('Taxa de deslocação', fmt.format(displacement), muted: true),
+                        const Divider(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Total', style: TextStyle(fontSize: 14, color: Colors.grey)),
+                            Text(fmt.format(grandTotal),
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: AppTheme.brandBlack)),
                           ],
-                          Text(fmt.format(_promo?.valid == true ? _promo!.finalAmount : booking.total),
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: AppTheme.brandBlue)),
-                        ],
-                      ),
-                    ],
-                  ),
+                        ),
+                      ],
+                    );
+                  }),
                   const SizedBox(height: 12),
                   SizedBox(
                     width: double.infinity,
@@ -319,6 +336,18 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
           borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: AppTheme.brandRed, width: 2),
         ),
+      );
+
+  Widget _totalRow(String label, String value, {bool muted = false}) => Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: TextStyle(fontSize: 13, color: Colors.grey[600])),
+          Text(value,
+              style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: muted ? Colors.grey[700] : Colors.black87)),
+        ],
       );
 }
 
@@ -461,29 +490,3 @@ class _PhoneField extends StatelessWidget {
   }
 }
 
-class _CardField extends StatelessWidget {
-  final String label;
-  final String hint;
-  final IconData icon;
-  const _CardField({required this.label, required this.hint, required this.icon});
-
-  @override
-  Widget build(BuildContext context) {
-    return TextField(
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
-        prefixIcon: Icon(icon),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: Colors.grey.shade300),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: AppTheme.brandRed, width: 2),
-        ),
-      ),
-    );
-  }
-}

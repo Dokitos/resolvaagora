@@ -88,7 +88,10 @@ class _PaymentConfirmPageState extends ConsumerState<PaymentConfirmPage> {
     final booking = ref.watch(bookingProvider);
     final fmt = NumberFormat.currency(locale: 'pt_PT', symbol: '€');
     final categoryName = booking.category?.name ?? 'Serviço';
-    final displacement = ref.watch(appSettingsProvider).valueOrNull?.displacementFee ?? 25.0;
+    // Deslocação efetiva (já com o desconto da subscrição) — bate certo com o
+    // valor cobrado pela Stripe.
+    final displacement = ref.watch(effectiveDisplacementProvider).valueOrNull ??
+        (ref.watch(appSettingsProvider).valueOrNull?.displacementFee ?? 25.0);
     final itemsTotal = booking.total;
     final total = itemsTotal + displacement;
 

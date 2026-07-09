@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../network/api_client.dart';
 import '../models/client_profile.dart';
 import '../models/service_request.dart';
+import 'settings_service.dart';
 
 /// Customer-facing API layer. Mirrors [TechnicianService] but for the CLIENT role.
 class ClientService {
@@ -246,4 +247,23 @@ final mySubscriptionProvider = FutureProvider<ClientSubscription?>((ref) {
 
 final referralInfoProvider = FutureProvider<ReferralInfo>((ref) {
   return ref.read(clientServiceProvider).getReferralInfo();
+});
+
+/// Taxa de deslocação efetiva para o cliente atual: parte da taxa base
+/// (definições) e aplica o desconto da subscrição ativa, tal como o backend
+/// faz ao criar o pedido. Assim o total mostrado bate certo com o cobrado.
+final effectiveDisplacementProvider = FutureProvider<double>((ref) async {
+  final settings = await ref.watch(appSettingsProvider.future);
+  final base = settings.displacementFee;
+  try {
+    final sub = await ref.watch(mySubscriptionProvider.future);
+    final plan = sub?.plan;
+    if (sub != null && sub.isActive && plan != null) {
+      final pct = plan.displacementDiscountPct.clamp(0, 100) / 100.0;
+      return double.parse((base * (1 - pct)).toStringAsFixed(2));
+    }
+  } catch (_) {
+    // Sem subscrição / falha a obter → usa a taxa base.
+  }
+  return base;
 });
