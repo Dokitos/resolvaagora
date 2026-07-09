@@ -25,13 +25,15 @@ async function bootstrap() {
   app.enableCors({
     origin: (origin, callback) => {
       // Allow server-to-server requests (no Origin header, e.g. the mobile app),
-      // configured origins, and any Vercel deployment (*.vercel.app covers the
-      // production alias and per-deploy preview URLs).
+      // configured origins, any Vercel deployment (*.vercel.app cobre o alias de
+      // produção e URLs de preview), e todo o domínio resolvaagora.pt (apex, www
+      // e subdomínios como admin.).
       // In development, also allow any localhost port.
       if (
         !origin ||
         allowedOrigins.includes(origin) ||
         /^https:\/\/([a-z0-9-]+\.)*vercel\.app$/i.test(origin) ||
+        /^https:\/\/([a-z0-9-]+\.)*resolvaagora\.pt$/i.test(origin) ||
         (isDev && /^http:\/\/localhost(:\d+)?$/.test(origin))
       ) {
         callback(null, true);
