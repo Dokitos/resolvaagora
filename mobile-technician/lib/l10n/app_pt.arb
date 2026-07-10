@@ -103,6 +103,37 @@
   "postalHint": "Introduzir freguesia ou código postal",
   "postalFormat": "Formato: 0000-000 ou apenas os primeiros 4 dígitos",
 
+  "detailsTitle": "Partilha os detalhes relevantes para a realização do serviço",
+  "detailsHint": "Ex: Preciso de instalar 2 tomadas duplas na sala...",
+  "addImages": "Adicione imagens ao seu pedido",
+  "chooseUpTo5": "Escolhe até 5 imagens",
+  "uploadFromDevice": "Carregar do seu dispositivo",
+  "max5Images": "Podes adicionar no máximo 5 imagens",
+  "imageLoadError": "Não foi possível carregar as imagens",
+
+  "contactTitle": "Indica o teu número de telefone",
+  "smsCodeNote": "Irás receber um código de confirmação por SMS.",
+
+  "otpTitle": "Valida o teu número de telefone com o código enviado por SMS",
+  "otpSentTo": "O código foi enviado para o número {phone}.",
+  "@otpSentTo": { "placeholders": { "phone": { "type": "String" } } },
+  "edit": "EDITAR",
+  "resend": "REENVIAR",
+  "codeResent": "Código reenviado",
+  "clientDidntReceiveSms": "CLIENTE NÃO RECEBEU SMS",
+  "smsDisabledTestMode": "Validação por SMS desativada em modo de teste — podes avançar diretamente.",
+
+  "addressDetailsTitle": "Indica os detalhes da morada onde será realizado o serviço",
+  "addrStreet": "Rua / Avenida",
+  "addrStreetHint": "Ex: Rua da Liberdade, 123",
+  "addrDoor": "Número da porta",
+  "addrDoorHint": "Ex: 3",
+  "addrFloor": "Andar / Fração",
+  "addrFloorHint": "Ex: 2º Dto",
+  "addrObs": "Observações",
+  "addrObsHint": "Ex: Campainha não funciona, ligar ao chegar...",
+  "change": "Alterar",
+
   "serviceConditions": "Condições do serviço",
   "serviceConditionsText": "Qualquer serviço não inclui peças/materiais adicionais não selecionados.\n1) O valor apresentado é um orçamento estimado com base no valor médio para os serviços selecionados.\n2) O orçamento final do serviço será determinado no local após levantamento das tarefas a realizar e está sujeito a confirmação.\n3) Serviço com custo mínimo de 30,00€\n4) Em todos os casos, o agendamento está sujeito ao pagamento do valor apresentado.\n5) Serviço com 6 meses de garantia.",
 

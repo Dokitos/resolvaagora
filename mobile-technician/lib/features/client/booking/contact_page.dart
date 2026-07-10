@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'booking_provider.dart';
@@ -42,6 +43,7 @@ class _ContactPageState extends ConsumerState<ContactPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -62,9 +64,9 @@ class _ContactPageState extends ConsumerState<ContactPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Indica o teu número de telefone',
-                    style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, height: 1.3),
+                  Text(
+                    l.contactTitle,
+                    style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, height: 1.3),
                   ),
                   const SizedBox(height: 32),
                   Row(
@@ -98,7 +100,7 @@ class _ContactPageState extends ConsumerState<ContactPage> {
                           },
                           decoration: InputDecoration(
                             prefixIcon: const Icon(Icons.phone_outlined),
-                            hintText: 'Telefone',
+                            hintText: l.phoneHint,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
@@ -115,7 +117,7 @@ class _ContactPageState extends ConsumerState<ContactPage> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Irás receber um código de confirmação por SMS.',
+                    l.smsCodeNote,
                     style: TextStyle(color: Colors.grey[500], fontSize: 13),
                   ),
                 ],

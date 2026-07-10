@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'booking_provider.dart';
@@ -34,6 +35,7 @@ class _OtpPageState extends ConsumerState<OtpPage> {
   @override
   Widget build(BuildContext context) {
     final phone = ref.watch(bookingProvider).phone;
+    final l = AppLocalizations.of(context);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -55,9 +57,9 @@ class _OtpPageState extends ConsumerState<OtpPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Valida o teu número de telefone com o código enviado por SMS',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, height: 1.3),
+                  Text(
+                    l.otpTitle,
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, height: 1.3),
                   ),
                   const SizedBox(height: 32),
                   // 6 OTP boxes
@@ -94,21 +96,21 @@ class _OtpPageState extends ConsumerState<OtpPage> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'O código foi enviado para o número $phone.',
+                    l.otpSentTo(phone),
                     style: TextStyle(color: Colors.grey[600], fontSize: 13),
                   ),
                   const SizedBox(height: 20),
                   Row(
                     children: [
-                      _TextBtn('EDITAR', () => context.pop()),
+                      _TextBtn(l.edit, () => context.pop()),
                       const SizedBox(width: 16),
-                      _TextBtn('REENVIAR', () {
+                      _TextBtn(l.resend, () {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Código reenviado')),
+                          SnackBar(content: Text(l.codeResent)),
                         );
                       }),
                       const SizedBox(width: 16),
-                      _TextBtn('CLIENTE NÃO RECEBEU SMS', () {}),
+                      _TextBtn(l.clientDidntReceiveSms, () {}),
                     ],
                   ),
                   const SizedBox(height: 24),
@@ -124,7 +126,7 @@ class _OtpPageState extends ConsumerState<OtpPage> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'Validação por SMS desativada em modo de teste — podes avançar diretamente.',
+                            l.smsDisabledTestMode,
                             style: TextStyle(fontSize: 12, color: Colors.grey[800]),
                           ),
                         ),

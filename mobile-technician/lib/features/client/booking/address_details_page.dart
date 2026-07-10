@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'booking_provider.dart';
@@ -49,6 +50,7 @@ class _AddressDetailsPageState extends ConsumerState<AddressDetailsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -67,15 +69,15 @@ class _AddressDetailsPageState extends ConsumerState<AddressDetailsPage> {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
               children: [
-                const Text(
-                  'Indica os detalhes da morada onde será realizado o serviço',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, height: 1.3),
+                Text(
+                  l.addressDetailsTitle,
+                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, height: 1.3),
                 ),
                 const SizedBox(height: 28),
                 _buildField(
                   ctrl: _streetCtrl,
-                  label: 'Rua / Avenida',
-                  hint: 'Ex: Rua da Liberdade, 123',
+                  label: l.addrStreet,
+                  hint: l.addrStreetHint,
                   icon: Icons.home_outlined,
                   required: true,
                 ),
@@ -85,8 +87,8 @@ class _AddressDetailsPageState extends ConsumerState<AddressDetailsPage> {
                     Expanded(
                       child: _buildField(
                         ctrl: _doorCtrl,
-                        label: 'Número da porta',
-                        hint: 'Ex: 3',
+                        label: l.addrDoor,
+                        hint: l.addrDoorHint,
                         icon: Icons.door_front_door_outlined,
                         required: true,
                         keyboardType: TextInputType.text,
@@ -96,8 +98,8 @@ class _AddressDetailsPageState extends ConsumerState<AddressDetailsPage> {
                     Expanded(
                       child: _buildField(
                         ctrl: _floorCtrl,
-                        label: 'Andar / Fração',
-                        hint: 'Ex: 2º Dto',
+                        label: l.addrFloor,
+                        hint: l.addrFloorHint,
                         icon: Icons.layers_outlined,
                       ),
                     ),
@@ -106,8 +108,8 @@ class _AddressDetailsPageState extends ConsumerState<AddressDetailsPage> {
                 const SizedBox(height: 16),
                 _buildField(
                   ctrl: _obsCtrl,
-                  label: 'Observações',
-                  hint: 'Ex: Campainha não funciona, ligar ao chegar...',
+                  label: l.addrObs,
+                  hint: l.addrObsHint,
                   icon: Icons.notes_outlined,
                   maxLines: 3,
                 ),
@@ -140,7 +142,7 @@ class _AddressDetailsPageState extends ConsumerState<AddressDetailsPage> {
                         ),
                         TextButton(
                           onPressed: () => context.pop(),
-                          child: const Text('Alterar', style: TextStyle(fontSize: 12)),
+                          child: Text(AppLocalizations.of(context).change, style: const TextStyle(fontSize: 12)),
                         ),
                       ],
                     ),

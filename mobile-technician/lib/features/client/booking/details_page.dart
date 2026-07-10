@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -31,6 +32,7 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -49,9 +51,9 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
             child: ListView(
               padding: const EdgeInsets.all(20),
               children: [
-                const Text(
-                  'Partilha os detalhes relevantes para a realização do serviço',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, height: 1.3),
+                Text(
+                  l.detailsTitle,
+                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, height: 1.3),
                 ),
                 const SizedBox(height: 24),
                 TextField(
@@ -63,7 +65,7 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
                     setState(() {}); // refresh footer's "SEGUINTE" enabled state
                   },
                   decoration: InputDecoration(
-                    hintText: 'Ex: Preciso de instalar 2 tomadas duplas na sala...',
+                    hintText: l.detailsHint,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -85,16 +87,16 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
                       borderRadius: BorderRadius.circular(12),
                       color: Colors.grey[50],
                     ),
-                    child: const Column(
+                    child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.add_a_photo_outlined, size: 36, color: Colors.grey),
-                        SizedBox(height: 8),
-                        Text('Adicione imagens ao seu pedido', style: TextStyle(fontWeight: FontWeight.w500)),
-                        SizedBox(height: 4),
-                        Text('Escolhe até 5 imagens', style: TextStyle(color: Colors.grey, fontSize: 12)),
-                        SizedBox(height: 4),
-                        Text('Carregar do seu dispositivo', style: TextStyle(color: Colors.black54, decoration: TextDecoration.underline, fontSize: 12)),
+                        const Icon(Icons.add_a_photo_outlined, size: 36, color: Colors.grey),
+                        const SizedBox(height: 8),
+                        Text(l.addImages, style: const TextStyle(fontWeight: FontWeight.w500)),
+                        const SizedBox(height: 4),
+                        Text(l.chooseUpTo5, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                        const SizedBox(height: 4),
+                        Text(l.uploadFromDevice, style: const TextStyle(color: Colors.black54, decoration: TextDecoration.underline, fontSize: 12)),
                       ],
                     ),
                   ),
@@ -148,7 +150,7 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
     final remaining = 5 - _imageBytes.length;
     if (remaining <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Podes adicionar no máximo 5 imagens')),
+        SnackBar(content: Text(AppLocalizations.of(context).max5Images)),
       );
       return;
     }
@@ -162,7 +164,7 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Não foi possível carregar as imagens')),
+          SnackBar(content: Text(AppLocalizations.of(context).imageLoadError)),
         );
       }
     }
