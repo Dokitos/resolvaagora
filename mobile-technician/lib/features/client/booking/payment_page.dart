@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -73,7 +74,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
       setState(() { _promo = res; _validatingPromo = false; });
     } catch (_) {
       setState(() {
-        _promo = const PromoResult(valid: false, message: 'Não foi possível validar o código.');
+        _promo = PromoResult(valid: false, message: AppLocalizations.of(context).promoValidateError);
         _validatingPromo = false;
       });
     }
@@ -83,6 +84,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
   Widget build(BuildContext context) {
     final booking = ref.watch(bookingProvider);
     final notifier = ref.read(bookingProvider.notifier);
+    final l = AppLocalizations.of(context);
     final fmt = NumberFormat.currency(locale: 'pt_PT', symbol: '€');
     final method = booking.paymentMethod;
 
@@ -104,15 +106,15 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
               children: [
-                const Text(
-                  'Escolhe o teu método de pagamento',
-                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, height: 1.2),
+                Text(
+                  l.choosePaymentMethod,
+                  style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, height: 1.2),
                 ),
                 const SizedBox(height: 24),
-                const Text('Dados de pagamento',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                Text(l.paymentData,
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 16),
-                Text('MÉTODO DE PAGAMENTO',
+                Text(l.paymentMethodLabel,
                     style: TextStyle(color: Colors.grey[500], fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
                 const SizedBox(height: 10),
                 Row(
@@ -147,7 +149,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
 
                 // MB Way → phone number
                 if (method == 'mbway') ...[
-                  Text('NÚMERO DE TELEMÓVEL',
+                  Text(l.phoneNumberLabel,
                       style: TextStyle(color: Colors.grey[500], fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
                   const SizedBox(height: 10),
                   _PhoneField(
@@ -174,8 +176,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            'Os dados do cartão são pedidos no passo seguinte, de forma '
-                            'segura, através da Stripe.',
+                            l.cardSecureNote,
                             style: TextStyle(color: Colors.grey[800], fontSize: 13, height: 1.4),
                           ),
                         ),
@@ -194,7 +195,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
-                      'Será gerada uma referência Multibanco após a confirmação, válida por 24h.',
+                      l.multibancoNote,
                       style: TextStyle(color: Colors.grey[700], fontSize: 13, height: 1.4),
                     ),
                   ),
@@ -215,7 +216,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                   controlAffinity: ListTileControlAffinity.leading,
                   contentPadding: EdgeInsets.zero,
                   activeColor: AppTheme.brandRed,
-                  title: const Text('Usar código promocional'),
+                  title: Text(l.usePromoCode),
                 ),
                 if (_usePromo) ...[
                   Row(
@@ -224,7 +225,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                         child: TextField(
                           controller: _promoCtrl,
                           textCapitalization: TextCapitalization.characters,
-                          decoration: _inputDecoration('Código promocional', Icons.local_offer_outlined),
+                          decoration: _inputDecoration(l.promoCodeHint, Icons.local_offer_outlined),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -239,7 +240,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                           ),
                           child: _validatingPromo
                               ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                              : const Text('Aplicar'),
+                              : Text(l.apply),
                         ),
                       ),
                     ],
@@ -255,8 +256,8 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                           Expanded(
                             child: Text(
                               _promo!.valid
-                                  ? 'Código aplicado — poupas ${fmt.format(_promo!.discount)}'
-                                  : (_promo!.message ?? 'Código inválido'),
+                                  ? l.promoApplied(fmt.format(_promo!.discount))
+                                  : (_promo!.message ?? l.promoInvalid),
                               style: TextStyle(fontSize: 12, color: _promo!.valid ? const Color(0xFF16A34A) : AppTheme.brandRed),
                             ),
                           ),
@@ -268,7 +269,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                 const SizedBox(height: 8),
 
                 // NIF
-                Text('NIF',
+                Text(l.nifLabel,
                     style: TextStyle(color: Colors.grey[500], fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
                 const SizedBox(height: 10),
                 TextField(
@@ -276,7 +277,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   onChanged: notifier.setNif,
-                  decoration: _inputDecoration('Adicionar NIF', Icons.badge_outlined),
+                  decoration: _inputDecoration(l.addNif, Icons.badge_outlined),
                 ),
                 const SizedBox(height: 8),
 
@@ -287,7 +288,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                   controlAffinity: ListTileControlAffinity.leading,
                   contentPadding: EdgeInsets.zero,
                   activeColor: AppTheme.brandRed,
-                  title: const Text('Usar morada de faturação diferente da morada do serviço.'),
+                  title: Text(l.differentBillingAddress),
                 ),
                 if (booking.useDifferentBillingAddress) ...[
                   const SizedBox(height: 4),
@@ -295,7 +296,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                     controller: _billStreetCtrl,
                     onChanged: (v) => notifier.setBillingAddress(street: v),
                     textCapitalization: TextCapitalization.words,
-                    decoration: _inputDecoration('Rua / Morada', Icons.location_on_outlined),
+                    decoration: _inputDecoration(l.billStreet, Icons.location_on_outlined),
                   ),
                   const SizedBox(height: 12),
                   Row(
@@ -304,7 +305,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                         child: TextField(
                           controller: _billNumberCtrl,
                           onChanged: (v) => notifier.setBillingAddress(number: v),
-                          decoration: _inputDecoration('Nº / Andar', Icons.tag),
+                          decoration: _inputDecoration(l.billNumber, Icons.tag),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -313,7 +314,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                           controller: _billPostalCtrl,
                           keyboardType: TextInputType.number,
                           onChanged: (v) => notifier.setBillingAddress(postalCode: v),
-                          decoration: _inputDecoration('Cód. postal', Icons.markunread_mailbox_outlined),
+                          decoration: _inputDecoration(l.billPostal, Icons.markunread_mailbox_outlined),
                         ),
                       ),
                     ],
@@ -323,7 +324,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                     controller: _billCityCtrl,
                     onChanged: (v) => notifier.setBillingAddress(city: v),
                     textCapitalization: TextCapitalization.words,
-                    decoration: _inputDecoration('Localidade', Icons.location_city_outlined),
+                    decoration: _inputDecoration(l.billCity, Icons.location_city_outlined),
                   ),
                   const SizedBox(height: 8),
                 ],
@@ -350,18 +351,18 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                         (booking.total + displacement - discount).clamp(0, double.infinity);
                     return Column(
                       children: [
-                        _totalRow('Serviço', fmt.format(booking.total), muted: true),
+                        _totalRow(l.priceService, fmt.format(booking.total), muted: true),
                         const SizedBox(height: 4),
-                        _totalRow('Taxa de deslocação', fmt.format(displacement), muted: true),
+                        _totalRow(l.priceDisplacement, fmt.format(displacement), muted: true),
                         if (discount > 0) ...[
                           const SizedBox(height: 4),
-                          _totalRow('Desconto', '- ${fmt.format(discount)}', muted: true),
+                          _totalRow(l.priceDiscount, '- ${fmt.format(discount)}', muted: true),
                         ],
                         const Divider(height: 16),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('Total', style: TextStyle(fontSize: 14, color: Colors.grey)),
+                            Text(l.priceTotal, style: const TextStyle(fontSize: 14, color: Colors.grey)),
                             Text(fmt.format(grandTotal),
                                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: AppTheme.brandBlack)),
                           ],
@@ -381,8 +382,8 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                         elevation: 0,
                       ),
-                      child: const Text('AVANÇAR',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, letterSpacing: 1)),
+                      child: Text(l.continueButton,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, letterSpacing: 1)),
                     ),
                   ),
                 ],

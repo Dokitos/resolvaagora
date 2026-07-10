@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:go_router/go_router.dart';
@@ -56,13 +57,13 @@ class _PaymentConfirmPageState extends ConsumerState<PaymentConfirmPage> {
       if (!mounted) return;
       setState(() => _processing = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Pagamento cancelado.')),
+        SnackBar(content: Text(AppLocalizations.of(context).paymentCancelled)),
       );
     } catch (_) {
       if (!mounted) return;
       setState(() => _processing = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Não foi possível concluir o pagamento. Tenta novamente.')),
+        SnackBar(content: Text(AppLocalizations.of(context).paymentFailed)),
       );
     }
   }
@@ -73,8 +74,8 @@ class _PaymentConfirmPageState extends ConsumerState<PaymentConfirmPage> {
     context.pushReplacement('/booking/confirmation');
   }
 
-  String _cancellationDeadline(DateTime? date, String? slot) {
-    if (date == null) return 'à data agendada do serviço';
+  String _cancellationDeadline(DateTime? date, String? slot, AppLocalizations l) {
+    if (date == null) return l.cancellationDeadlineDefault;
     final dateFmt = DateFormat("d 'de' MMMM 'de' yyyy", 'pt_PT');
     final hour = slot != null
         ? (RegExp(r'(\d{1,2}:\d{2})').firstMatch(slot)?.group(1) ?? '')
@@ -86,8 +87,9 @@ class _PaymentConfirmPageState extends ConsumerState<PaymentConfirmPage> {
   @override
   Widget build(BuildContext context) {
     final booking = ref.watch(bookingProvider);
+    final l = AppLocalizations.of(context);
     final fmt = NumberFormat.currency(locale: 'pt_PT', symbol: '€');
-    final categoryName = booking.category?.name ?? 'Serviço';
+    final categoryName = booking.category?.name ?? l.priceService;
     // Deslocação efetiva (já com o desconto da subscrição) — bate certo com o
     // valor cobrado pela Stripe.
     final displacement = ref.watch(effectiveDisplacementProvider).valueOrNull ??
@@ -123,14 +125,14 @@ class _PaymentConfirmPageState extends ConsumerState<PaymentConfirmPage> {
                   ? const SizedBox(
                       height: 24, width: 24,
                       child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.black))
-                  : Text('PAGAR ${fmt.format(total)}',
+                  : Text(l.payButton(fmt.format(total)),
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, letterSpacing: 1)),
             ),
           ),
           const SizedBox(height: 28),
 
-          const Text('Política de Cancelamento',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+          Text(l.cancellationPolicy,
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
           Container(
             width: double.infinity,
@@ -141,8 +143,8 @@ class _PaymentConfirmPageState extends ConsumerState<PaymentConfirmPage> {
               border: Border.all(color: Colors.grey.shade200),
             ),
             child: Text(
-              'Cancelamento grátis e com reembolso completo até '
-              '${_cancellationDeadline(booking.scheduledDate, booking.scheduledSlot)}.',
+              l.freeCancellationUntil(
+                  _cancellationDeadline(booking.scheduledDate, booking.scheduledSlot, l)),
               style: const TextStyle(fontSize: 15, height: 1.5),
             ),
           ),
@@ -162,30 +164,29 @@ class _PaymentConfirmPageState extends ConsumerState<PaymentConfirmPage> {
               children: [
                 Text(categoryName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
                 const SizedBox(height: 16),
-                _row('Serviço', fmt.format(itemsTotal)),
+                _row(l.priceService, fmt.format(itemsTotal)),
                 const Divider(height: 24),
-                _row('Taxa de deslocação', fmt.format(displacement)),
+                _row(l.priceDisplacement, fmt.format(displacement)),
                 if (promoDiscount > 0) ...[
                   const Divider(height: 24),
-                  _row('Desconto', '- ${fmt.format(promoDiscount)}'),
+                  _row(l.priceDiscount, '- ${fmt.format(promoDiscount)}'),
                 ],
                 const Divider(height: 24),
-                _row('IVA', 'incl.', muted: true),
+                _row(l.priceVat, l.priceIncluded, muted: true),
                 const Divider(height: 24),
                 Row(
                   children: [
-                    const Text('Total', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    Text(l.priceTotal, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                     const Spacer(),
                     Text(fmt.format(total),
                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppTheme.brandBlack)),
                   ],
                 ),
                 const SizedBox(height: 20),
-                const Text('Informação sobre pagamento', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                Text(l.paymentInfoTitle, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                 const SizedBox(height: 8),
                 Text(
-                  'O valor inclui a taxa de deslocação do técnico. Com o pagamento, confirma o '
-                  'interesse na contratação de uma equipa profissional ResolvaAgora.',
+                  l.paymentInfoDesc,
                   style: TextStyle(color: Colors.grey[600], fontSize: 13, height: 1.5),
                 ),
               ],
@@ -195,7 +196,7 @@ class _PaymentConfirmPageState extends ConsumerState<PaymentConfirmPage> {
           Center(
             child: TextButton(
               onPressed: () => context.push('/client/account/terms'),
-              child: const Text('Termos e condições'),
+              child: Text(l.accountTerms),
             ),
           ),
         ],
