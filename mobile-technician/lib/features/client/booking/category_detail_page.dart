@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../data/services_data.dart';
@@ -97,7 +98,8 @@ class _SubcategoryCard extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
               child: Text(
-                'Desde €${sub.items.map((i) => i.price).reduce((a, b) => a < b ? a : b).toStringAsFixed(2)}',
+                AppLocalizations.of(context).priceFrom(
+                    '€${sub.items.map((i) => i.price).reduce((a, b) => a < b ? a : b).toStringAsFixed(2)}'),
                 style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w600, fontSize: 13),
               ),
             ),
@@ -115,7 +117,7 @@ class _SubcategoryCard extends ConsumerWidget {
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                     ),
-                    child: const Text('SABER MAIS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    child: Text(AppLocalizations.of(context).learnMore, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -133,7 +135,7 @@ class _SubcategoryCard extends ConsumerWidget {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                       elevation: 0,
                     ),
-                    child: const Text('PEDIR SERVIÇO', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    child: Text(AppLocalizations.of(context).requestService, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                   ),
                 ),
               ],

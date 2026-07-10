@@ -73,6 +73,19 @@
   "paymentFailed": "Não foi possível concluir o pagamento. Tenta novamente.",
   "paymentUnavailable": "Pagamento indisponível de momento.",
 
+  "bookingConfirmedTitle": "Pedido confirmado!",
+  "bookingConfirmedMessage": "O teu agendamento foi realizado com sucesso. Em breve receberás uma confirmação por SMS.",
+  "bookingDetails": "Detalhes do agendamento",
+  "totalPaid": "Total pago",
+  "technicianAcceptNote": "Irás receber uma notificação quando um técnico aceitar o teu pedido.",
+  "viewMyOrdersButton": "VER OS MEUS PEDIDOS",
+  "backToHomeButton": "VOLTAR AO INÍCIO",
+
+  "priceFrom": "Desde {price}",
+  "@priceFrom": { "placeholders": { "price": { "type": "String" } } },
+  "learnMore": "SABER MAIS",
+  "requestService": "PEDIR SERVIÇO",
+
   "loginWelcomeBack": "Bem-vindo de volta. Inicia sessão para continuar.",
   "fieldEmail": "Email",
   "fieldPassword": "Password",

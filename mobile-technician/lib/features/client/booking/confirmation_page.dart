@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -10,6 +11,7 @@ class ConfirmationPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final booking = ref.watch(bookingProvider);
+    final l = AppLocalizations.of(context);
     final fmt = NumberFormat.currency(locale: 'pt_PT', symbol: '€');
     final dateFmt = DateFormat("d 'de' MMMM 'de' yyyy", 'pt_PT');
 
@@ -35,14 +37,14 @@ class ConfirmationPage extends ConsumerWidget {
                       child: const Icon(Icons.check_circle_outline, color: Color(0xFF2E7D32), size: 52),
                     ),
                     const SizedBox(height: 24),
-                    const Text(
-                      'Pedido confirmado!',
-                      style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+                    Text(
+                      l.bookingConfirmedTitle,
+                      style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      'O teu agendamento foi realizado com sucesso. Em breve receberás uma confirmação por SMS.',
+                      l.bookingConfirmedMessage,
                       style: TextStyle(color: Colors.grey[600], fontSize: 14, height: 1.5),
                       textAlign: TextAlign.center,
                     ),
@@ -60,9 +62,9 @@ class ConfirmationPage extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Detalhes do agendamento',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          Text(
+                            l.bookingDetails,
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                           ),
                           const SizedBox(height: 14),
                           if (booking.category != null)
@@ -88,7 +90,7 @@ class ConfirmationPage extends ConsumerWidget {
                           const Divider(height: 20),
                           Row(
                             children: [
-                              const Text('Total pago', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                              Text(l.totalPaid, style: const TextStyle(color: Colors.grey, fontSize: 13)),
                               const Spacer(),
                               Text(
                                 fmt.format(booking.total),
@@ -114,7 +116,7 @@ class ConfirmationPage extends ConsumerWidget {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'Irás receber uma notificação quando um técnico aceitar o teu pedido.',
+                              l.technicianAcceptNote,
                               style: TextStyle(fontSize: 12, color: Colors.grey[800]),
                             ),
                           ),
@@ -145,9 +147,9 @@ class ConfirmationPage extends ConsumerWidget {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                         elevation: 0,
                       ),
-                      child: const Text(
-                        'VER OS MEUS PEDIDOS',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, letterSpacing: 1),
+                      child: Text(
+                        l.viewMyOrdersButton,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, letterSpacing: 1),
                       ),
                     ),
                   ),
@@ -165,9 +167,9 @@ class ConfirmationPage extends ConsumerWidget {
                         side: const BorderSide(color: Colors.black26),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                       ),
-                      child: const Text(
-                        'VOLTAR AO INÍCIO',
-                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, letterSpacing: 0.5),
+                      child: Text(
+                        l.backToHomeButton,
+                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, letterSpacing: 0.5),
                       ),
                     ),
                   ),

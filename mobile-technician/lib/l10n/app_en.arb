@@ -70,6 +70,18 @@
   "paymentFailed": "Couldn't complete the payment. Please try again.",
   "paymentUnavailable": "Payment unavailable at the moment.",
 
+  "bookingConfirmedTitle": "Order confirmed!",
+  "bookingConfirmedMessage": "Your booking was placed successfully. You'll receive a confirmation by SMS shortly.",
+  "bookingDetails": "Booking details",
+  "totalPaid": "Total paid",
+  "technicianAcceptNote": "You'll get a notification when a professional accepts your request.",
+  "viewMyOrdersButton": "VIEW MY ORDERS",
+  "backToHomeButton": "BACK TO HOME",
+
+  "priceFrom": "From {price}",
+  "learnMore": "LEARN MORE",
+  "requestService": "REQUEST SERVICE",
+
   "loginWelcomeBack": "Welcome back. Sign in to continue.",
   "fieldEmail": "Email",
   "fieldPassword": "Password",
