@@ -96,6 +96,13 @@
   "bookingBack": "Voltar",
   "bookingNext": "Continuar",
   "bookingSeeDetails": "Ver detalhes",
+  "locationTitle": "Indica a localização para encontrar um/a profissional perto de ti",
+  "enterPostalCode": "Indica o teu código postal",
+  "locationConfirmed": "Localização confirmada",
+  "findProfessionalNear": "Vamos encontrar um profissional perto de ti",
+  "postalHint": "Introduzir freguesia ou código postal",
+  "postalFormat": "Formato: 0000-000 ou apenas os primeiros 4 dígitos",
+
   "serviceConditions": "Condições do serviço",
   "serviceConditionsText": "Qualquer serviço não inclui peças/materiais adicionais não selecionados.\n1) O valor apresentado é um orçamento estimado com base no valor médio para os serviços selecionados.\n2) O orçamento final do serviço será determinado no local após levantamento das tarefas a realizar e está sujeito a confirmação.\n3) Serviço com custo mínimo de 30,00€\n4) Em todos os casos, o agendamento está sujeito ao pagamento do valor apresentado.\n5) Serviço com 6 meses de garantia.",
 

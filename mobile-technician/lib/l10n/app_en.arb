@@ -90,6 +90,13 @@
   "bookingBack": "Back",
   "bookingNext": "Continue",
   "bookingSeeDetails": "See details",
+  "locationTitle": "Enter the location to find a professional near you",
+  "enterPostalCode": "Enter your postal code",
+  "locationConfirmed": "Location confirmed",
+  "findProfessionalNear": "We'll find a professional near you",
+  "postalHint": "Enter parish or postal code",
+  "postalFormat": "Format: 0000-000 or just the first 4 digits",
+
   "serviceConditions": "Service conditions",
   "serviceConditionsText": "Any service does not include additional parts/materials not selected.\n1) The amount shown is an estimated quote based on the average price for the selected services.\n2) The final service quote is determined on site after assessing the tasks to be performed and is subject to confirmation.\n3) Service with a minimum cost of €30.00\n4) In all cases, scheduling is subject to payment of the amount shown.\n5) Service with a 6-month warranty.",
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/utils/pt_postal.dart';
@@ -51,6 +52,7 @@ class _LocationPageState extends ConsumerState<LocationPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -68,11 +70,11 @@ class _LocationPageState extends ConsumerState<LocationPage> {
           Expanded(
             child: ListView(
               children: [
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(20, 24, 20, 24),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
                   child: Text(
-                    'Indica a localização para encontrar um/a profissional perto de ti',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, height: 1.3),
+                    l.locationTitle,
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, height: 1.3),
                   ),
                 ),
                 // Location preview
@@ -108,7 +110,7 @@ class _LocationPageState extends ConsumerState<LocationPage> {
                       ),
                       const SizedBox(height: 14),
                       Text(
-                        _isValid ? _locationDisplay : 'Indica o teu código postal',
+                        _isValid ? _locationDisplay : l.enterPostalCode,
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -119,8 +121,8 @@ class _LocationPageState extends ConsumerState<LocationPage> {
                       const SizedBox(height: 4),
                       Text(
                         _isValid
-                            ? 'Localização confirmada'
-                            : 'Vamos encontrar um profissional perto de ti',
+                            ? l.locationConfirmed
+                            : l.findProfessionalNear,
                         style: TextStyle(
                           fontSize: 13,
                           color: _isValid ? Colors.green[700] : Colors.grey[500],
@@ -139,7 +141,7 @@ class _LocationPageState extends ConsumerState<LocationPage> {
                     onChanged: _onPostalChanged,
                     decoration: InputDecoration(
                       prefixIcon: const Icon(Icons.location_on_outlined),
-                      hintText: 'Introduzir freguesia ou código postal',
+                      hintText: l.postalHint,
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
@@ -157,7 +159,7 @@ class _LocationPageState extends ConsumerState<LocationPage> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Text(
-                    'Formato: 0000-000 ou apenas os primeiros 4 dígitos',
+                    l.postalFormat,
                     style: TextStyle(color: Colors.grey[500], fontSize: 12),
                   ),
                 ),
