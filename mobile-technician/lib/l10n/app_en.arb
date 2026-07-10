@@ -1,0 +1,18 @@
+{
+  "@@locale": "en",
+  "appName": "ResolvaAgora",
+  "language": "Language",
+  "chooseLanguage": "Choose language",
+  "languagePortuguese": "Português",
+  "languageEnglish": "English",
+  "back": "Back",
+  "loginWelcomeBack": "Welcome back. Sign in to continue.",
+  "fieldEmail": "Email",
+  "fieldPassword": "Password",
+  "emailInvalid": "Invalid email",
+  "passwordMin": "Minimum 6 characters",
+  "loginButton": "SIGN IN",
+  "forgotPassword": "Forgot your password?",
+  "noAccountYet": "Don't have an account yet?",
+  "createAccount": "Create account"
+}

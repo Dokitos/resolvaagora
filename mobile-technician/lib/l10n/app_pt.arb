@@ -1,0 +1,18 @@
+{
+  "@@locale": "pt",
+  "appName": "ResolvaAgora",
+  "language": "Idioma",
+  "chooseLanguage": "Escolhe o idioma",
+  "languagePortuguese": "Português",
+  "languageEnglish": "English",
+  "back": "Voltar",
+  "loginWelcomeBack": "Bem-vindo de volta. Inicia sessão para continuar.",
+  "fieldEmail": "Email",
+  "fieldPassword": "Password",
+  "emailInvalid": "Email inválido",
+  "passwordMin": "Mínimo 6 caracteres",
+  "loginButton": "ENTRAR",
+  "forgotPassword": "Esqueceste-te da palavra-passe?",
+  "noAccountYet": "Ainda não tens conta?",
+  "createAccount": "Criar conta"
+}

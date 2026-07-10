@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/i18n/language_selector.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/settings_service.dart';
 import '../../../core/theme/app_theme.dart';
@@ -76,9 +77,12 @@ class ClientHomeScreen extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          IconButton(
-            icon: const Icon(Icons.language, color: Colors.white),
-            onPressed: () {},
+          Consumer(
+            builder: (context, ref, _) => IconButton(
+              icon: const Icon(Icons.language, color: Colors.white),
+              tooltip: 'Idioma / Language',
+              onPressed: () => showLanguageSelector(context, ref),
+            ),
           ),
           Consumer(
             builder: (context, ref, _) {

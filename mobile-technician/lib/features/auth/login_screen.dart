@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/i18n/language_selector.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/settings_service.dart';
 import '../../core/theme/app_theme.dart';
@@ -54,6 +56,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     final isLoading = ref.watch(authProvider).isLoading;
     final registrationEnabled = ref.watch(appSettingsProvider).valueOrNull?.registrationEnabled ?? true;
+    final l = AppLocalizations.of(context);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -63,11 +66,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         foregroundColor: Colors.black87,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          tooltip: 'Voltar',
+          tooltip: l.back,
           // Volta ao ecrã anterior; se não houver (ex.: chegámos aqui por
           // redirect de logout), vai para a página inicial pública.
           onPressed: () => context.canPop() ? context.pop() : context.go('/client/home'),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.language),
+            tooltip: 'Idioma / Language',
+            onPressed: () => showLanguageSelector(context, ref),
+          ),
+        ],
       ),
       body: SafeArea(
         child: Padding(
@@ -94,15 +104,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const Text('ResolvaAgora', textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 6),
-                Text('Bem-vindo de volta. Inicia sessão para continuar.',
+                Text(l.loginWelcomeBack,
                     textAlign: TextAlign.center, style: TextStyle(color: Colors.grey[500], fontSize: 14)),
                 const SizedBox(height: 36),
                 TextFormField(
                   controller: _emailCtrl,
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.email_outlined)),
-                  validator: (v) => (v?.contains('@') ?? false) ? null : 'Email inválido',
+                  decoration: InputDecoration(labelText: l.fieldEmail, prefixIcon: const Icon(Icons.email_outlined)),
+                  validator: (v) => (v?.contains('@') ?? false) ? null : l.emailInvalid,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -111,14 +121,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   textInputAction: TextInputAction.done,
                   onFieldSubmitted: (_) => _submit(),
                   decoration: InputDecoration(
-                    labelText: 'Password',
+                    labelText: l.fieldPassword,
                     prefixIcon: const Icon(Icons.lock_outline),
                     suffixIcon: IconButton(
                       icon: Icon(_obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined),
                       onPressed: () => setState(() => _obscure = !_obscure),
                     ),
                   ),
-                  validator: (v) => (v?.length ?? 0) >= 6 ? null : 'Mínimo 6 caracteres',
+                  validator: (v) => (v?.length ?? 0) >= 6 ? null : l.passwordMin,
                 ),
                 const SizedBox(height: 28),
                 SizedBox(
@@ -132,15 +142,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                     child: isLoading
                         ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                        : const Text('ENTRAR', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                        : Text(l.loginButton, style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 0.5)),
                   ),
                 ),
                 const SizedBox(height: 8),
                 Center(
                   child: TextButton(
                     onPressed: () => context.push('/forgot-password'),
-                    child: const Text('Esqueceste-te da palavra-passe?',
-                        style: TextStyle(color: AppTheme.brandBlue, fontWeight: FontWeight.w600)),
+                    child: Text(l.forgotPassword,
+                        style: const TextStyle(color: AppTheme.brandBlue, fontWeight: FontWeight.w600)),
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -148,13 +158,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text('Ainda não tens conta?', style: TextStyle(color: Colors.grey[600])),
+                      Text(l.noAccountYet, style: TextStyle(color: Colors.grey[600])),
                       TextButton(
                         onPressed: () {
                           final q = widget.from?.isNotEmpty == true ? '?from=${Uri.encodeComponent(widget.from!)}' : '';
                           context.push('/register$q');
                         },
-                        child: const Text('Criar conta', style: TextStyle(color: AppTheme.brandRed, fontWeight: FontWeight.bold)),
+                        child: Text(l.createAccount, style: const TextStyle(color: AppTheme.brandRed, fontWeight: FontWeight.bold)),
                       ),
                     ],
                   ),
