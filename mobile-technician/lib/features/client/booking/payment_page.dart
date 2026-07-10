@@ -59,9 +59,17 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
     if (code.isEmpty) return;
     setState(() => _validatingPromo = true);
     try {
-      final total = ref.read(bookingProvider).total;
-      final res = await ref.read(clientServiceProvider).validatePromo(code, total);
-      ref.read(bookingProvider.notifier).setPromoCode(res.valid ? code : '');
+      // Valida contra o TOTAL do pedido (itens + deslocação) — o desconto
+      // aplica-se ao total, tal como o backend faz no pagamento.
+      final displacement = ref.read(effectiveDisplacementProvider).valueOrNull ?? 0;
+      final orderTotal = ref.read(bookingProvider).total + displacement;
+      final res = await ref.read(clientServiceProvider).validatePromo(code, orderTotal);
+      final notifier = ref.read(bookingProvider.notifier);
+      if (res.valid) {
+        notifier.setPromo(code, res.discount);
+      } else {
+        notifier.clearPromo();
+      }
       setState(() { _promo = res; _validatingPromo = false; });
     } catch (_) {
       setState(() {
@@ -196,7 +204,14 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                 // Promo code
                 CheckboxListTile(
                   value: _usePromo,
-                  onChanged: (v) => setState(() => _usePromo = v ?? false),
+                  onChanged: (v) {
+                    final on = v ?? false;
+                    if (!on) {
+                      ref.read(bookingProvider.notifier).clearPromo();
+                      _promo = null;
+                    }
+                    setState(() => _usePromo = on);
+                  },
                   controlAffinity: ListTileControlAffinity.leading,
                   contentPadding: EdgeInsets.zero,
                   activeColor: AppTheme.brandRed,
@@ -330,13 +345,18 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                   Builder(builder: (_) {
                     final displacement =
                         ref.watch(effectiveDisplacementProvider).valueOrNull ?? 0;
-                    final items = _promo?.valid == true ? _promo!.finalAmount : booking.total;
-                    final grandTotal = items + displacement;
+                    final discount = _promo?.valid == true ? _promo!.discount : 0.0;
+                    final grandTotal =
+                        (booking.total + displacement - discount).clamp(0, double.infinity);
                     return Column(
                       children: [
                         _totalRow('Serviço', fmt.format(booking.total), muted: true),
                         const SizedBox(height: 4),
                         _totalRow('Taxa de deslocação', fmt.format(displacement), muted: true),
+                        if (discount > 0) ...[
+                          const SizedBox(height: 4),
+                          _totalRow('Desconto', '- ${fmt.format(discount)}', muted: true),
+                        ],
                         const Divider(height: 16),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,

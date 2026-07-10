@@ -93,7 +93,8 @@ class _PaymentConfirmPageState extends ConsumerState<PaymentConfirmPage> {
     final displacement = ref.watch(effectiveDisplacementProvider).valueOrNull ??
         (ref.watch(appSettingsProvider).valueOrNull?.displacementFee ?? 25.0);
     final itemsTotal = booking.total;
-    final total = itemsTotal + displacement;
+    final promoDiscount = booking.promoDiscount;
+    final total = (itemsTotal + displacement - promoDiscount).clamp(0, double.infinity).toDouble();
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
@@ -164,6 +165,10 @@ class _PaymentConfirmPageState extends ConsumerState<PaymentConfirmPage> {
                 _row('Serviço', fmt.format(itemsTotal)),
                 const Divider(height: 24),
                 _row('Taxa de deslocação', fmt.format(displacement)),
+                if (promoDiscount > 0) ...[
+                  const Divider(height: 24),
+                  _row('Desconto', '- ${fmt.format(promoDiscount)}'),
+                ],
                 const Divider(height: 24),
                 _row('IVA', 'incl.', muted: true),
                 const Divider(height: 24),

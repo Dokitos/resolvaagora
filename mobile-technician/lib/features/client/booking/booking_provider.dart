@@ -36,6 +36,7 @@ class BookingState {
   // Payment
   final String paymentMethod; // 'mbway' | 'card' | 'multibanco'
   final String promoCode;
+  final double promoDiscount; // € de desconto validado (aplica-se ao total)
   final String nif;
   final bool useDifferentBillingAddress;
   // Billing address (only used when useDifferentBillingAddress is true)
@@ -62,6 +63,7 @@ class BookingState {
     this.observations = '',
     this.paymentMethod = 'mbway',
     this.promoCode = '',
+    this.promoDiscount = 0,
     this.nif = '',
     this.useDifferentBillingAddress = false,
     this.billingStreet = '',
@@ -95,6 +97,7 @@ class BookingState {
     String? observations,
     String? paymentMethod,
     String? promoCode,
+    double? promoDiscount,
     String? nif,
     bool? useDifferentBillingAddress,
     String? billingStreet,
@@ -120,6 +123,7 @@ class BookingState {
         observations: observations ?? this.observations,
         paymentMethod: paymentMethod ?? this.paymentMethod,
         promoCode: promoCode ?? this.promoCode,
+        promoDiscount: promoDiscount ?? this.promoDiscount,
         nif: nif ?? this.nif,
         useDifferentBillingAddress: useDifferentBillingAddress ?? this.useDifferentBillingAddress,
         billingStreet: billingStreet ?? this.billingStreet,
@@ -188,6 +192,10 @@ class BookingNotifier extends StateNotifier<BookingState> {
 
   void setPaymentMethod(String method) => state = state.copyWith(paymentMethod: method);
   void setPromoCode(String code) => state = state.copyWith(promoCode: code);
+  /// Guarda o código validado e o respetivo desconto (€) aplicado ao total.
+  void setPromo(String code, double discount) =>
+      state = state.copyWith(promoCode: code, promoDiscount: discount);
+  void clearPromo() => state = state.copyWith(promoCode: '', promoDiscount: 0);
   void setNif(String nif) => state = state.copyWith(nif: nif);
   void setUseDifferentBillingAddress(bool v) =>
       state = state.copyWith(useDifferentBillingAddress: v);

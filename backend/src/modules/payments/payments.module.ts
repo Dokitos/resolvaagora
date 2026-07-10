@@ -5,9 +5,10 @@ import { CreateDisplacementPaymentUseCase } from './application/use-cases/create
 import { CreateOrderPaymentUseCase } from './application/use-cases/create-order-payment.use-case';
 import { HandleStripeWebhookUseCase } from './application/use-cases/handle-stripe-webhook.use-case';
 import { SettingsModule } from '../settings/settings.module';
+import { PromotionsModule } from '../promotions/promotions.module';
 
 @Module({
-  imports: [SettingsModule],
+  imports: [SettingsModule, PromotionsModule],
   controllers: [PaymentsController],
   providers: [
     StripeService,

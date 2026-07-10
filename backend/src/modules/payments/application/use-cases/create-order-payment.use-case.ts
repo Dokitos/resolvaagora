@@ -4,6 +4,7 @@ import { PrismaService } from '@shared/infrastructure/database/prisma.service';
 import { RabbitMQService } from '@shared/infrastructure/messaging/rabbitmq.service';
 import { SettingsService } from '../../../settings/settings.service';
 import { StripeService } from '../../infrastructure/stripe.service';
+import { PromoService } from '../../../promotions/application/promo.service';
 
 /**
  * Pagamento do pedido COMPLETO: itens + taxa de deslocação (esta é sempre
@@ -18,6 +19,7 @@ export class CreateOrderPaymentUseCase {
     private readonly settings: SettingsService,
     private readonly rabbitmq: RabbitMQService,
     private readonly config: ConfigService,
+    private readonly promo: PromoService,
   ) {}
 
   async execute(userId: string, serviceRequestId: string, itemsTotal: number) {
@@ -35,16 +37,39 @@ export class CreateOrderPaymentUseCase {
       throw new BadRequestException('Service request not in draft status');
     }
 
-    // Total a cobrar = itens + deslocação (a deslocação já traz descontos de
-    // subscrição/promo aplicados na criação do pedido). Nunca negativo.
+    // Subtotal = itens + deslocação (a deslocação já traz o desconto de
+    // subscrição aplicado na criação do pedido). Nunca negativo.
     const items = Math.max(0, Number(itemsTotal) || 0);
     const displacement = Number(sr.displacementFee);
-    const total = Math.max(0, Number((items + displacement).toFixed(2)));
+    const subtotal = Math.max(0, Number((items + displacement).toFixed(2)));
 
     // Visita gratuita (subscrição) → sem cobrança.
     if (sr.isFreeVisit && items === 0) {
-      await this.markPaid(serviceRequestId, userId, total, null, 'Free visit');
-      return { simulated: true, freeVisit: true, total };
+      await this.markPaid(serviceRequestId, userId, subtotal, null, 'Free visit');
+      return { simulated: true, freeVisit: true, total: subtotal };
+    }
+
+    // Código promocional: resgatado AGORA e aplicado ao TOTAL do pedido
+    // (itens + deslocação) — é aqui que se conhece o total dos itens. Acontece
+    // uma única vez, pois o pedido sai de DRAFT logo a seguir.
+    let promoDiscount = 0;
+    if (sr.promoCode && subtotal > 0) {
+      promoDiscount = await this.prisma.$transaction(async (tx) => {
+        const redeemed = await this.promo.redeem(tx, sr.promoCode, subtotal);
+        if (!redeemed) return 0;
+        await tx.serviceRequest.update({
+          where: { id: serviceRequestId },
+          data: { promoDiscount: redeemed.discount },
+        });
+        return redeemed.discount;
+      });
+    }
+    const total = Math.max(0, Number((subtotal - promoDiscount).toFixed(2)));
+
+    // Promo cobre o valor todo (ou quase) → sem cobrança na Stripe (mínimo ~0,50€).
+    if (total < 0.5) {
+      await this.markPaid(serviceRequestId, userId, total, null, 'Coberto por promoção');
+      return { simulated: true, total, promoDiscount };
     }
 
     const settings = await this.settings.get();
@@ -59,7 +84,7 @@ export class CreateOrderPaymentUseCase {
         ? 'Simulated payment (test mode)'
         : 'Simulated payment (Stripe not configured)';
       await this.markPaid(serviceRequestId, userId, total, `pi_sim_${Date.now()}`, note);
-      return { simulated: true, total };
+      return { simulated: true, total, promoDiscount };
     }
 
     // ── Modo real: PaymentIntent na Stripe ─────────────────────────────────
@@ -94,6 +119,7 @@ export class CreateOrderPaymentUseCase {
     return {
       simulated: false,
       total,
+      promoDiscount,
       clientSecret: paymentIntent.client_secret,
       paymentIntentId: paymentIntent.id,
       publishableKey,

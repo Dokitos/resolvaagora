@@ -73,18 +73,11 @@ export class CreateServiceRequestUseCase {
     }
 
     const serviceRequest = await this.prisma.$transaction(async (tx) => {
-      // Código promocional: aplicado ao valor a cobrar (deslocação) e resgatado
-      // de forma atómica dentro da mesma transação (impede reutilização acima do limite).
-      let promoCode: string | null = null;
-      let promoDiscount: number | null = null;
-      if (!isFreeVisit && displacementFee > 0 && dto.promoCode) {
-        const redeemed = await this.promoService.redeem(tx, dto.promoCode, displacementFee);
-        if (redeemed) {
-          promoCode = redeemed.code;
-          promoDiscount = redeemed.discount;
-          displacementFee = Math.max(0, Number((displacementFee - redeemed.discount).toFixed(2)));
-        }
-      }
+      // Guarda apenas o código promocional; o desconto é calculado e o código
+      // resgatado no passo de pagamento, onde já se conhece o total dos itens
+      // (o backend não conhece o catálogo). Aplica-se ao total (itens+deslocação).
+      const promoCode: string | null =
+        !isFreeVisit && dto.promoCode ? dto.promoCode.trim().toUpperCase() || null : null;
 
       return tx.serviceRequest.create({
         data: {
@@ -95,7 +88,7 @@ export class CreateServiceRequestUseCase {
           scheduledDate: dto.scheduledDate ? new Date(dto.scheduledDate) : undefined,
           displacementFee,
           promoCode,
-          promoDiscount,
+          promoDiscount: null,
           isPriority,
           isFreeVisit,
           subscriptionId,
