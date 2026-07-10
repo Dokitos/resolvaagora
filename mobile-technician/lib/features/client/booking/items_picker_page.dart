@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'booking_provider.dart';
@@ -10,9 +11,10 @@ class ItemsPickerPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final booking = ref.watch(bookingProvider);
+    final l = AppLocalizations.of(context);
     final sub = booking.subcategory;
     if (sub == null) {
-      return const Scaffold(body: Center(child: Text('Erro: subcategoria não seleccionada')));
+      return Scaffold(body: Center(child: Text(l.subcategoryError)));
     }
 
     return Scaffold(
@@ -37,17 +39,17 @@ class ItemsPickerPage extends ConsumerWidget {
                   padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
                   child: Text(
                     sub.hasCustomQuote
-                        ? 'Descreve o que precisas'
-                        : 'Quais são os componentes que precisam de ${sub.name.toLowerCase()}?',
+                        ? l.describeWhatYouNeed
+                        : l.componentsNeeding(sub.name.toLowerCase()),
                     style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, height: 1.3),
                   ),
                 ),
                 if (sub.hasCustomQuote)
-                  const Padding(
-                    padding: EdgeInsets.all(20),
+                  Padding(
+                    padding: const EdgeInsets.all(20),
                     child: Text(
-                      'Este serviço é orçamentado no local pelo técnico. Avança para descrever o que precisas.',
-                      style: TextStyle(color: Colors.grey, fontSize: 14),
+                      l.customQuoteNote,
+                      style: const TextStyle(color: Colors.grey, fontSize: 14),
                     ),
                   )
                 else
@@ -88,7 +90,7 @@ class _ItemRow extends ConsumerWidget {
               children: [
                 Text(item.name, style: const TextStyle(fontSize: 15)),
                 if (item.unit != null)
-                  Text('por ${item.unit}', style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+                  Text(AppLocalizations.of(context).perUnit(item.unit!), style: TextStyle(color: Colors.grey[500], fontSize: 12)),
               ],
             ),
           ),

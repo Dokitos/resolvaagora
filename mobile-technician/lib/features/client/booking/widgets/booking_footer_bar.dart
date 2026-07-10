@@ -1,24 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../booking_provider.dart';
 
 class BookingFooterBar extends ConsumerWidget {
   final VoidCallback? onNext;
   final VoidCallback? onBack;
-  final String nextLabel;
+  final String? nextLabel;
   final bool nextEnabled;
 
   const BookingFooterBar({
     super.key,
     this.onNext,
     this.onBack,
-    this.nextLabel = 'SEGUINTE',
+    this.nextLabel,
     this.nextEnabled = true,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final booking = ref.watch(bookingProvider);
+    final l = AppLocalizations.of(context);
     final total = booking.total;
 
     return Container(
@@ -43,7 +45,7 @@ class BookingFooterBar extends ConsumerWidget {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'Ver detalhes ↑',
+                      '${l.bookingSeeDetails} ↑',
                       style: TextStyle(color: Colors.grey[700], fontWeight: FontWeight.w600, fontSize: 13),
                     ),
                   ],
@@ -64,7 +66,7 @@ class BookingFooterBar extends ConsumerWidget {
                         side: const BorderSide(color: Colors.black26),
                         foregroundColor: Colors.black,
                       ),
-                      child: const Text('VOLTAR', style: TextStyle(fontWeight: FontWeight.bold)),
+                      child: Text(l.bookingBack.toUpperCase(), style: const TextStyle(fontWeight: FontWeight.bold)),
                     ),
                   ),
                 if (onBack != null) const SizedBox(width: 12),
@@ -79,7 +81,7 @@ class BookingFooterBar extends ConsumerWidget {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       elevation: 0,
                     ),
-                    child: Text(nextLabel, style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                    child: Text((nextLabel ?? l.bookingNext).toUpperCase(), style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 0.5)),
                   ),
                 ),
               ],
@@ -105,6 +107,7 @@ class _PriceDetailsSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final selected = booking.selectedItems;
     return Container(
       padding: const EdgeInsets.all(24),
@@ -113,12 +116,12 @@ class _PriceDetailsSheet extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            booking.subcategory?.name ?? booking.category?.name ?? 'Serviço',
+            booking.subcategory?.name ?? booking.category?.name ?? l.priceService,
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           ),
           const SizedBox(height: 16),
           if (selected.isNotEmpty) ...[
-            const Text('Serviço', style: TextStyle(color: Colors.grey, fontSize: 13)),
+            Text(l.priceService, style: const TextStyle(color: Colors.grey, fontSize: 13)),
             const SizedBox(height: 8),
             ...selected.map((bi) => Padding(
               padding: const EdgeInsets.symmetric(vertical: 6),
@@ -134,15 +137,15 @@ class _PriceDetailsSheet extends StatelessWidget {
           ],
           Row(
             children: [
-              const Text('IVA'),
+              Text(l.priceVat),
               const Spacer(),
-              const Text('incl.', style: TextStyle(color: Colors.grey)),
+              Text(l.priceIncluded, style: const TextStyle(color: Colors.grey)),
             ],
           ),
           const SizedBox(height: 8),
           Row(
             children: [
-              const Text('Total', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              Text(l.priceTotal, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               const Spacer(),
               Text(
                 '${booking.total.toStringAsFixed(2)}€',
@@ -151,16 +154,11 @@ class _PriceDetailsSheet extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          const Text('Condições do serviço', style: TextStyle(fontWeight: FontWeight.bold)),
+          Text(l.serviceConditions, style: const TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          const Text(
-            'Qualquer serviço não inclui peças/materiais adicionais não selecionados.\n'
-            '1) O valor apresentado é um orçamento estimado com base no valor médio para os serviços selecionados.\n'
-            '2) O orçamento final do serviço será determinado no local após levantamento das tarefas a realizar e está sujeito a confirmação.\n'
-            '3) Serviço com custo mínimo de 30,00€\n'
-            '4) Em todos os casos, o agendamento está sujeito ao pagamento do valor apresentado.\n'
-            '5) Serviço com 6 meses de garantia.',
-            style: TextStyle(fontSize: 13, color: Colors.black87, height: 1.5),
+          Text(
+            l.serviceConditionsText,
+            style: const TextStyle(fontSize: 13, color: Colors.black87, height: 1.5),
           ),
           const SizedBox(height: 8),
         ],
