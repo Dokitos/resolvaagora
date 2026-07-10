@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/i18n/language_selector.dart';
@@ -101,7 +102,8 @@ class ClientHomeScreen extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                 ),
-                child: const Text('Entrar', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                child: Text(AppLocalizations.of(context).signInShort,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
               );
             },
           ),
@@ -117,11 +119,12 @@ class ClientHomeScreen extends StatelessWidget {
 class _HeroSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context);
     final auth = ref.watch(authProvider).valueOrNull;
     final firstName = (auth?.isAuthenticated == true && (auth?.name?.isNotEmpty ?? false))
         ? auth!.name!.split(' ').first
         : null;
-    final greeting = firstName != null ? 'Olá, $firstName 👋' : 'Bem-vindo 👋';
+    final greeting = firstName != null ? l.homeGreetingNamed(firstName) : l.homeGreeting;
 
     return Container(
       decoration: const BoxDecoration(gradient: AppTheme.brandGradient),
@@ -134,18 +137,18 @@ class _HeroSection extends ConsumerWidget {
             style: const TextStyle(color: Colors.white70, fontSize: 15, fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 10),
-          const Text(
-            'Num só sítio,',
-            style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w300, height: 1.05),
+          Text(
+            l.homeHeroLine1,
+            style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w300, height: 1.05),
           ),
-          const Text(
-            'resolvemos tudo.',
-            style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w800, height: 1.05),
+          Text(
+            l.homeHeroLine2,
+            style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w800, height: 1.05),
           ),
           const SizedBox(height: 10),
-          const Text(
-            'Reparações, instalações, manutenções e limpezas com técnicos certificados.',
-            style: TextStyle(color: Colors.white70, fontSize: 14, height: 1.4),
+          Text(
+            l.homeHeroSubtitle,
+            style: const TextStyle(color: Colors.white70, fontSize: 14, height: 1.4),
           ),
           const SizedBox(height: 22),
           // Barra de pesquisa flutuante — sombra dá a sensação de "sobreposta" ao hero.
@@ -163,7 +166,7 @@ class _HeroSection extends ConsumerWidget {
             ),
             child: TextField(
               decoration: InputDecoration(
-                hintText: 'Ex: Máquina lavar avariada',
+                hintText: l.homeSearchHint,
                 hintStyle: TextStyle(color: Colors.grey[400]),
                 prefixIcon: const Icon(Icons.search, color: _red),
                 border: OutlineInputBorder(
@@ -187,6 +190,7 @@ class _HeroSection extends ConsumerWidget {
 class _SubscriptionBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       child: GestureDetector(
@@ -209,19 +213,19 @@ class _SubscriptionBanner extends StatelessWidget {
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Text('Plano Premium',
-                        style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 17)),
-                    SizedBox(height: 3),
-                    Text('Desconto na deslocação, visitas grátis e prioridade.',
-                        style: TextStyle(color: Colors.black87, fontSize: 13, height: 1.3)),
+                  children: [
+                    Text(l.premiumBannerTitle,
+                        style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 17)),
+                    const SizedBox(height: 3),
+                    Text(l.premiumBannerDesc,
+                        style: const TextStyle(color: Colors.black87, fontSize: 13, height: 1.3)),
                   ],
                 ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(20)),
-                child: const Text('Ver', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                child: Text(l.seeAction, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
               ),
             ],
           ),
@@ -235,12 +239,13 @@ class _SubscriptionBanner extends StatelessWidget {
 class _StatsChips extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    const items = [
-      (Icons.verified_outlined, '100% Técnicos certificados'),
-      (Icons.shield_outlined, 'Serviços com garantia'),
-      (Icons.location_on_outlined, '+300 Municípios cobertos'),
-      (Icons.bolt_outlined, '100% online'),
-      (Icons.people_outline, '+700 técnicos'),
+    final l = AppLocalizations.of(context);
+    final items = [
+      (Icons.verified_outlined, l.statCertified),
+      (Icons.shield_outlined, l.statWarranty),
+      (Icons.location_on_outlined, l.statMunicipalities),
+      (Icons.bolt_outlined, l.statOnline),
+      (Icons.people_outline, l.statTechs),
     ];
     return Container(
       color: Colors.white,
@@ -294,14 +299,15 @@ class _FeaturedServices extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.fromLTRB(20, 24, 20, 12),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
           child: Text(
-            'Explora alguns dos nossos serviços',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            l.exploreServices,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
         ),
         SizedBox(
@@ -364,16 +370,17 @@ class _FeaturedServices extends StatelessWidget {
 class _CategoryGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.fromLTRB(20, 28, 20, 4),
-          child: Text('Serviços por categoria', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 28, 20, 4),
+          child: Text(l.servicesByCategory, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-          child: Text('Vê todos os serviços disponíveis em cada área.',
+          child: Text(l.servicesByCategorySub,
               style: TextStyle(color: Colors.grey[600], fontSize: 13)),
         ),
         const SizedBox(height: 16),
@@ -444,7 +451,7 @@ class _CategoryCard extends StatelessWidget {
             const SizedBox(height: 4),
             Row(
               children: [
-                Text('Ver serviços',
+                Text(AppLocalizations.of(context).viewServices,
                     style: TextStyle(color: accent, fontSize: 12, fontWeight: FontWeight.w600)),
                 const SizedBox(width: 2),
                 Icon(Icons.arrow_forward, size: 13, color: accent),
@@ -461,10 +468,11 @@ class _CategoryCard extends StatelessWidget {
 class _HowItWorks extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    const steps = [
-      (Icons.search, 'Escolhe', 'Encontra o serviço certo para ti.'),
-      (Icons.calendar_today, 'Marca', 'Escolhe o dia e a hora que preferires.'),
-      (Icons.access_time, 'Confirma', 'Paga online e deixa o resto connosco.'),
+    final l = AppLocalizations.of(context);
+    final steps = [
+      (Icons.search, l.step1Title, l.step1Desc),
+      (Icons.calendar_today, l.step2Title, l.step2Desc),
+      (Icons.access_time, l.step3Title, l.step3Desc),
     ];
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 28, 20, 0),
@@ -476,7 +484,7 @@ class _HowItWorks extends StatelessWidget {
       padding: const EdgeInsets.all(24),
       child: Column(
         children: [
-          const Text('Como funciona', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          Text(l.howItWorks, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 24),
           ...steps.map((s) => Padding(
             padding: const EdgeInsets.only(bottom: 20),
@@ -515,13 +523,14 @@ class _HowItWorks extends StatelessWidget {
 class _WhyChooseUs extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    const points = [
-      (Icons.public, 'Cobertura nacional'),
-      (Icons.shield_outlined, 'Serviços com garantia'),
-      (Icons.bolt, '100% online, sem complicações'),
-      (Icons.people_outline, '+700 técnicos especializados'),
-      (Icons.home_repair_service_outlined, '+50 serviços disponíveis'),
-      (Icons.euro_symbol, 'Preço justo e transparente'),
+    final l = AppLocalizations.of(context);
+    final points = [
+      (Icons.public, l.whyNationalCoverage),
+      (Icons.shield_outlined, l.whyWarranty),
+      (Icons.bolt, l.whyOnline),
+      (Icons.people_outline, l.whySpecialists),
+      (Icons.home_repair_service_outlined, l.whyManyServices),
+      (Icons.euro_symbol, l.whyFairPrice),
     ];
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 24, 20, 0),
@@ -534,10 +543,10 @@ class _WhyChooseUs extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Porquê escolher-nos?', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          Text(l.whyChooseUs, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 6),
           Text(
-            'Garantimos a tua total satisfação com compromissos que nos diferenciam no mercado.',
+            l.whyChooseUsSub,
             style: TextStyle(color: Colors.grey[600], fontSize: 13, height: 1.4),
           ),
           const SizedBox(height: 20),
@@ -581,14 +590,14 @@ class _JoinProviderBanner extends StatelessWidget {
         children: [
           const Icon(Icons.handyman, color: AppTheme.brandYellow, size: 40),
           const SizedBox(height: 16),
-          const Text(
-            'Queres prestar serviços com a ResolvaAgora?',
-            style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold, height: 1.3),
+          Text(
+            AppLocalizations.of(context).joinProviderTitle,
+            style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold, height: 1.3),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Junta-te à nossa rede de técnicos certificados e começa a receber pedidos de clientes de todo o país.',
-            style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
+          Text(
+            AppLocalizations.of(context).joinProviderDesc,
+            style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
           ),
           const SizedBox(height: 20),
           SizedBox(
@@ -601,7 +610,7 @@ class _JoinProviderBanner extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
               ),
-              child: const Text('COMEÇAR AGORA', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: Text(AppLocalizations.of(context).joinProviderButton, style: const TextStyle(fontWeight: FontWeight.bold)),
             ),
           ),
         ],

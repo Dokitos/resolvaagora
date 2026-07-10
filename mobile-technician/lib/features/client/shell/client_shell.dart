@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -7,9 +8,9 @@ class ClientShell extends ConsumerWidget {
   const ClientShell({super.key, required this.child});
 
   static const _tabs = [
-    (path: '/client/home', label: 'Início', icon: Icons.home_outlined, activeIcon: Icons.home),
-    (path: '/client/services', label: 'Os meus serviços', icon: Icons.receipt_long_outlined, activeIcon: Icons.receipt_long),
-    (path: '/client/account', label: 'Conta', icon: Icons.person_outline, activeIcon: Icons.person),
+    (path: '/client/home', icon: Icons.home_outlined, activeIcon: Icons.home),
+    (path: '/client/services', icon: Icons.receipt_long_outlined, activeIcon: Icons.receipt_long),
+    (path: '/client/account', icon: Icons.person_outline, activeIcon: Icons.person),
   ];
 
   int _indexOf(String location) {
@@ -24,6 +25,8 @@ class ClientShell extends ConsumerWidget {
     final location = GoRouterState.of(context).matchedLocation;
     final currentIndex = _indexOf(location);
     const red = Color(0xFF161616);
+    final l = AppLocalizations.of(context);
+    final labels = [l.navHome, l.navMyServices, l.navAccount];
 
     return Scaffold(
       body: child,
@@ -33,11 +36,14 @@ class ClientShell extends ConsumerWidget {
         backgroundColor: Colors.white,
         elevation: 0,
         indicatorColor: const Color(0xFFFFF7E0),
-        destinations: _tabs.map((tab) => NavigationDestination(
-          icon: Icon(tab.icon),
-          selectedIcon: Icon(tab.activeIcon, color: red),
-          label: tab.label,
-        )).toList(),
+        destinations: [
+          for (var i = 0; i < _tabs.length; i++)
+            NavigationDestination(
+              icon: Icon(_tabs[i].icon),
+              selectedIcon: Icon(_tabs[i].activeIcon, color: red),
+              label: labels[i],
+            ),
+        ],
       ),
     );
   }

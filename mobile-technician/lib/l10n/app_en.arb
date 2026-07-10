@@ -6,6 +6,11 @@
   "languagePortuguese": "Português",
   "languageEnglish": "English",
   "back": "Back",
+  "signInShort": "Sign in",
+  "navHome": "Home",
+  "navMyServices": "My services",
+  "navAccount": "Account",
+
   "loginWelcomeBack": "Welcome back. Sign in to continue.",
   "fieldEmail": "Email",
   "fieldPassword": "Password",
@@ -14,5 +19,48 @@
   "loginButton": "SIGN IN",
   "forgotPassword": "Forgot your password?",
   "noAccountYet": "Don't have an account yet?",
-  "createAccount": "Create account"
+  "createAccount": "Create account",
+
+  "homeGreeting": "Welcome 👋",
+  "homeGreetingNamed": "Hi, {name} 👋",
+  "homeHeroLine1": "In one place,",
+  "homeHeroLine2": "we solve it all.",
+  "homeHeroSubtitle": "Repairs, installations, maintenance and cleaning with certified professionals.",
+  "homeSearchHint": "e.g. Broken washing machine",
+
+  "premiumBannerTitle": "Premium Plan",
+  "premiumBannerDesc": "Call-out discount, free visits and priority.",
+  "seeAction": "View",
+
+  "statCertified": "100% Certified pros",
+  "statWarranty": "Services with warranty",
+  "statMunicipalities": "+300 Municipalities covered",
+  "statOnline": "100% online",
+  "statTechs": "+700 pros",
+
+  "exploreServices": "Explore some of our services",
+  "servicesByCategory": "Services by category",
+  "servicesByCategorySub": "See all the services available in each area.",
+  "viewServices": "View services",
+
+  "howItWorks": "How it works",
+  "step1Title": "Choose",
+  "step1Desc": "Find the right service for you.",
+  "step2Title": "Book",
+  "step2Desc": "Pick the day and time you prefer.",
+  "step3Title": "Confirm",
+  "step3Desc": "Pay online and leave the rest to us.",
+
+  "whyChooseUs": "Why choose us?",
+  "whyChooseUsSub": "We guarantee your full satisfaction with commitments that set us apart in the market.",
+  "whyNationalCoverage": "Nationwide coverage",
+  "whyWarranty": "Services with warranty",
+  "whyOnline": "100% online, hassle-free",
+  "whySpecialists": "+700 specialised professionals",
+  "whyManyServices": "+50 services available",
+  "whyFairPrice": "Fair and transparent pricing",
+
+  "joinProviderTitle": "Want to provide services with ResolvaAgora?",
+  "joinProviderDesc": "Join our network of certified professionals and start receiving requests from clients across the country.",
+  "joinProviderButton": "GET STARTED"
 }

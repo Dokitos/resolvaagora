@@ -6,6 +6,11 @@
   "languagePortuguese": "Português",
   "languageEnglish": "English",
   "back": "Voltar",
+  "signInShort": "Entrar",
+  "navHome": "Início",
+  "navMyServices": "Os meus serviços",
+  "navAccount": "Conta",
+
   "loginWelcomeBack": "Bem-vindo de volta. Inicia sessão para continuar.",
   "fieldEmail": "Email",
   "fieldPassword": "Password",
@@ -14,5 +19,49 @@
   "loginButton": "ENTRAR",
   "forgotPassword": "Esqueceste-te da palavra-passe?",
   "noAccountYet": "Ainda não tens conta?",
-  "createAccount": "Criar conta"
+  "createAccount": "Criar conta",
+
+  "homeGreeting": "Bem-vindo 👋",
+  "homeGreetingNamed": "Olá, {name} 👋",
+  "@homeGreetingNamed": { "placeholders": { "name": { "type": "String" } } },
+  "homeHeroLine1": "Num só sítio,",
+  "homeHeroLine2": "resolvemos tudo.",
+  "homeHeroSubtitle": "Reparações, instalações, manutenções e limpezas com técnicos certificados.",
+  "homeSearchHint": "Ex: Máquina lavar avariada",
+
+  "premiumBannerTitle": "Plano Premium",
+  "premiumBannerDesc": "Desconto na deslocação, visitas grátis e prioridade.",
+  "seeAction": "Ver",
+
+  "statCertified": "100% Técnicos certificados",
+  "statWarranty": "Serviços com garantia",
+  "statMunicipalities": "+300 Municípios cobertos",
+  "statOnline": "100% online",
+  "statTechs": "+700 técnicos",
+
+  "exploreServices": "Explora alguns dos nossos serviços",
+  "servicesByCategory": "Serviços por categoria",
+  "servicesByCategorySub": "Vê todos os serviços disponíveis em cada área.",
+  "viewServices": "Ver serviços",
+
+  "howItWorks": "Como funciona",
+  "step1Title": "Escolhe",
+  "step1Desc": "Encontra o serviço certo para ti.",
+  "step2Title": "Marca",
+  "step2Desc": "Escolhe o dia e a hora que preferires.",
+  "step3Title": "Confirma",
+  "step3Desc": "Paga online e deixa o resto connosco.",
+
+  "whyChooseUs": "Porquê escolher-nos?",
+  "whyChooseUsSub": "Garantimos a tua total satisfação com compromissos que nos diferenciam no mercado.",
+  "whyNationalCoverage": "Cobertura nacional",
+  "whyWarranty": "Serviços com garantia",
+  "whyOnline": "100% online, sem complicações",
+  "whySpecialists": "+700 técnicos especializados",
+  "whyManyServices": "+50 serviços disponíveis",
+  "whyFairPrice": "Preço justo e transparente",
+
+  "joinProviderTitle": "Queres prestar serviços com a ResolvaAgora?",
+  "joinProviderDesc": "Junta-te à nossa rede de técnicos certificados e começa a receber pedidos de clientes de todo o país.",
+  "joinProviderButton": "COMEÇAR AGORA"
 }
