@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/i18n/language_selector.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/client_service.dart';
 import '../../../core/theme/app_theme.dart';
@@ -13,6 +15,7 @@ class ClientAccountScreen extends ConsumerWidget {
     final auth = ref.watch(authProvider).valueOrNull;
     final profile = ref.watch(clientProfileProvider);
     final unread = ref.watch(unreadCountProvider).valueOrNull ?? 0;
+    final l = AppLocalizations.of(context);
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
@@ -39,12 +42,12 @@ class ClientAccountScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        profile.valueOrNull?.fullName ?? auth?.name ?? 'Cliente',
+                        profile.valueOrNull?.fullName ?? auth?.name ?? l.accountRoleClient,
                         style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        profile.valueOrNull?.email ?? 'Conta de cliente',
+                        profile.valueOrNull?.email ?? l.accountClientAccount,
                         style: const TextStyle(color: Colors.white70, fontSize: 13),
                       ),
                     ],
@@ -60,53 +63,58 @@ class ClientAccountScreen extends ConsumerWidget {
           const SizedBox(height: 16),
 
           // ── Conta ──
-          _SectionTitle('Conta'),
+          _SectionTitle(l.accountSectionAccount),
           _MenuGroup(children: [
             _MenuTile(
               icon: Icons.workspace_premium_outlined,
-              label: 'Plano Premium (subscrição)',
+              label: l.accountSubscription,
               onTap: () => context.push('/client/subscription'),
             ),
             _MenuTile(
               icon: Icons.person_outline,
-              label: 'Editar perfil',
+              label: l.accountEditProfile,
               onTap: () => context.push('/client/account/edit'),
             ),
             _MenuTile(
               icon: Icons.location_on_outlined,
-              label: 'As minhas moradas',
+              label: l.accountAddresses,
               onTap: () => context.push('/client/account/addresses'),
             ),
             _MenuTile(
               icon: Icons.receipt_long_outlined,
-              label: 'Os meus pedidos',
+              label: l.accountMyOrders,
               onTap: () => context.go('/client/services'),
             ),
             _MenuTile(
               icon: Icons.notifications_outlined,
-              label: 'Notificações',
+              label: l.accountNotifications,
               badge: unread,
               onTap: () => context.push('/client/account/notifications'),
             ),
             _MenuTile(
               icon: Icons.card_giftcard_outlined,
-              label: 'Convida amigos',
+              label: l.accountReferral,
               onTap: () => context.push('/client/referral'),
             ),
           ]),
           const SizedBox(height: 20),
 
           // ── Apoio ──
-          _SectionTitle('Apoio'),
+          _SectionTitle(l.accountSectionSupport),
           _MenuGroup(children: [
             _MenuTile(
+              icon: Icons.language,
+              label: l.language,
+              onTap: () => showLanguageSelector(context, ref),
+            ),
+            _MenuTile(
               icon: Icons.help_outline,
-              label: 'Ajuda e suporte',
+              label: l.accountHelp,
               onTap: () => context.push('/client/account/support'),
             ),
             _MenuTile(
               icon: Icons.description_outlined,
-              label: 'Termos e condições',
+              label: l.accountTerms,
               onTap: () => context.push('/client/account/terms'),
             ),
           ]),
@@ -116,7 +124,7 @@ class ClientAccountScreen extends ConsumerWidget {
           _MenuGroup(children: [
             _MenuTile(
               icon: Icons.logout,
-              label: 'Terminar sessão',
+              label: l.accountLogout,
               color: AppTheme.brandRed,
               showChevron: false,
               onTap: () {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -17,11 +18,12 @@ class ClientServicesScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final requests = ref.watch(clientServiceRequestsProvider);
+    final l = AppLocalizations.of(context);
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text('Os meus serviços'),
+        title: Text(l.navMyServices),
         backgroundColor: AppTheme.brandRed,
         foregroundColor: Colors.white,
         elevation: 0,
@@ -41,9 +43,9 @@ class ClientServicesScreen extends ConsumerWidget {
                 const SizedBox(height: 80),
                 EmptyState(
                   icon: Icons.receipt_long_outlined,
-                  title: 'Ainda não tens pedidos',
-                  message: 'Os teus pedidos de serviço aparecerão aqui. Faz o primeiro em segundos.',
-                  actionLabel: 'Pedir um serviço',
+                  title: l.ordersEmptyTitle,
+                  message: l.ordersEmptyMessage,
+                  actionLabel: l.ordersEmptyAction,
                   onAction: () => context.go('/client/home'),
                 ),
               ]);
@@ -121,7 +123,7 @@ class _RequestCard extends StatelessWidget {
                 Text(
                   request.scheduledDate != null
                       ? dateFmt.format(request.scheduledDate!.toLocal())
-                      : 'Sem data definida',
+                      : AppLocalizations.of(context).noDateSet,
                   style: TextStyle(color: Colors.grey[700], fontSize: 13),
                 ),
                 const Spacer(),
@@ -141,15 +143,16 @@ class _ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return ListView(
       children: [
         const SizedBox(height: 120),
         const Icon(Icons.cloud_off_outlined, size: 56, color: Colors.grey),
         const SizedBox(height: 16),
-        const Center(child: Text('Não foi possível carregar os pedidos', style: TextStyle(color: Colors.grey))),
+        Center(child: Text(l.ordersLoadError, style: const TextStyle(color: Colors.grey))),
         const SizedBox(height: 16),
         Center(
-          child: OutlinedButton(onPressed: onRetry, child: const Text('Tentar novamente')),
+          child: OutlinedButton(onPressed: onRetry, child: Text(l.retry)),
         ),
       ],
     );
