@@ -2,11 +2,16 @@ import {
   Controller,
   Get,
   Patch,
+  Post,
   Body,
   Query,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
   ConflictException,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { TechnicianStatus } from '@prisma/client';
 import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard';
 import { Roles } from '../../auth/presentation/decorators/roles.decorator';
@@ -16,6 +21,7 @@ import { AuthenticatedUser } from '../../auth/infrastructure/jwt.strategy';
 import { GetScheduleUseCase } from '../application/use-cases/get-schedule.use-case';
 import { UpdateAvailabilityUseCase } from '../application/use-cases/update-availability.use-case';
 import { GetEarningsUseCase } from '../application/use-cases/get-earnings.use-case';
+import { StorageService } from '../../storage/storage.service';
 import { PrismaService } from '@shared/infrastructure/database/prisma.service';
 
 @Controller('technician')
@@ -26,6 +32,7 @@ export class TechniciansController {
     private readonly getSchedule: GetScheduleUseCase,
     private readonly updateAvailability: UpdateAvailabilityUseCase,
     private readonly getEarnings: GetEarningsUseCase,
+    private readonly storage: StorageService,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -74,6 +81,28 @@ export class TechniciansController {
     });
     const email = body.email?.toLowerCase().trim() || u.email;
     return { ...tech, email };
+  }
+
+  /** Enviar/atualizar a foto de perfil do técnico (R2). */
+  @Post('me/photo')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadPhoto(
+    @CurrentUser() user: AuthenticatedUser,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) throw new BadRequestException('Nenhum ficheiro enviado.');
+    const u = await this.prisma.user.findUnique({
+      where: { id: user.id },
+      include: { technician: true },
+    });
+    if (!u?.technician) throw new ConflictException('Technician not found');
+
+    const url = await this.storage.uploadImage(file, 'technicians');
+    await this.prisma.technician.update({
+      where: { id: u.technician.id },
+      data: { photoUrl: url },
+    });
+    return { photoUrl: url };
   }
 
   @Get('schedule')

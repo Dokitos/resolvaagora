@@ -202,6 +202,7 @@ model Technician {
   lastName          String           @map("last_name")
   phone             String
   nif               String?
+  photoUrl          String?          @map("photo_url")
   status            TechnicianStatus @default(AVAILABLE)
   dailyServiceLimit Int              @default(8) @map("daily_service_limit")
   createdAt         DateTime         @default(now()) @map("created_at")
