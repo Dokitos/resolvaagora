@@ -3,6 +3,7 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../data/services_data.dart';
+import '../../../data/catalog_i18n.dart';
 import 'booking_provider.dart';
 
 class CategoryDetailPage extends ConsumerWidget {
@@ -11,6 +12,7 @@ class CategoryDetailPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final locale = Localizations.localeOf(context);
     return Scaffold(
       backgroundColor: Colors.white,
       body: CustomScrollView(
@@ -19,7 +21,7 @@ class CategoryDetailPage extends ConsumerWidget {
             pinned: true,
             backgroundColor: const Color(0xFF161616),
             foregroundColor: Colors.white,
-            title: Text(category.name),
+            title: Text(category.localizedName(locale)),
             leading: IconButton(
               icon: const Icon(Icons.arrow_back),
               onPressed: () => context.pop(),
@@ -32,12 +34,12 @@ class CategoryDetailPage extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    category.name,
+                    category.localizedName(locale),
                     style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Color(0xFF161616)),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    category.description,
+                    category.localizedDescription(locale),
                     style: TextStyle(color: Colors.grey[600], fontSize: 14, height: 1.5),
                   ),
                 ],
@@ -67,6 +69,7 @@ class _SubcategoryCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final locale = Localizations.localeOf(context);
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
       decoration: BoxDecoration(
@@ -85,9 +88,9 @@ class _SubcategoryCard extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(sub.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      Text(sub.localizedName(locale), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                       const SizedBox(height: 4),
-                      Text(sub.description, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+                      Text(sub.localizedDescription(locale), style: TextStyle(color: Colors.grey[600], fontSize: 13)),
                     ],
                   ),
                 ),

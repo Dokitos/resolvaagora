@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../data/catalog_i18n.dart';
 import '../booking_provider.dart';
 
 class BookingFooterBar extends ConsumerWidget {
@@ -108,6 +109,7 @@ class _PriceDetailsSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final locale = Localizations.localeOf(context);
     final selected = booking.selectedItems;
     return Container(
       padding: const EdgeInsets.all(24),
@@ -116,7 +118,7 @@ class _PriceDetailsSheet extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            booking.subcategory?.name ?? booking.category?.name ?? l.priceService,
+            booking.subcategory?.localizedName(locale) ?? booking.category?.localizedName(locale) ?? l.priceService,
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           ),
           const SizedBox(height: 16),
@@ -127,7 +129,7 @@ class _PriceDetailsSheet extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 6),
               child: Row(
                 children: [
-                  Expanded(child: Text(bi.item.name)),
+                  Expanded(child: Text(bi.item.localizedName(locale))),
                   Text('${(bi.item.price * bi.qty).toStringAsFixed(2)}€',
                       style: const TextStyle(fontWeight: FontWeight.w500)),
                 ],

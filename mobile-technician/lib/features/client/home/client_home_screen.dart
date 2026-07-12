@@ -8,6 +8,7 @@ import '../../../core/services/settings_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/pressable.dart';
 import '../../../data/services_data.dart';
+import '../../../data/catalog_i18n.dart';
 
 const _red = Color(0xFF161616);
 const _blue = Color(0xFF161616); // acento em fundo claro → preto (legível)
@@ -444,7 +445,7 @@ class _CategoryCard extends StatelessWidget {
             ),
             const Spacer(),
             Text(
-              category.name,
+              category.localizedName(Localizations.localeOf(context)),
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
               maxLines: 2,
             ),

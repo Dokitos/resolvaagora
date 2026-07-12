@@ -3,6 +3,7 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../../data/catalog_i18n.dart';
 import 'booking_provider.dart';
 
 class ConfirmationPage extends ConsumerWidget {
@@ -70,8 +71,8 @@ class ConfirmationPage extends ConsumerWidget {
                           if (booking.category != null)
                             _DetailRow(
                               icon: Icons.build_outlined,
-                              label: booking.category!.name,
-                              sub: booking.subcategory?.name ?? '',
+                              label: booking.category!.localizedName(Localizations.localeOf(context)),
+                              sub: booking.subcategory?.localizedName(Localizations.localeOf(context)) ?? '',
                             ),
                           const SizedBox(height: 8),
                           if (booking.scheduledDate != null)

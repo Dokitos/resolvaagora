@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../data/catalog_i18n.dart';
 import 'booking_provider.dart';
 import 'widgets/booking_footer_bar.dart';
 
@@ -12,6 +13,7 @@ class ItemsPickerPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final booking = ref.watch(bookingProvider);
     final l = AppLocalizations.of(context);
+    final locale = Localizations.localeOf(context);
     final sub = booking.subcategory;
     if (sub == null) {
       return Scaffold(body: Center(child: Text(l.subcategoryError)));
@@ -22,7 +24,7 @@ class ItemsPickerPage extends ConsumerWidget {
       appBar: AppBar(
         backgroundColor: const Color(0xFF161616),
         foregroundColor: Colors.white,
-        title: Text(booking.category?.name ?? ''),
+        title: Text(booking.category?.localizedName(locale) ?? ''),
         leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.pop()),
         actions: [
           IconButton(icon: const Icon(Icons.search), onPressed: () {}),
@@ -40,7 +42,7 @@ class ItemsPickerPage extends ConsumerWidget {
                   child: Text(
                     sub.hasCustomQuote
                         ? l.describeWhatYouNeed
-                        : l.componentsNeeding(sub.name.toLowerCase()),
+                        : l.componentsNeeding(sub.localizedName(locale).toLowerCase()),
                     style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, height: 1.3),
                   ),
                 ),
@@ -88,7 +90,7 @@ class _ItemRow extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(item.name, style: const TextStyle(fontSize: 15)),
+                Text(item.localizedName(Localizations.localeOf(context)), style: const TextStyle(fontSize: 15)),
                 if (item.unit != null)
                   Text(AppLocalizations.of(context).perUnit(item.unit!), style: TextStyle(color: Colors.grey[500], fontSize: 12)),
               ],
