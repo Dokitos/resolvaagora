@@ -148,6 +148,29 @@
   "cancel": "Cancelar",
   "signOut": "Sair",
 
+  "fillNameAndContact": "Preenche pelo menos o nome e o contacto.",
+  "profileUpdated": "Perfil atualizado.",
+  "couldntSave": "Não foi possível guardar.",
+  "photoComingSoon": "Foto de perfil disponível em breve",
+  "fieldFirstName": "Nome",
+  "fieldLastName": "Apelido",
+  "fieldContact": "Contacto",
+  "save": "GUARDAR",
+
+  "scheduleScreenTitle": "Agenda",
+  "available": "Disponível",
+  "busy": "Ocupado",
+  "noAssignedJobs": "Sem serviços atribuídos",
+  "stayAvailable": "Fique disponível para receber novos pedidos",
+  "priorityTag": "⚡ Prioritário",
+
+  "earningsTitle": "Ganhos",
+  "displacements": "Deslocações",
+  "services": "Serviços",
+  "history": "Histórico",
+  "noEarnings": "Sem ganhos registados",
+  "serviceCompleted": "Serviço concluído",
+
   "serviceConditions": "Condições do serviço",
   "serviceConditionsText": "Qualquer serviço não inclui peças/materiais adicionais não selecionados.\n1) O valor apresentado é um orçamento estimado com base no valor médio para os serviços selecionados.\n2) O orçamento final do serviço será determinado no local após levantamento das tarefas a realizar e está sujeito a confirmação.\n3) Serviço com custo mínimo de 30,00€\n4) Em todos os casos, o agendamento está sujeito ao pagamento do valor apresentado.\n5) Serviço com 6 meses de garantia.",
 

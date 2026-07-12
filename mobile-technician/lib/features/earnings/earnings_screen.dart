@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/services/technician_service.dart';
 import '../../core/models/earning.dart';
@@ -15,9 +16,10 @@ class EarningsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final earningsAsync = ref.watch(earningsProvider);
+    final l = AppLocalizations.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Ganhos')),
+      appBar: AppBar(title: Text(l.earningsTitle)),
       body: earningsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text(e.toString())),
@@ -30,21 +32,21 @@ class EarningsScreen extends ConsumerWidget {
               Row(
                 children: [
                   Expanded(child: _SummaryCard(
-                    label: 'Total',
+                    label: l.priceTotal,
                     value: formatCurrency(data.total),
                     color: AppTheme.primary,
                     icon: Icons.euro,
                   )),
                   const SizedBox(width: 10),
                   Expanded(child: _SummaryCard(
-                    label: 'Deslocações',
+                    label: l.displacements,
                     value: formatCurrency(data.displacement),
                     color: AppTheme.success,
                     icon: Icons.directions_car_outlined,
                   )),
                   const SizedBox(width: 10),
                   Expanded(child: _SummaryCard(
-                    label: 'Serviços',
+                    label: l.services,
                     value: formatCurrency(data.service),
                     color: const Color(0xFF7C3AED),
                     icon: Icons.build_outlined,
@@ -52,7 +54,7 @@ class EarningsScreen extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 20),
-              const Text('Histórico', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+              Text(l.history, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
               const SizedBox(height: 10),
               if (data.items.isEmpty)
                 Card(
@@ -62,8 +64,8 @@ class EarningsScreen extends ConsumerWidget {
                       children: [
                         Icon(Icons.euro_outlined, size: 48, color: Colors.grey[300]),
                         const SizedBox(height: 12),
-                        const Text('Sem ganhos registados',
-                            style: TextStyle(color: Colors.grey, fontSize: 15)),
+                        Text(l.noEarnings,
+                            style: const TextStyle(color: Colors.grey, fontSize: 15)),
                       ],
                     ),
                   ),
@@ -135,7 +137,7 @@ class _EarningTile extends StatelessWidget {
           ),
         ),
         title: Text(
-          isDisplacement ? 'Taxa de deslocação' : 'Serviço concluído',
+          isDisplacement ? AppLocalizations.of(context).priceDisplacement : AppLocalizations.of(context).serviceCompleted,
           style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
         ),
         subtitle: Text(

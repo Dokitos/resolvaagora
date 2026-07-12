@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:dio/dio.dart';
@@ -54,8 +55,9 @@ class _EditTechnicianProfileScreenState extends ConsumerState<EditTechnicianProf
   }
 
   Future<void> _save() async {
+    final l = AppLocalizations.of(context);
     if (_firstCtrl.text.trim().isEmpty || _phoneCtrl.text.trim().isEmpty) {
-      _toast('Preenche pelo menos o nome e o contacto.');
+      _toast(l.fillNameAndContact);
       return;
     }
     setState(() => _saving = true);
@@ -69,10 +71,10 @@ class _EditTechnicianProfileScreenState extends ConsumerState<EditTechnicianProf
       final fullName = '${_firstCtrl.text.trim()} ${_lastCtrl.text.trim()}'.trim();
       await ref.read(authProvider.notifier).updateStoredName(fullName);
       if (!mounted) return;
-      _toast('Perfil atualizado.');
+      _toast(l.profileUpdated);
       context.pop();
     } on DioException catch (e) {
-      _toast(e.response?.data?['message']?.toString() ?? 'Não foi possível guardar.');
+      _toast(e.response?.data?['message']?.toString() ?? l.couldntSave);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -83,8 +85,9 @@ class _EditTechnicianProfileScreenState extends ConsumerState<EditTechnicianProf
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Editar perfil')),
+      appBar: AppBar(title: Text(l.accountEditProfile)),
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: AppTheme.brandBlack))
           : ListView(
@@ -111,17 +114,17 @@ class _EditTechnicianProfileScreenState extends ConsumerState<EditTechnicianProf
                 ),
                 const SizedBox(height: 6),
                 Center(
-                  child: Text('Foto de perfil disponível em breve',
+                  child: Text(l.photoComingSoon,
                       style: TextStyle(color: Colors.grey[500], fontSize: 12)),
                 ),
                 const SizedBox(height: 24),
-                _field(_firstCtrl, 'Nome', Icons.person_outline),
+                _field(_firstCtrl, l.fieldFirstName, Icons.person_outline),
                 const SizedBox(height: 14),
-                _field(_lastCtrl, 'Apelido', Icons.person_outline),
+                _field(_lastCtrl, l.fieldLastName, Icons.person_outline),
                 const SizedBox(height: 14),
-                _field(_phoneCtrl, 'Contacto', Icons.phone_outlined, keyboard: TextInputType.phone),
+                _field(_phoneCtrl, l.fieldContact, Icons.phone_outlined, keyboard: TextInputType.phone),
                 const SizedBox(height: 14),
-                _field(_emailCtrl, 'Email', Icons.email_outlined, keyboard: TextInputType.emailAddress),
+                _field(_emailCtrl, l.fieldEmail, Icons.email_outlined, keyboard: TextInputType.emailAddress),
                 const SizedBox(height: 28),
                 SizedBox(
                   height: 52,
@@ -134,7 +137,7 @@ class _EditTechnicianProfileScreenState extends ConsumerState<EditTechnicianProf
                     ),
                     child: _saving
                         ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
-                        : const Text('GUARDAR', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                        : Text(l.save, style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 0.5)),
                   ),
                 ),
               ],

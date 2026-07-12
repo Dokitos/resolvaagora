@@ -141,6 +141,29 @@
   "cancel": "Cancel",
   "signOut": "Sign out",
 
+  "fillNameAndContact": "Fill in at least your name and contact.",
+  "profileUpdated": "Profile updated.",
+  "couldntSave": "Couldn't save.",
+  "photoComingSoon": "Profile photo available soon",
+  "fieldFirstName": "First name",
+  "fieldLastName": "Last name",
+  "fieldContact": "Contact",
+  "save": "SAVE",
+
+  "scheduleScreenTitle": "Schedule",
+  "available": "Available",
+  "busy": "Busy",
+  "noAssignedJobs": "No assigned jobs",
+  "stayAvailable": "Stay available to receive new requests",
+  "priorityTag": "⚡ Priority",
+
+  "earningsTitle": "Earnings",
+  "displacements": "Call-outs",
+  "services": "Services",
+  "history": "History",
+  "noEarnings": "No earnings recorded",
+  "serviceCompleted": "Service completed",
+
   "serviceConditions": "Service conditions",
   "serviceConditionsText": "Any service does not include additional parts/materials not selected.\n1) The amount shown is an estimated quote based on the average price for the selected services.\n2) The final service quote is determined on site after assessing the tasks to be performed and is subject to confirmation.\n3) Service with a minimum cost of €30.00\n4) In all cases, scheduling is subject to payment of the amount shown.\n5) Service with a 6-month warranty.",
 

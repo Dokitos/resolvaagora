@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/services/technician_service.dart';
@@ -15,17 +16,18 @@ class ScheduleScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final jobsAsync = ref.watch(assignedJobsProvider);
     final isAvailable = ref.watch(availabilityProvider);
+    final l = AppLocalizations.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Agenda'),
+        title: Text(l.scheduleScreenTitle),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 16),
             child: Row(
               children: [
                 Text(
-                  isAvailable ? 'Disponível' : 'Ocupado',
+                  isAvailable ? l.available : l.busy,
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
@@ -58,7 +60,7 @@ class ScheduleScreen extends ConsumerWidget {
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () => ref.invalidate(assignedJobsProvider),
-                child: const Text('Tentar novamente'),
+                child: Text(l.retry),
               ),
             ],
           ),
@@ -71,10 +73,10 @@ class ScheduleScreen extends ConsumerWidget {
                 children: [
                   Icon(Icons.calendar_today_outlined, size: 56, color: Colors.grey[300]),
                   const SizedBox(height: 16),
-                  const Text('Sem serviços atribuídos',
-                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+                  Text(l.noAssignedJobs,
+                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
                   const SizedBox(height: 6),
-                  Text('Fique disponível para receber novos pedidos',
+                  Text(l.stayAvailable,
                       style: TextStyle(color: Colors.grey[500], fontSize: 14)),
                 ],
               ),
@@ -151,8 +153,8 @@ class _JobCard extends StatelessWidget {
                               color: Colors.amber[100],
                               borderRadius: BorderRadius.circular(6),
                             ),
-                            child: const Text('⚡ Prioritário',
-                                style: TextStyle(fontSize: 11, color: Color(0xFF92400E))),
+                            child: Text(AppLocalizations.of(context).priorityTag,
+                                style: const TextStyle(fontSize: 11, color: Color(0xFF92400E))),
                           ),
                         ],
                       ],
