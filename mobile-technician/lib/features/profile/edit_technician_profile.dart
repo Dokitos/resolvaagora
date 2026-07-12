@@ -3,6 +3,7 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:dio/dio.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../core/network/api_client.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/theme/app_theme.dart';
@@ -23,6 +24,8 @@ class _EditTechnicianProfileScreenState extends ConsumerState<EditTechnicianProf
   final _emailCtrl = TextEditingController();
   bool _loading = true;
   bool _saving = false;
+  bool _uploadingPhoto = false;
+  String? _photoUrl;
 
   @override
   void initState() {
@@ -47,6 +50,8 @@ class _EditTechnicianProfileScreenState extends ConsumerState<EditTechnicianProf
       _lastCtrl.text = (t['lastName'] ?? '').toString();
       _phoneCtrl.text = (t['phone'] ?? '').toString();
       _emailCtrl.text = (t['email'] ?? '').toString();
+      final p = t['photoUrl']?.toString();
+      if (p != null && p.isNotEmpty) _photoUrl = p;
     } catch (_) {
       // deixa campos vazios se falhar
     } finally {
@@ -83,6 +88,34 @@ class _EditTechnicianProfileScreenState extends ConsumerState<EditTechnicianProf
   void _toast(String m) =>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
 
+  Future<void> _pickPhoto() async {
+    final l = AppLocalizations.of(context);
+    try {
+      final picked = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1024,
+        imageQuality: 85,
+      );
+      if (picked == null) return;
+      setState(() => _uploadingPhoto = true);
+      final bytes = await picked.readAsBytes();
+      final form = FormData.fromMap({
+        'file': MultipartFile.fromBytes(bytes, filename: picked.name),
+      });
+      final r = await ref.read(dioProvider).post('/technician/me/photo', data: form);
+      final url = (r.data as Map)['photoUrl']?.toString();
+      if (!mounted) return;
+      setState(() => _photoUrl = url);
+      _toast(l.profileUpdated);
+    } on DioException catch (e) {
+      _toast(e.response?.data?['message']?.toString() ?? l.couldntSave);
+    } catch (_) {
+      _toast(l.couldntSave);
+    } finally {
+      if (mounted) setState(() => _uploadingPhoto = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -94,28 +127,31 @@ class _EditTechnicianProfileScreenState extends ConsumerState<EditTechnicianProf
               padding: const EdgeInsets.all(20),
               children: [
                 Center(
-                  child: Stack(
-                    children: [
-                      const CircleAvatar(
-                        radius: 44,
-                        backgroundColor: AppTheme.brandYellowSoft,
-                        child: Icon(Icons.person, size: 44, color: AppTheme.brandBlack),
-                      ),
-                      Positioned(
-                        right: 0, bottom: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: const BoxDecoration(color: AppTheme.brandBlack, shape: BoxShape.circle),
-                          child: const Icon(Icons.photo_camera, size: 16, color: AppTheme.brandYellow),
+                  child: GestureDetector(
+                    onTap: _uploadingPhoto ? null : _pickPhoto,
+                    child: Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 44,
+                          backgroundColor: AppTheme.brandYellowSoft,
+                          backgroundImage: (_photoUrl != null) ? NetworkImage(_photoUrl!) : null,
+                          child: _uploadingPhoto
+                              ? const CircularProgressIndicator(strokeWidth: 2, color: AppTheme.brandBlack)
+                              : (_photoUrl == null
+                                  ? const Icon(Icons.person, size: 44, color: AppTheme.brandBlack)
+                                  : null),
                         ),
-                      ),
-                    ],
+                        Positioned(
+                          right: 0, bottom: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: const BoxDecoration(color: AppTheme.brandBlack, shape: BoxShape.circle),
+                            child: const Icon(Icons.photo_camera, size: 16, color: AppTheme.brandYellow),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 6),
-                Center(
-                  child: Text(l.photoComingSoon,
-                      style: TextStyle(color: Colors.grey[500], fontSize: 12)),
                 ),
                 const SizedBox(height: 24),
                 _field(_firstCtrl, l.fieldFirstName, Icons.person_outline),
