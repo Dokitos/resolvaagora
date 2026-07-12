@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -42,9 +43,9 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
     _selectedDate ??= _availableDays.first;
   }
 
-  String _dayLabel(DateTime d) {
+  String _dayLabel(DateTime d, AppLocalizations l) {
     final diff = d.difference(DateTime.now()).inDays;
-    if (diff == 1) return 'Amanhã';
+    if (diff == 1) return l.tomorrow;
     final fmt = DateFormat('EEE', 'pt_PT');
     return fmt.format(d).replaceFirst(fmt.format(d)[0], fmt.format(d)[0].toUpperCase());
   }
@@ -52,6 +53,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
   @override
   Widget build(BuildContext context) {
     final days = _availableDays;
+    final l = AppLocalizations.of(context);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -71,9 +73,9 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
               children: [
-                const Text(
-                  'Para quando preferes agendar o serviço?',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, height: 1.3),
+                Text(
+                  l.scheduleTitle,
+                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, height: 1.3),
                 ),
                 const SizedBox(height: 24),
                 // Day picker
@@ -93,7 +95,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
                           ),
                           child: Column(
                             children: [
-                              Text(_dayLabel(d), style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+                              Text(_dayLabel(d, l), style: TextStyle(fontSize: 11, color: Colors.grey[600])),
                               const SizedBox(height: 2),
                               Text('${d.day}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: selected ? Colors.black : Colors.grey[600])),
                             ],
@@ -158,10 +160,10 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Garante a tua data e hora', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                            Text(l.guaranteeDateTime, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                             const SizedBox(height: 2),
                             Text(
-                              'Caso realizes o pagamento após 2 horas, a tua marcação ficará sujeita a confirmação.',
+                              l.paymentAfter2h,
                               style: TextStyle(fontSize: 12, color: Colors.grey[700]),
                             ),
                           ],

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/i18n/language_selector.dart';
+import '../../core/i18n/locale_provider.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/theme/app_theme.dart';
 
@@ -33,18 +36,21 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       // IMPORTANTE: usar o context do PRÓPRIO diálogo (dialogContext) para o
       // pop. Com o context do ecrã, o go_router intercepta o pop e esvazia a
       // lista de rotas (currentConfiguration vazio) → ecrã preto no logout.
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Terminar sessão'),
-        content: const Text('Tem a certeza que quer sair?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancelar')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Sair'),
-          ),
-        ],
-      ),
+      builder: (dialogContext) {
+        final l = AppLocalizations.of(dialogContext);
+        return AlertDialog(
+          title: Text(l.accountLogout),
+          content: Text(l.logoutConfirm),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: Text(l.cancel)),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(l.signOut),
+            ),
+          ],
+        );
+      },
     );
     if (confirm == true) {
       // Ao limpar a sessão, o redirect do router encaminha para /login.
@@ -54,8 +60,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final currentLang = (ref.watch(localeProvider)?.languageCode ??
+                Localizations.localeOf(context).languageCode) ==
+            'en'
+        ? l.languageEnglish
+        : l.languagePortuguese;
     return Scaffold(
-      appBar: AppBar(title: const Text('Perfil')),
+      appBar: AppBar(title: Text(l.profileTitle)),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -75,7 +87,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          _name ?? 'Técnico',
+                          _name ?? l.roleTechnician,
                           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
                         ),
                         const SizedBox(height: 4),
@@ -85,14 +97,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             color: AppTheme.primaryLight,
                             borderRadius: BorderRadius.circular(6),
                           ),
-                          child: const Text('Técnico', style: TextStyle(color: AppTheme.primary, fontSize: 12, fontWeight: FontWeight.w500)),
+                          child: Text(l.roleTechnician, style: const TextStyle(color: AppTheme.primary, fontSize: 12, fontWeight: FontWeight.w500)),
                         ),
                       ],
                     ),
                   ),
                   IconButton(
                     icon: const Icon(Icons.edit_outlined, color: AppTheme.brandBlack),
-                    tooltip: 'Editar perfil',
+                    tooltip: l.accountEditProfile,
                     onPressed: () => context.push('/profile/edit'),
                   ),
                 ],
@@ -105,18 +117,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               children: [
                 ListTile(
                   leading: const Icon(Icons.notifications_outlined, color: AppTheme.primary),
-                  title: const Text('Notificações push'),
-                  subtitle: const Text('Receba alertas de novos serviços'),
+                  title: Text(l.pushNotifications),
+                  subtitle: Text(l.pushNotificationsSub),
                   trailing: Switch.adaptive(value: true, onChanged: (_) {}),
                 ),
                 const Divider(height: 1, indent: 56),
                 ListTile(
                   leading: const Icon(Icons.language_outlined, color: AppTheme.primary),
-                  title: const Text('Idioma'),
+                  title: Text(l.language),
+                  onTap: () => showLanguageSelector(context, ref),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text('Português', style: TextStyle(color: Colors.grey[500])),
+                      Text(currentLang, style: TextStyle(color: Colors.grey[500])),
                       const Icon(Icons.chevron_right, color: Colors.grey),
                     ],
                   ),
@@ -130,14 +143,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               children: [
                 ListTile(
                   leading: const Icon(Icons.help_outline, color: Colors.grey),
-                  title: const Text('Ajuda e Suporte'),
+                  title: Text(l.accountHelp),
                   trailing: const Icon(Icons.chevron_right, color: Colors.grey),
                   onTap: () {},
                 ),
                 const Divider(height: 1, indent: 56),
                 ListTile(
                   leading: const Icon(Icons.info_outline, color: Colors.grey),
-                  title: const Text('Versão da App'),
+                  title: Text(l.appVersion),
                   trailing: Text('1.0.0', style: TextStyle(color: Colors.grey[500])),
                 ),
               ],
@@ -153,7 +166,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
               onPressed: _logout,
               icon: const Icon(Icons.logout),
-              label: const Text('Terminar sessão'),
+              label: Text(l.accountLogout),
             ),
           ),
         ],

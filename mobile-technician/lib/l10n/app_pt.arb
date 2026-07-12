@@ -134,6 +134,20 @@
   "addrObsHint": "Ex: Campainha não funciona, ligar ao chegar...",
   "change": "Alterar",
 
+  "scheduleTitle": "Para quando preferes agendar o serviço?",
+  "tomorrow": "Amanhã",
+  "guaranteeDateTime": "Garante a tua data e hora",
+  "paymentAfter2h": "Caso realizes o pagamento após 2 horas, a tua marcação ficará sujeita a confirmação.",
+
+  "profileTitle": "Perfil",
+  "roleTechnician": "Técnico",
+  "pushNotifications": "Notificações push",
+  "pushNotificationsSub": "Receba alertas de novos serviços",
+  "appVersion": "Versão da App",
+  "logoutConfirm": "Tem a certeza que quer sair?",
+  "cancel": "Cancelar",
+  "signOut": "Sair",
+
   "serviceConditions": "Condições do serviço",
   "serviceConditionsText": "Qualquer serviço não inclui peças/materiais adicionais não selecionados.\n1) O valor apresentado é um orçamento estimado com base no valor médio para os serviços selecionados.\n2) O orçamento final do serviço será determinado no local após levantamento das tarefas a realizar e está sujeito a confirmação.\n3) Serviço com custo mínimo de 30,00€\n4) Em todos os casos, o agendamento está sujeito ao pagamento do valor apresentado.\n5) Serviço com 6 meses de garantia.",
 
