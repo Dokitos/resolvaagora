@@ -64,12 +64,19 @@ class SubscriptionPage extends ConsumerWidget {
       );
 }
 
-List<({IconData icon, String text})> _benefits(SubscriptionPlan p) => [
-      (icon: Icons.local_shipping_outlined, text: '${p.displacementDiscountPct.toInt()}% de desconto na taxa de deslocação'),
-      (icon: Icons.card_giftcard_outlined, text: '${p.freeVisitsCount} visitas grátis por ano'),
-      if (p.priorityScheduling) (icon: Icons.bolt_outlined, text: 'Agendamento prioritário'),
-      (icon: Icons.verified_user_outlined, text: 'Apoio dedicado e garantia alargada'),
-    ];
+List<({IconData icon, String text})> _benefits(SubscriptionPlan p) {
+  // Se o admin definiu benefícios personalizados, usa-os; senão, deriva dos
+  // atributos do plano.
+  if (p.benefits.isNotEmpty) {
+    return p.benefits.map((t) => (icon: Icons.check_circle_outline, text: t)).toList();
+  }
+  return [
+    (icon: Icons.local_shipping_outlined, text: '${p.displacementDiscountPct.toInt()}% de desconto na taxa de deslocação'),
+    (icon: Icons.card_giftcard_outlined, text: '${p.freeVisitsCount} visitas grátis por ano'),
+    if (p.priorityScheduling) (icon: Icons.bolt_outlined, text: 'Agendamento prioritário'),
+    (icon: Icons.verified_user_outlined, text: 'Apoio dedicado e garantia alargada'),
+  ];
+}
 
 class _OfferView extends ConsumerStatefulWidget {
   final SubscriptionPlan plan;
@@ -109,6 +116,21 @@ class _OfferViewState extends ConsumerState<_OfferView> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        // Imagem de destaque (definida pelo admin), se existir.
+        if (p.imageUrl != null) ...[
+          ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: AspectRatio(
+              aspectRatio: 16 / 9,
+              child: Image.network(
+                p.imageUrl!,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
         // Hero
         Container(
           padding: const EdgeInsets.all(24),
@@ -123,12 +145,14 @@ class _OfferViewState extends ConsumerState<_OfferView> {
                 children: [
                   const Icon(Icons.workspace_premium, color: AppTheme.brandYellow, size: 28),
                   const SizedBox(width: 8),
-                  Text(p.name, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                  Expanded(
+                    child: Text(p.name, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                  ),
                 ],
               ),
               const SizedBox(height: 8),
-              const Text('Poupa em cada serviço e tem prioridade o ano todo.',
-                  style: TextStyle(color: Colors.white70, fontSize: 14, height: 1.4)),
+              Text(p.description ?? 'Poupa em cada serviço e tem prioridade o ano todo.',
+                  style: const TextStyle(color: Colors.white70, fontSize: 14, height: 1.4)),
               const SizedBox(height: 18),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.end,

@@ -117,6 +117,9 @@ export interface Subscription {
 export interface SubscriptionPlan {
   id: string
   name: string
+  description?: string | null
+  imageUrl?: string | null
+  benefits?: string[]
   yearlyPrice: number
   displacementDiscountPct: number
   freeVisitsCount: number

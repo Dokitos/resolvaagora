@@ -65,6 +65,17 @@ export const adminApi = {
   plans: () =>
     api.get('/admin/subscription-plans').then((r) => r.data),
 
+  updatePlan: (id: string, data: any) =>
+    api.patch(`/admin/subscription-plans/${id}`, data).then((r) => r.data),
+
+  uploadImage: (file: File) => {
+    const fd = new FormData()
+    fd.append('file', file)
+    return api.post('/admin/uploads', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then((r) => r.data as { url: string })
+  },
+
   promoCodes: () =>
     api.get('/admin/promo-codes').then((r) => r.data),
 

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/i18n/language_selector.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../core/services/client_service.dart';
 import '../../../core/services/settings_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/pressable.dart';
@@ -188,10 +189,15 @@ class _HeroSection extends ConsumerWidget {
 }
 
 // ── Subscription banner ─────────────────────────────────────────────────────
-class _SubscriptionBanner extends StatelessWidget {
+class _SubscriptionBanner extends ConsumerWidget {
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
+    // Nome/descrição do plano vêm do admin (1.º plano ativo); fallback à tradução.
+    final plans = ref.watch(subscriptionPlansProvider).valueOrNull;
+    final plan = (plans != null && plans.isNotEmpty) ? plans.first : null;
+    final title = plan?.name ?? l.premiumBannerTitle;
+    final desc = plan?.description ?? l.premiumBannerDesc;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       child: GestureDetector(
@@ -215,11 +221,13 @@ class _SubscriptionBanner extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(l.premiumBannerTitle,
-                        style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 17)),
+                    Text(title,
+                        style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 17),
+                        maxLines: 1, overflow: TextOverflow.ellipsis),
                     const SizedBox(height: 3),
-                    Text(l.premiumBannerDesc,
-                        style: const TextStyle(color: Colors.black87, fontSize: 13, height: 1.3)),
+                    Text(desc,
+                        style: const TextStyle(color: Colors.black87, fontSize: 13, height: 1.3),
+                        maxLines: 2, overflow: TextOverflow.ellipsis),
                   ],
                 ),
               ),

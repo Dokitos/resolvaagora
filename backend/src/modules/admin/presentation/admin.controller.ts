@@ -476,12 +476,31 @@ export class AdminController {
   @Post('subscription-plans')
   @HttpCode(HttpStatus.CREATED)
   createPlan(@Body() data: any) {
-    return this.prisma.subscriptionPlan.create({ data });
+    return this.prisma.subscriptionPlan.create({ data: this.planFields(data) });
   }
 
   @Patch('subscription-plans/:id')
   updatePlan(@Param('id') id: string, @Body() data: any) {
-    return this.prisma.subscriptionPlan.update({ where: { id }, data });
+    return this.prisma.subscriptionPlan.update({ where: { id }, data: this.planFields(data) });
+  }
+
+  /** Apenas os campos editáveis do plano (evita mass-assignment). */
+  private planFields(d: any) {
+    const out: any = {};
+    if (d.name !== undefined) out.name = String(d.name);
+    if (d.description !== undefined) out.description = d.description ? String(d.description) : null;
+    if (d.imageUrl !== undefined) out.imageUrl = d.imageUrl ? String(d.imageUrl) : null;
+    if (d.benefits !== undefined) {
+      out.benefits = Array.isArray(d.benefits)
+        ? d.benefits.map((b: any) => String(b)).filter((b: string) => b.trim() !== '')
+        : [];
+    }
+    if (d.yearlyPrice !== undefined) out.yearlyPrice = Number(d.yearlyPrice);
+    if (d.displacementDiscountPct !== undefined) out.displacementDiscountPct = Number(d.displacementDiscountPct);
+    if (d.freeVisitsCount !== undefined) out.freeVisitsCount = Math.trunc(Number(d.freeVisitsCount));
+    if (d.priorityScheduling !== undefined) out.priorityScheduling = !!d.priorityScheduling;
+    if (d.isActive !== undefined) out.isActive = !!d.isActive;
+    return out;
   }
 
   // ─── PROMO CODES & REFERRALS ──────────────────────────────────────────────

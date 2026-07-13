@@ -374,6 +374,9 @@ model Payment {
 model SubscriptionPlan {
   id                      String   @id @default(uuid())
   name                    String
+  description             String?  @db.Text
+  imageUrl                String?  @map("image_url")
+  benefits                String[] @default([])
   yearlyPrice             Decimal  @map("yearly_price") @db.Decimal(10, 2)
   displacementDiscountPct Decimal  @map("displacement_discount_pct") @db.Decimal(5, 2)
   freeVisitsCount         Int      @map("free_visits_count")

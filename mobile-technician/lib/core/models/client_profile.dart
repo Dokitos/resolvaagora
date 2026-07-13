@@ -123,6 +123,9 @@ class PromoResult {
 class SubscriptionPlan {
   final String id;
   final String name;
+  final String? description;
+  final String? imageUrl;
+  final List<String> benefits;
   final double yearlyPrice;
   final double displacementDiscountPct;
   final int freeVisitsCount;
@@ -131,6 +134,9 @@ class SubscriptionPlan {
   const SubscriptionPlan({
     required this.id,
     required this.name,
+    this.description,
+    this.imageUrl,
+    this.benefits = const [],
     required this.yearlyPrice,
     required this.displacementDiscountPct,
     required this.freeVisitsCount,
@@ -142,6 +148,9 @@ class SubscriptionPlan {
   factory SubscriptionPlan.fromJson(Map<String, dynamic> j) => SubscriptionPlan(
         id: j['id'] as String,
         name: (j['name'] as String?) ?? 'Plano',
+        description: (j['description'] as String?)?.trim().isNotEmpty == true ? j['description'] as String : null,
+        imageUrl: (j['imageUrl'] as String?)?.trim().isNotEmpty == true ? j['imageUrl'] as String : null,
+        benefits: (j['benefits'] as List?)?.map((e) => e.toString()).where((e) => e.trim().isNotEmpty).toList() ?? const [],
         yearlyPrice: _d(j['yearlyPrice']),
         displacementDiscountPct: _d(j['displacementDiscountPct']),
         freeVisitsCount: (j['freeVisitsCount'] as num?)?.toInt() ?? 0,
