@@ -19,6 +19,7 @@ import { SupportModule } from './modules/support/support.module';
 import { PromotionsModule } from './modules/promotions/promotions.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { StorageModule } from './modules/storage/storage.module';
+import { BannersModule } from './modules/banners/banners.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { StorageModule } from './modules/storage/storage.module';
     SupportModule,
     PromotionsModule,
     SettingsModule,
+    BannersModule,
   ],
   providers: [
     // Rate-limiting global (protege todos os endpoints; rotas sensíveis apertam com @Throttle)

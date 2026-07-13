@@ -503,6 +503,45 @@ export class AdminController {
     return out;
   }
 
+  // ─── HOME BANNERS ─────────────────────────────────────────────────────────
+
+  @Get('banners')
+  listBanners() {
+    return this.prisma.homeBanner.findMany({
+      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+    });
+  }
+
+  @Post('banners')
+  @HttpCode(HttpStatus.CREATED)
+  createBanner(@Body() data: any) {
+    return this.prisma.homeBanner.create({ data: this.bannerFields(data, true) });
+  }
+
+  @Patch('banners/:id')
+  updateBanner(@Param('id') id: string, @Body() data: any) {
+    return this.prisma.homeBanner.update({ where: { id }, data: this.bannerFields(data, false) });
+  }
+
+  @Delete('banners/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteBanner(@Param('id') id: string) {
+    await this.prisma.homeBanner.delete({ where: { id } });
+  }
+
+  /** Campos editáveis do banner (evita mass-assignment). */
+  private bannerFields(d: any, creating: boolean) {
+    const out: any = {};
+    if (creating || d.imageUrl !== undefined) out.imageUrl = String(d.imageUrl ?? '');
+    if (d.title !== undefined) out.title = d.title ? String(d.title) : null;
+    if (d.subtitle !== undefined) out.subtitle = d.subtitle ? String(d.subtitle) : null;
+    if (d.actionType !== undefined) out.actionType = d.actionType ? String(d.actionType) : null;
+    if (d.actionTarget !== undefined) out.actionTarget = d.actionTarget ? String(d.actionTarget) : null;
+    if (d.sortOrder !== undefined) out.sortOrder = Math.trunc(Number(d.sortOrder) || 0);
+    if (d.isActive !== undefined) out.isActive = !!d.isActive;
+    return out;
+  }
+
   // ─── PROMO CODES & REFERRALS ──────────────────────────────────────────────
 
   @Get('promo-codes')

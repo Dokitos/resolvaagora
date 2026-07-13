@@ -249,6 +249,48 @@ final referralInfoProvider = FutureProvider<ReferralInfo>((ref) {
   return ref.read(clientServiceProvider).getReferralInfo();
 });
 
+/// Banner/slide configurável da página inicial.
+class HomeBanner {
+  final String id;
+  final String imageUrl;
+  final String? title;
+  final String? subtitle;
+  final String? actionType; // 'category' | 'subscription' | 'url'
+  final String? actionTarget;
+
+  const HomeBanner({
+    required this.id,
+    required this.imageUrl,
+    this.title,
+    this.subtitle,
+    this.actionType,
+    this.actionTarget,
+  });
+
+  factory HomeBanner.fromJson(Map<String, dynamic> j) => HomeBanner(
+        id: j['id'] as String,
+        imageUrl: (j['imageUrl'] as String?) ?? '',
+        title: j['title'] as String?,
+        subtitle: j['subtitle'] as String?,
+        actionType: j['actionType'] as String?,
+        actionTarget: j['actionTarget'] as String?,
+      );
+}
+
+/// Banners ativos da página inicial (público). Lista vazia em caso de falha.
+final homeBannersProvider = FutureProvider<List<HomeBanner>>((ref) async {
+  try {
+    final dio = ref.read(dioProvider);
+    final r = await dio.get('/banners');
+    return (r.data as List)
+        .map((e) => HomeBanner.fromJson(Map<String, dynamic>.from(e as Map)))
+        .where((b) => b.imageUrl.isNotEmpty)
+        .toList();
+  } catch (_) {
+    return const [];
+  }
+});
+
 /// Taxa de deslocação efetiva para o cliente atual: parte da taxa base
 /// (definições) e aplica o desconto da subscrição ativa, tal como o backend
 /// faz ao criar o pedido. Assim o total mostrado bate certo com o cobrado.

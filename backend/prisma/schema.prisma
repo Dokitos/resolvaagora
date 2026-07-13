@@ -390,6 +390,22 @@ model SubscriptionPlan {
   @@map("subscription_plans")
 }
 
+/// Banners/slides configuráveis da página inicial (geridos no admin).
+model HomeBanner {
+  id           String   @id @default(uuid())
+  imageUrl     String   @map("image_url")
+  title        String?
+  subtitle     String?
+  actionType   String?  @map("action_type") // 'category' | 'subscription' | 'url' | null
+  actionTarget String?  @map("action_target") // id da categoria, url, etc.
+  sortOrder    Int      @default(0) @map("sort_order")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("home_banners")
+}
+
 model Subscription {
   id                   String             @id @default(uuid())
   clientId             String             @map("client_id")

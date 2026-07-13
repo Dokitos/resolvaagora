@@ -126,6 +126,17 @@ export interface SubscriptionPlan {
   priorityScheduling: boolean
 }
 
+export interface HomeBanner {
+  id: string
+  imageUrl: string
+  title?: string | null
+  subtitle?: string | null
+  actionType?: string | null
+  actionTarget?: string | null
+  sortOrder: number
+  isActive: boolean
+}
+
 export interface SlaAlert {
   id: string
   metric: SlaMetric

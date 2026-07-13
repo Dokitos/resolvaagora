@@ -76,6 +76,18 @@ export const adminApi = {
     }).then((r) => r.data as { url: string })
   },
 
+  banners: () =>
+    api.get('/admin/banners').then((r) => r.data),
+
+  createBanner: (data: any) =>
+    api.post('/admin/banners', data).then((r) => r.data),
+
+  updateBanner: (id: string, data: any) =>
+    api.patch(`/admin/banners/${id}`, data).then((r) => r.data),
+
+  deleteBanner: (id: string) =>
+    api.delete(`/admin/banners/${id}`).then((r) => r.data),
+
   promoCodes: () =>
     api.get('/admin/promo-codes').then((r) => r.data),
 

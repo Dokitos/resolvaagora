@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/i18n/language_selector.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/client_service.dart';
@@ -49,6 +50,7 @@ class ClientHomeScreen extends StatelessWidget {
             );
           })),
           SliverToBoxAdapter(child: _HeroSection()),
+          SliverToBoxAdapter(child: _BannersCarousel()),
           SliverToBoxAdapter(child: _StatsChips()),
           SliverToBoxAdapter(child: _SubscriptionBanner()),
           SliverToBoxAdapter(child: _FeaturedServices()),
@@ -182,6 +184,123 @@ class _HeroSection extends ConsumerWidget {
               onSubmitted: (_) {},
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Home banners carousel (configuráveis no admin) ──────────────────────────
+class _BannersCarousel extends ConsumerStatefulWidget {
+  @override
+  ConsumerState<_BannersCarousel> createState() => _BannersCarouselState();
+}
+
+class _BannersCarouselState extends ConsumerState<_BannersCarousel> {
+  final _controller = PageController();
+  int _current = 0;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onTap(BuildContext context, HomeBanner b) {
+    switch (b.actionType) {
+      case 'category':
+        if (b.actionTarget != null && b.actionTarget!.isNotEmpty) {
+          context.push('/booking/category/${b.actionTarget}');
+        }
+        break;
+      case 'subscription':
+        context.push('/client/subscription');
+        break;
+      case 'url':
+        final t = b.actionTarget;
+        if (t != null && t.isNotEmpty) {
+          launchUrl(Uri.parse(t), mode: LaunchMode.externalApplication);
+        }
+        break;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final banners = ref.watch(homeBannersProvider).valueOrNull ?? const <HomeBanner>[];
+    if (banners.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+      child: Column(
+        children: [
+          SizedBox(
+            height: 160,
+            child: PageView.builder(
+              controller: _controller,
+              itemCount: banners.length,
+              onPageChanged: (i) => setState(() => _current = i),
+              itemBuilder: (_, i) {
+                final b = banners[i];
+                return GestureDetector(
+                  onTap: () => _onTap(context, b),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Image.network(b.imageUrl, fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(color: Colors.grey[200])),
+                        if (b.title != null || b.subtitle != null)
+                          Positioned(
+                            left: 0, right: 0, bottom: 0,
+                            child: Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [Colors.transparent, Colors.black.withOpacity(0.65)],
+                                ),
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (b.title != null)
+                                    Text(b.title!,
+                                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                                  if (b.subtitle != null)
+                                    Text(b.subtitle!,
+                                        style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                                ],
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          if (banners.length > 1)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  for (int i = 0; i < banners.length; i++)
+                    Container(
+                      width: 8, height: 8,
+                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: i == _current ? _yellow : Colors.grey[300],
+                      ),
+                    ),
+                ],
+              ),
+            ),
         ],
       ),
     );
