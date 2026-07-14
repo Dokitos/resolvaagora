@@ -1,6 +1,7 @@
 import { Controller, Get } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SettingsService } from './settings.service';
+import { StorageService } from '../storage/storage.service';
 
 /** Taxa de deslocação (mantida em sincronia com create-service-request). */
 export const DISPLACEMENT_FEE = 25.0;
@@ -11,6 +12,7 @@ export class SettingsController {
   constructor(
     private readonly settings: SettingsService,
     private readonly config: ConfigService,
+    private readonly storage: StorageService,
   ) {}
 
   @Get('public')
@@ -27,6 +29,8 @@ export class SettingsController {
       // A app usa isto para iniciar a Stripe e mostrar o total com deslocação.
       displacementFee: DISPLACEMENT_FEE,
       stripePublishableKey: pk.includes('placeholder') ? '' : pk,
+      // Indicador de diagnóstico: true se o R2 está configurado (não stub).
+      imageUploadsEnabled: this.storage.configured,
     };
   }
 }
