@@ -211,6 +211,17 @@ class ClientService {
   Future<void> resendVerificationEmail() async {
     await _dio.post('/auth/resend-verification');
   }
+
+  /// Envia um código OTP por SMS para o número indicado.
+  Future<void> sendOtp(String phone) async {
+    await _dio.post('/otp/send', data: {'phone': phone});
+  }
+
+  /// Verifica o código OTP. Devolve true se válido.
+  Future<bool> verifyOtp(String code) async {
+    final r = await _dio.post('/otp/verify', data: {'code': code});
+    return (r.data as Map)['valid'] == true;
+  }
 }
 
 final clientServiceProvider = Provider<ClientService>((ref) {

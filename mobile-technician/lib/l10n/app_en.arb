@@ -119,6 +119,8 @@
   "codeResent": "Code resent",
   "clientDidntReceiveSms": "CLIENT DIDN'T GET THE SMS",
   "smsDisabledTestMode": "SMS verification is disabled in test mode — you can continue directly.",
+  "otpEnterCode": "Enter the 6-digit code.",
+  "otpInvalid": "Invalid code. Please try again.",
 
   "addressDetailsTitle": "Enter the details of the address where the service will take place",
   "addrStreet": "Street / Avenue",

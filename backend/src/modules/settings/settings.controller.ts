@@ -2,6 +2,7 @@ import { Controller, Get } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SettingsService } from './settings.service';
 import { StorageService } from '../storage/storage.service';
+import { SmsService } from '../otp/sms.service';
 
 /** Taxa de deslocação (mantida em sincronia com create-service-request). */
 export const DISPLACEMENT_FEE = 25.0;
@@ -13,6 +14,7 @@ export class SettingsController {
     private readonly settings: SettingsService,
     private readonly config: ConfigService,
     private readonly storage: StorageService,
+    private readonly sms: SmsService,
   ) {}
 
   @Get('public')
@@ -31,6 +33,8 @@ export class SettingsController {
       stripePublishableKey: pk.includes('placeholder') ? '' : pk,
       // Indicador de diagnóstico: true se o R2 está configurado (não stub).
       imageUploadsEnabled: this.storage.configured,
+      // A app só exige OTP quando a verificação está ligada E a Twilio configurada.
+      smsConfigured: this.sms.configured,
     };
   }
 }

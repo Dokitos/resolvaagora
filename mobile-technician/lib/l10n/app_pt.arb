@@ -126,6 +126,8 @@
   "codeResent": "Código reenviado",
   "clientDidntReceiveSms": "CLIENTE NÃO RECEBEU SMS",
   "smsDisabledTestMode": "Validação por SMS desativada em modo de teste — podes avançar diretamente.",
+  "otpEnterCode": "Introduz o código de 6 dígitos.",
+  "otpInvalid": "Código inválido. Tenta novamente.",
 
   "addressDetailsTitle": "Indica os detalhes da morada onde será realizado o serviço",
   "addrStreet": "Rua / Avenida",

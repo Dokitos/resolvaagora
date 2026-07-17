@@ -20,6 +20,7 @@ import { PromotionsModule } from './modules/promotions/promotions.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { StorageModule } from './modules/storage/storage.module';
 import { BannersModule } from './modules/banners/banners.module';
+import { OtpModule } from './modules/otp/otp.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { BannersModule } from './modules/banners/banners.module';
     PromotionsModule,
     SettingsModule,
     BannersModule,
+    OtpModule,
   ],
   providers: [
     // Rate-limiting global (protege todos os endpoints; rotas sensíveis apertam com @Throttle)
