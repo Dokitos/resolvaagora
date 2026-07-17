@@ -94,13 +94,26 @@ class ReferralInfo {
   final String? code;
   final int referredCount;
   final double rewardTotal;
+  final double rewardAmount; // recompensa configurada por amigo
+  final bool active;
+  final String shareMessage; // mensagem de partilha (já com o código)
 
-  const ReferralInfo({this.code, this.referredCount = 0, this.rewardTotal = 0});
+  const ReferralInfo({
+    this.code,
+    this.referredCount = 0,
+    this.rewardTotal = 0,
+    this.rewardAmount = 10,
+    this.active = true,
+    this.shareMessage = '',
+  });
 
   factory ReferralInfo.fromJson(Map<String, dynamic> j) => ReferralInfo(
         code: j['code'] as String?,
         referredCount: (j['referredCount'] as num?)?.toInt() ?? 0,
         rewardTotal: (j['rewardTotal'] as num?)?.toDouble() ?? 0,
+        rewardAmount: (j['rewardAmount'] as num?)?.toDouble() ?? 10,
+        active: j['active'] as bool? ?? true,
+        shareMessage: (j['shareMessage'] as String?) ?? '',
       );
 }
 

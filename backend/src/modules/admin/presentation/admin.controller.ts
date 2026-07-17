@@ -591,6 +591,29 @@ export class AdminController {
     });
   }
 
+  /** Config do programa "Convida Amigos" (singleton). */
+  @Get('referral-config')
+  referralConfig() {
+    return this.prisma.referralConfig.upsert({
+      where: { id: 'default' },
+      update: {},
+      create: { id: 'default' },
+    });
+  }
+
+  @Patch('referral-config')
+  updateReferralConfig(@Body() data: any) {
+    const out: any = {};
+    if (data.rewardAmount !== undefined) out.rewardAmount = Math.max(0, Number(data.rewardAmount) || 0);
+    if (data.shareMessage !== undefined) out.shareMessage = data.shareMessage ? String(data.shareMessage) : null;
+    if (data.isActive !== undefined) out.isActive = !!data.isActive;
+    return this.prisma.referralConfig.upsert({
+      where: { id: 'default' },
+      update: out,
+      create: { id: 'default', ...out },
+    });
+  }
+
   // ─── APP SETTINGS (feature flags / maintenance) ────────────────────────────
 
   @Get('settings')

@@ -390,6 +390,17 @@ model SubscriptionPlan {
   @@map("subscription_plans")
 }
 
+/// Configuração do programa "Convida Amigos" (singleton, gerido no admin).
+model ReferralConfig {
+  id           String   @id @default("default")
+  rewardAmount Decimal  @default(10) @map("reward_amount") @db.Decimal(10, 2)
+  shareMessage String?  @map("share_message") @db.Text
+  isActive     Boolean  @default(true) @map("is_active")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("referral_config")
+}
+
 /// Banners/slides configuráveis da página inicial (geridos no admin).
 model HomeBanner {
   id           String   @id @default(uuid())

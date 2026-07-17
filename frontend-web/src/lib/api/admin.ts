@@ -76,6 +76,12 @@ export const adminApi = {
     }).then((r) => r.data as { url: string })
   },
 
+  referralConfig: () =>
+    api.get('/admin/referral-config').then((r) => r.data),
+
+  updateReferralConfig: (data: any) =>
+    api.patch('/admin/referral-config', data).then((r) => r.data),
+
   banners: () =>
     api.get('/admin/banners').then((r) => r.data),
 

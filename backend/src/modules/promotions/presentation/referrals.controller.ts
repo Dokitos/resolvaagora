@@ -34,8 +34,14 @@ export class ReferralsController {
 
   @Get('me')
   async me(@CurrentUser() user: AuthenticatedUser) {
+    const config = await this.prisma.referralConfig.findUnique({ where: { id: 'default' } });
+    const rewardAmount = Number(config?.rewardAmount ?? 10);
+    const active = config?.isActive ?? true;
+
     const client = await this.prisma.client.findFirst({ where: { userId: user.id } });
-    if (!client) return { code: null, referredCount: 0, rewardTotal: 0, referrals: [] };
+    if (!client) {
+      return { code: null, referredCount: 0, rewardTotal: 0, rewardAmount, active, shareMessage: '', referrals: [] };
+    }
 
     const code = await ReferralsController.ensureCode(this.prisma, client.id, client.firstName);
 
@@ -47,10 +53,18 @@ export class ReferralsController {
 
     const rewardTotal = referrals.reduce((sum, r) => sum + Number(r.rewardAmount ?? 0), 0);
 
+    const rawMsg =
+      config?.shareMessage ??
+      'Junta-te à ResolvaAgora com o meu código {code} e poupamos os dois! https://resolvaagora.pt';
+    const shareMessage = rawMsg.replace(/\{code\}/g, code ?? '');
+
     return {
       code,
       referredCount: referrals.length,
       rewardTotal,
+      rewardAmount,
+      active,
+      shareMessage,
       referrals: referrals.map((r) => ({
         name: r.referred ? `${r.referred.firstName} ${r.referred.lastName}` : 'Convidado',
         status: r.status,

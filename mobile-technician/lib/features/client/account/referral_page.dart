@@ -37,7 +37,10 @@ class ReferralPage extends ConsumerWidget {
         ),
         data: (r) {
           final code = r.code ?? '------';
-          final message = 'Junta-te à ResolvaAgora com o meu código $code e poupamos os dois! https://resolvaagora.pt';
+          final message = r.shareMessage.isNotEmpty
+              ? r.shareMessage
+              : 'Junta-te à ResolvaAgora com o meu código $code e poupamos os dois! https://resolvaagora.pt';
+          final rewardLabel = '${r.rewardAmount.toStringAsFixed(0)}€';
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
@@ -54,10 +57,10 @@ class ReferralPage extends ConsumerWidget {
                   children: [
                     const Icon(Icons.card_giftcard, color: Colors.white, size: 40),
                     const SizedBox(height: 12),
-                    const Text('Convida e ganha', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                    Text('Convida e ganha $rewardLabel', style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 6),
-                    const Text('Partilha o teu código. Quando um amigo fizer o primeiro serviço, ganham os dois.',
-                        textAlign: TextAlign.center, style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4)),
+                    Text('Partilha o teu código. Quando um amigo fizer o primeiro serviço, ganham $rewardLabel cada.',
+                        textAlign: TextAlign.center, style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.4)),
                     const SizedBox(height: 20),
                     GestureDetector(
                       onTap: () {
