@@ -24,6 +24,10 @@
   "accountHelp": "Help & support",
   "accountTerms": "Terms & conditions",
   "accountLogout": "Sign out",
+  "emailVerifyTitle": "Confirm your email",
+  "emailVerifyDesc": "We sent you a confirmation link. Check your inbox.",
+  "emailVerifyResend": "Resend",
+  "emailVerifySent": "Confirmation email resent.",
 
   "ordersEmptyTitle": "You don't have any orders yet",
   "ordersEmptyMessage": "Your service requests will appear here. Place your first one in seconds.",

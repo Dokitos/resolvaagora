@@ -9,6 +9,7 @@ import { RegisterClientUseCase } from './application/use-cases/register-client.u
 import { RefreshTokenUseCase } from './application/use-cases/refresh-token.use-case';
 import { ForgotPasswordUseCase } from './application/use-cases/forgot-password.use-case';
 import { ResetPasswordUseCase } from './application/use-cases/reset-password.use-case';
+import { EmailVerificationUseCase } from './application/use-cases/email-verification.use-case';
 import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
@@ -32,6 +33,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     RefreshTokenUseCase,
     ForgotPasswordUseCase,
     ResetPasswordUseCase,
+    EmailVerificationUseCase,
   ],
   exports: [JwtModule, PassportModule],
 })

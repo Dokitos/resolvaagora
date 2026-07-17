@@ -62,6 +62,10 @@ class ClientAccountScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
 
+          // Aviso suave de confirmação de email (não bloqueia o uso).
+          if (profile.valueOrNull?.emailVerified == false)
+            const _EmailVerifyBanner(),
+
           // ── Conta ──
           _SectionTitle(l.accountSectionAccount),
           _MenuGroup(children: [
@@ -138,6 +142,68 @@ class ClientAccountScreen extends ConsumerWidget {
             child: Text('ResolvaAgora · v1.0.0', style: TextStyle(color: Colors.grey[400], fontSize: 12)),
           ),
           const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmailVerifyBanner extends ConsumerStatefulWidget {
+  const _EmailVerifyBanner();
+  @override
+  ConsumerState<_EmailVerifyBanner> createState() => _EmailVerifyBannerState();
+}
+
+class _EmailVerifyBannerState extends ConsumerState<_EmailVerifyBanner> {
+  bool _sending = false;
+
+  Future<void> _resend() async {
+    final l = AppLocalizations.of(context);
+    setState(() => _sending = true);
+    try {
+      await ref.read(clientServiceProvider).resendVerificationEmail();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l.emailVerifySent)));
+    } catch (_) {
+      // silencioso
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.brandYellowSoft,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.brandYellow),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.mark_email_unread_outlined, color: AppTheme.brandBlack),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(l.emailVerifyTitle, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                const SizedBox(height: 2),
+                Text(l.emailVerifyDesc, style: TextStyle(color: Colors.grey[800], fontSize: 12, height: 1.3)),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          _sending
+              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.brandBlack))
+              : TextButton(
+                  onPressed: _resend,
+                  style: TextButton.styleFrom(foregroundColor: AppTheme.brandBlack),
+                  child: Text(l.emailVerifyResend, style: const TextStyle(fontWeight: FontWeight.bold)),
+                ),
         ],
       ),
     );

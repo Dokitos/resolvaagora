@@ -52,6 +52,7 @@ class ClientProfile {
   final String lastName;
   final String? phone;
   final String? nif;
+  final bool emailVerified;
   final List<ClientAddress> addresses;
 
   const ClientProfile({
@@ -61,6 +62,7 @@ class ClientProfile {
     required this.lastName,
     this.phone,
     this.nif,
+    this.emailVerified = true,
     this.addresses = const [],
   });
 
@@ -83,6 +85,7 @@ class ClientProfile {
         lastName: (j['lastName'] as String?) ?? '',
         phone: j['phone'] as String?,
         nif: j['nif'] as String?,
+        emailVerified: j['emailVerified'] as bool? ?? true,
         addresses: (j['addresses'] as List<dynamic>?)
                 ?.map((e) => ClientAddress.fromJson(e as Map<String, dynamic>))
                 .toList() ??

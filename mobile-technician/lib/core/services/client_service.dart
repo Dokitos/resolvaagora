@@ -206,6 +206,11 @@ class ClientService {
     final r = await _dio.get('/referrals/me');
     return ReferralInfo.fromJson(r.data as Map<String, dynamic>);
   }
+
+  /// Reenvia o email de confirmação de conta.
+  Future<void> resendVerificationEmail() async {
+    await _dio.post('/auth/resend-verification');
+  }
 }
 
 final clientServiceProvider = Provider<ClientService>((ref) {

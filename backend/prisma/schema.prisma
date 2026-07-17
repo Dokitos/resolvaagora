@@ -130,13 +130,15 @@ enum DevicePlatform {
 // ─── USER ────────────────────────────────────────────────────────────────────
 
 model User {
-  id           String     @id @default(uuid())
-  email        String     @unique
-  passwordHash String     @map("password_hash")
-  role         Role
-  status       UserStatus @default(ACTIVE)
-  createdAt    DateTime   @default(now()) @map("created_at")
-  updatedAt    DateTime   @updatedAt @map("updated_at")
+  id               String     @id @default(uuid())
+  email            String     @unique
+  passwordHash     String     @map("password_hash")
+  role             Role
+  status           UserStatus @default(ACTIVE)
+  emailVerified    Boolean    @default(false) @map("email_verified")
+  emailVerifyToken String?    @map("email_verify_token")
+  createdAt        DateTime   @default(now()) @map("created_at")
+  updatedAt        DateTime   @updatedAt @map("updated_at")
 
   client          Client?
   technician      Technician?

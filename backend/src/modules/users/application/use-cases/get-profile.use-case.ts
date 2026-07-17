@@ -31,6 +31,7 @@ export class GetProfileUseCase {
       id: user.id,
       email: user.email,
       role: user.role,
+      emailVerified: user.emailVerified,
       clientId,
       ...clientData,
     };

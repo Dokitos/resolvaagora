@@ -21,6 +21,11 @@ export class EmailService {
     });
   }
 
+  /** True quando o SMTP está realmente configurado (utilizador + password). */
+  get configured(): boolean {
+    return !!this.config.get('SMTP_USER') && !!this.config.get('SMTP_PASS');
+  }
+
   async send(to: string, subject: string, html: string): Promise<void> {
     try {
       await this.transporter.sendMail({ from: this.from, to, subject, html });
@@ -80,6 +85,24 @@ export class EmailService {
             <tr><td style="padding:10px 0 0;border-top:1px solid #E5E7EB;font-weight:bold">Total</td><td style="padding:10px 0 0;border-top:1px solid #E5E7EB;text-align:right;font-weight:bold;color:#161616">${data.total}</td></tr>
           </table>
           <p style="margin:20px 0 0;color:#9CA3AF;font-size:12px">Obrigado por escolher a ResolvaAgora. Documento não fiscal.</p>
+        </div>
+      </div>
+    `;
+  }
+
+  verifyEmailHtml(link: string): string {
+    return `
+      <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;border:1px solid #E5E7EB;border-radius:12px;overflow:hidden">
+        <div style="background:#161616;color:#F5B301;padding:20px 24px">
+          <h2 style="margin:0">ResolvaAgora</h2>
+          <p style="margin:4px 0 0;color:#fff;opacity:.85">Confirma o teu email</p>
+        </div>
+        <div style="padding:24px">
+          <p>Obrigado por te registares na ResolvaAgora! Confirma o teu email para garantires o acesso a todas as funcionalidades.</p>
+          <p style="text-align:center;margin:26px 0">
+            <a href="${link}" style="background:#F5B301;color:#161616;text-decoration:none;font-weight:bold;padding:13px 30px;border-radius:26px;display:inline-block">Confirmar email</a>
+          </p>
+          <p style="color:#6B7280;font-size:13px">Se não te registaste na ResolvaAgora, ignora este email.</p>
         </div>
       </div>
     `;

@@ -1,9 +1,11 @@
 import { Injectable, ConflictException, ForbiddenException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { randomBytes } from 'crypto';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '@shared/infrastructure/database/prisma.service';
 import { RedisService } from '@shared/infrastructure/cache/redis.service';
+import { EmailService } from '../../../notifications/infrastructure/email.service';
 import { RegisterDto } from '../dto/register.dto';
 import { AuthTokens } from './login.use-case';
 
@@ -14,6 +16,7 @@ export class RegisterClientUseCase {
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
     private readonly redis: RedisService,
+    private readonly email: EmailService,
   ) {}
 
   async execute(dto: RegisterDto): Promise<AuthTokens> {
@@ -31,12 +34,18 @@ export class RegisterClientUseCase {
     }
 
     const passwordHash = await bcrypt.hash(dto.password, 12);
+    // Só se ativa a confirmação de email quando o SMTP está configurado —
+    // caso contrário a conta fica verificada (evita aviso permanente sem envio).
+    const emailEnabled = this.email.configured;
+    const verifyToken = randomBytes(32).toString('hex');
 
     const user = await this.prisma.user.create({
       data: {
         email: dto.email.toLowerCase(),
         passwordHash,
         role: 'CLIENT',
+        emailVerified: !emailEnabled,
+        emailVerifyToken: emailEnabled ? verifyToken : null,
         client: {
           create: {
             firstName: dto.firstName,
@@ -47,6 +56,15 @@ export class RegisterClientUseCase {
       },
       include: { client: true },
     });
+
+    // Confirmação de email (suave): envia o link; a conta funciona na mesma.
+    if (emailEnabled) {
+      const apiBase = this.config.get<string>('PUBLIC_API_URL', 'https://api.resolvaagora.pt/api/v1');
+      const verifyLink = `${apiBase}/auth/verify-email?token=${verifyToken}`;
+      this.email
+        .send(user.email, 'Confirma o teu email — ResolvaAgora', this.email.verifyEmailHtml(verifyLink))
+        .catch(() => undefined);
+    }
 
     // Link a referral if the new client signed up with someone's code.
     if (dto.referralCode && user.client) {

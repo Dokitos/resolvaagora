@@ -24,6 +24,10 @@
   "accountHelp": "Ajuda e suporte",
   "accountTerms": "Termos e condições",
   "accountLogout": "Terminar sessão",
+  "emailVerifyTitle": "Confirma o teu email",
+  "emailVerifyDesc": "Enviámos-te um link de confirmação. Verifica a tua caixa de entrada.",
+  "emailVerifyResend": "Reenviar",
+  "emailVerifySent": "Email de confirmação reenviado.",
 
   "ordersEmptyTitle": "Ainda não tens pedidos",
   "ordersEmptyMessage": "Os teus pedidos de serviço aparecerão aqui. Faz o primeiro em segundos.",
