@@ -1,4 +1,5 @@
-import { Controller, Get, Patch, Param, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Param, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
+import { DevicePlatform } from '@prisma/client';
 import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard';
 import { CurrentUser } from '../../auth/presentation/decorators/current-user.decorator';
 import { AuthenticatedUser } from '../../auth/infrastructure/jwt.strategy';
@@ -15,6 +16,22 @@ export class NotificationsController {
       where: { userId: user.id },
       orderBy: { createdAt: 'desc' },
       take: 50,
+    });
+  }
+
+  /** Regista/atualiza o token FCM do dispositivo do utilizador autenticado. */
+  @Post('register-token')
+  @HttpCode(HttpStatus.OK)
+  async registerToken(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() body: { token: string; platform?: string },
+  ) {
+    const platform = (String(body.platform ?? 'ANDROID').toUpperCase() as DevicePlatform);
+    const normalized = ['ANDROID', 'IOS', 'WEB'].includes(platform) ? platform : 'ANDROID';
+    return this.prisma.fcmToken.upsert({
+      where: { token: body.token },
+      create: { userId: user.id, token: body.token, platform: normalized },
+      update: { userId: user.id, platform: normalized },
     });
   }
 

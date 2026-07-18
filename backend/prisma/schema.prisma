@@ -159,6 +159,7 @@ model Client {
   lastName     String   @map("last_name")
   phone        String?
   nif          String?
+  photoUrl     String?  @map("photo_url")
   referralCode String?  @unique @map("referral_code")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")

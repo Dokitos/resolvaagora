@@ -7,9 +7,14 @@ import {
   Body,
   Param,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
+  NotFoundException,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard';
 import { Roles } from '../../auth/presentation/decorators/roles.decorator';
 import { RolesGuard } from '../../auth/presentation/guards/roles.guard';
@@ -20,6 +25,8 @@ import { UpdateProfileUseCase } from '../application/use-cases/update-profile.us
 import { ManageAddressUseCase } from '../application/use-cases/manage-address.use-case';
 import { UpdateProfileDto } from '../application/dto/update-profile.dto';
 import { CreateAddressDto, UpdateAddressDto } from '../application/dto/address.dto';
+import { StorageService } from '../../storage/storage.service';
+import { PrismaService } from '@shared/infrastructure/database/prisma.service';
 
 @Controller('clients')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -29,11 +36,35 @@ export class UsersController {
     private readonly getProfile: GetProfileUseCase,
     private readonly updateProfile: UpdateProfileUseCase,
     private readonly manageAddress: ManageAddressUseCase,
+    private readonly storage: StorageService,
+    private readonly prisma: PrismaService,
   ) {}
 
   @Get('me')
   profile(@CurrentUser() user: AuthenticatedUser) {
     return this.getProfile.execute(user.id);
+  }
+
+  /** Enviar/atualizar a foto de perfil do cliente (R2). */
+  @Post('me/photo')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadPhoto(
+    @CurrentUser() user: AuthenticatedUser,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) throw new BadRequestException('Nenhum ficheiro enviado.');
+    const u = await this.prisma.user.findUnique({
+      where: { id: user.id },
+      include: { client: true },
+    });
+    if (!u?.client) throw new NotFoundException('Client not found');
+
+    const url = await this.storage.uploadImage(file, 'clients');
+    await this.prisma.client.update({
+      where: { id: u.client.id },
+      data: { photoUrl: url },
+    });
+    return { photoUrl: url };
   }
 
   @Patch('me')

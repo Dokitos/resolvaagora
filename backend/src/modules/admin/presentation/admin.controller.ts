@@ -22,6 +22,7 @@ import { CreateTechnicianDto } from '../../technicians/application/dto/create-te
 import { CurrentUser } from '../../auth/presentation/decorators/current-user.decorator';
 import { AuthenticatedUser } from '../../auth/infrastructure/jwt.strategy';
 import { NotificationsGateway } from '../../notifications/presentation/notifications.gateway';
+import { FcmService } from '../../notifications/infrastructure/fcm.service';
 import { SettingsService } from '../../settings/settings.service';
 
 @Controller('admin')
@@ -33,6 +34,7 @@ export class AdminController {
     private readonly autoAssign: AutoAssignUseCase,
     private readonly createTechnician: CreateTechnicianUseCase,
     private readonly gateway: NotificationsGateway,
+    private readonly fcm: FcmService,
     private readonly settings: SettingsService,
   ) {}
 
@@ -328,8 +330,51 @@ export class AdminController {
   }
 
   @Patch('technicians/:id')
-  updateTechnician(@Param('id') id: string, @Body() data: any) {
-    return this.prisma.technician.update({ where: { id }, data });
+  async updateTechnician(@Param('id') id: string, @Body() data: any) {
+    const scalars = this.technicianScalarFields(data);
+
+    await this.prisma.$transaction(async (tx) => {
+      if (Object.keys(scalars).length > 0) {
+        await tx.technician.update({ where: { id }, data: scalars });
+      }
+
+      // specialties / coverageDistricts são RELAÇÕES → recriar em vez de gravar
+      // diretamente no update (evita o erro "Erro ao guardar técnico").
+      if (Array.isArray(data.specialties)) {
+        await tx.technicianSpecialty.deleteMany({ where: { technicianId: id } });
+        if (data.specialties.length > 0) {
+          await tx.technicianSpecialty.createMany({
+            data: data.specialties.map((s: any) => ({ technicianId: id, specialty: s })),
+            skipDuplicates: true,
+          });
+        }
+      }
+
+      if (Array.isArray(data.coverageDistricts)) {
+        await tx.technicianDistrict.deleteMany({ where: { technicianId: id } });
+        if (data.coverageDistricts.length > 0) {
+          await tx.technicianDistrict.createMany({
+            data: data.coverageDistricts.map((d: any) => ({ technicianId: id, district: String(d) })),
+            skipDuplicates: true,
+          });
+        }
+      }
+    });
+
+    return this.prisma.technician.findUnique({
+      where: { id },
+      include: { specialties: true, coverageDistricts: true },
+    });
+  }
+
+  /** Apenas os campos escalares editáveis do técnico (evita mass-assignment de relações). */
+  private technicianScalarFields(d: any) {
+    const out: any = {};
+    if (d.firstName !== undefined) out.firstName = String(d.firstName);
+    if (d.lastName !== undefined) out.lastName = String(d.lastName);
+    if (d.phone !== undefined) out.phone = String(d.phone);
+    if (d.dailyServiceLimit !== undefined) out.dailyServiceLimit = Math.trunc(Number(d.dailyServiceLimit));
+    return out;
   }
 
   @Patch('technicians/:id/daily-limit')
@@ -396,43 +441,74 @@ export class AdminController {
       ...(to && { lte: new Date(to) }),
     };
 
-    const [displacementAgg, commissionsAgg, subscriptionsAgg] = await Promise.all([
-      this.prisma.payment.aggregate({
-        where: { type: 'DISPLACEMENT', status: 'COMPLETED', paidAt: dateFilter },
-        _sum: { amount: true },
-        _count: true,
-      }),
-      this.prisma.earning.aggregate({
-        where: { type: 'SERVICE', earnedAt: dateFilter },
-        _sum: { amount: true },
-        _count: true,
-      }),
-      this.prisma.payment.aggregate({
+    // O pagamento real do pedido é UM único Payment do tipo SERVICE, com
+    // amount = itens + deslocação, ligado ao ServiceRequest (que guarda a
+    // displacementFee). A comissão da plataforma é 15% dos itens.
+    const [orderPayments, subscriptions] = await Promise.all([
+      this.prisma.payment.findMany({
         where: { type: 'SERVICE', status: 'COMPLETED', paidAt: dateFilter },
-        _sum: { amount: true },
-        _count: true,
+        include: { serviceRequest: true },
+      }),
+      this.prisma.subscription.findMany({
+        where: { status: 'ACTIVE', startsAt: dateFilter },
+        include: { plan: true },
       }),
     ]);
 
-    const displacement = {
-      total: Number(displacementAgg._sum.amount ?? 0),
-      count: displacementAgg._count,
-    };
-    const commissions = {
-      total: Number(commissionsAgg._sum.amount ?? 0),
-      count: commissionsAgg._count,
-    };
-    const subscriptions = {
-      total: Number(subscriptionsAgg._sum.amount ?? 0),
-      count: subscriptionsAgg._count,
+    const round = (n: number) => Number(n.toFixed(2));
+    const dayKey = (d: Date) => d.toISOString().slice(0, 10);
+    const byDay = new Map<string, { displacement: number; commissions: number; subscriptions: number }>();
+    const bucket = (day: string) => {
+      let b = byDay.get(day);
+      if (!b) {
+        b = { displacement: 0, commissions: 0, subscriptions: 0 };
+        byDay.set(day, b);
+      }
+      return b;
     };
 
+    let displacementTotal = 0;
+    let commissionsTotal = 0;
+    let ordersTotal = 0;
+
+    for (const p of orderPayments) {
+      const amount = Number(p.amount);
+      const disp = Number(p.serviceRequest?.displacementFee ?? 0);
+      const items = amount - disp;
+      const commission = items * 0.15;
+
+      displacementTotal += disp;
+      commissionsTotal += commission;
+      ordersTotal += amount;
+
+      const b = bucket(dayKey(p.paidAt ?? p.createdAt));
+      b.displacement += disp;
+      b.commissions += commission;
+    }
+
+    let subscriptionsTotal = 0;
+    for (const s of subscriptions) {
+      const price = Number(s.plan.yearlyPrice);
+      subscriptionsTotal += price;
+      bucket(dayKey(s.startsAt ?? s.createdAt)).subscriptions += price;
+    }
+
+    const breakdown = Array.from(byDay.entries())
+      .map(([date, v]) => ({
+        date,
+        displacement: round(v.displacement),
+        commissions: round(v.commissions),
+        subscriptions: round(v.subscriptions),
+        total: round(v.displacement + v.commissions + v.subscriptions),
+      }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
     return {
-      displacement,
-      commissions,
-      subscriptions,
-      totalRevenue: displacement.total + commissions.total + subscriptions.total,
-      breakdown: [],
+      displacement: { total: round(displacementTotal), count: orderPayments.length },
+      commissions: { total: round(commissionsTotal), count: orderPayments.length },
+      subscriptions: { total: round(subscriptionsTotal), count: subscriptions.length },
+      totalRevenue: round(ordersTotal + subscriptionsTotal),
+      breakdown,
     };
   }
 
@@ -655,6 +731,15 @@ export class AdminController {
       for (const id of userIds) {
         this.gateway.emitToUser(id, 'notification', { title: body.title, body: body.body });
       }
+
+      // Push (FCM) — auto-desativa sem credenciais Firebase.
+      const tokens = (
+        await this.prisma.fcmToken.findMany({
+          where: { userId: { in: userIds } },
+          select: { token: true },
+        })
+      ).map((t) => t.token);
+      await this.fcm.sendToMultiple(tokens, body.title, body.body);
     }
     return { sent: userIds.length };
   }
