@@ -35,6 +35,8 @@ export class SettingsController {
       imageUploadsEnabled: this.storage.configured,
       // A app só exige OTP quando a verificação está ligada E a Twilio configurada.
       smsConfigured: this.sms.configured,
+      // Diagnóstico: true se o SMTP (Resend) está configurado no backend.
+      emailConfigured: !!(this.config.get('SMTP_USER') && this.config.get('SMTP_PASS')),
     };
   }
 }
