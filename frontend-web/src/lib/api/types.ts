@@ -123,6 +123,7 @@ export interface SubscriptionPlan {
   yearlyPrice: number
   displacementDiscountPct: number
   freeVisitsCount: number
+  quoteExpiryDays?: number | null
   priorityScheduling: boolean
 }
 

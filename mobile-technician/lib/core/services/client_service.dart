@@ -149,6 +149,18 @@ class ClientService {
     return Map<String, dynamic>.from(r.data as Map);
   }
 
+  /// Aceita o orçamento enviado pelo técnico (→ QUOTE_APPROVED).
+  Future<void> approveQuote(String id) async {
+    await _dio.post('/service-requests/$id/quote/approve');
+  }
+
+  /// Recusa o orçamento enviado pelo técnico (→ QUOTE_REJECTED), com motivo opcional.
+  Future<void> rejectQuote(String id, {String? reason}) async {
+    await _dio.post('/service-requests/$id/quote/reject', data: {
+      if (reason != null && reason.trim().isNotEmpty) 'reason': reason.trim(),
+    });
+  }
+
   /// Avalia um serviço concluído (1–5 estrelas + comentário opcional).
   Future<void> submitReview(String id, int rating, {String? comment}) async {
     await _dio.post('/service-requests/$id/review', data: {

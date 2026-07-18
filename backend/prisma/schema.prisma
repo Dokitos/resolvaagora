@@ -384,6 +384,8 @@ model SubscriptionPlan {
   displacementDiscountPct Decimal  @map("displacement_discount_pct") @db.Decimal(5, 2)
   freeVisitsCount         Int      @map("free_visits_count")
   priorityScheduling      Boolean  @default(true) @map("priority_scheduling")
+  /// Prazo (dias) para o cliente responder a orçamentos. Null = usa o padrão (2 dias).
+  quoteExpiryDays         Int?     @map("quote_expiry_days")
   isActive                Boolean  @default(true) @map("is_active")
   createdAt               DateTime @default(now()) @map("created_at")
   updatedAt               DateTime @updatedAt @map("updated_at")

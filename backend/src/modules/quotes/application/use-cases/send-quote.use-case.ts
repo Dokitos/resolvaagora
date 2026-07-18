@@ -38,7 +38,17 @@ export class SendQuoteUseCase {
     if (existing) throw new BadRequestException('Quote already sent');
 
     const VAT_RATE = 0.23;
-    const expiryHours = this.config.get<number>('QUOTE_EXPIRY_HOURS', 48);
+    // Prazo para o cliente responder: 2 dias (48h) por defeito. Clientes com
+    // subscrição ativa (premium) usam o prazo definido no plano (painel admin).
+    let expiryHours = this.config.get<number>('QUOTE_EXPIRY_HOURS', 48);
+    const activeSub = await this.prisma.subscription.findFirst({
+      where: { clientId: sr.clientId, status: 'ACTIVE' },
+      include: { plan: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (activeSub?.plan?.quoteExpiryDays && activeSub.plan.quoteExpiryDays > 0) {
+      expiryHours = activeSub.plan.quoteExpiryDays * 24;
+    }
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + expiryHours);
 

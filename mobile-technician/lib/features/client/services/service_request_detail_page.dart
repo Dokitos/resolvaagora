@@ -201,6 +201,16 @@ class _Detail extends ConsumerWidget {
         ),
         const SizedBox(height: 20),
 
+        // Responder ao orçamento — aceitar/recusar dentro do prazo definido.
+        if (request.status == ServiceStatus.QUOTE_SENT && request.quote != null) ...[
+          _QuoteResponseCard(
+            request: request,
+            onAccept: () => _respondQuote(context, ref, approve: true),
+            onReject: () => _respondQuote(context, ref, approve: false),
+          ),
+          const SizedBox(height: 20),
+        ],
+
         // Recibo por email — disponível assim que há pagamento/serviço
         if (request.status != ServiceStatus.DRAFT &&
             request.status != ServiceStatus.AWAITING_PAYMENT &&
@@ -296,6 +306,169 @@ class _Detail extends ConsumerWidget {
         );
       }
     }
+  }
+
+  Future<void> _respondQuote(BuildContext context, WidgetRef ref, {required bool approve}) async {
+    String? reason;
+    if (approve) {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Aceitar orçamento?'),
+          content: const Text(
+              'Ao aceitar, autorizas o técnico a avançar com o serviço pelo valor apresentado.'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Voltar')),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Sim, aceitar', style: TextStyle(color: Color(0xFF16A34A))),
+            ),
+          ],
+        ),
+      );
+      if (ok != true) return;
+    } else {
+      final controller = TextEditingController();
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Recusar orçamento?'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Indica o motivo (opcional):'),
+              const SizedBox(height: 8),
+              TextField(
+                controller: controller,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  hintText: 'Ex.: valor acima do esperado',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Voltar')),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Recusar', style: TextStyle(color: AppTheme.brandRed)),
+            ),
+          ],
+        ),
+      );
+      if (ok != true) return;
+      reason = controller.text;
+    }
+
+    try {
+      final svc = ref.read(clientServiceProvider);
+      if (approve) {
+        await svc.approveQuote(request.id);
+      } else {
+        await svc.rejectQuote(request.id, reason: reason);
+      }
+      ref.invalidate(clientServiceRequestsProvider);
+      ref.invalidate(serviceRequestDetailProvider(request.id));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(approve ? 'Orçamento aceite' : 'Orçamento recusado')),
+        );
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Não foi possível responder ao orçamento. O prazo pode ter terminado.')),
+        );
+      }
+    }
+  }
+}
+
+/// Cartão de resposta ao orçamento: mostra o prazo e os botões Aceitar/Recusar.
+class _QuoteResponseCard extends StatelessWidget {
+  final ServiceRequest request;
+  final VoidCallback onAccept;
+  final VoidCallback onReject;
+  const _QuoteResponseCard({required this.request, required this.onAccept, required this.onReject});
+
+  String _humanize(Duration d) {
+    if (d.inDays >= 1) return 'faltam ${d.inDays} dia${d.inDays == 1 ? '' : 's'}';
+    if (d.inHours >= 1) return 'faltam ${d.inHours} hora${d.inHours == 1 ? '' : 's'}';
+    if (d.inMinutes >= 1) return 'faltam ${d.inMinutes} min';
+    return 'termina em breve';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final expiresAt = request.quote!.expiresAt.toLocal();
+    final now = DateTime.now();
+    final expired = !expiresAt.isAfter(now);
+    final dateFmt = DateFormat("d 'de' MMMM 'às' HH:mm", 'pt_PT');
+
+    return _Card(
+      title: 'Responder ao orçamento',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(expired ? Icons.timer_off_outlined : Icons.schedule,
+                  size: 18, color: expired ? AppTheme.brandRed : Colors.grey[700]),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  expired
+                      ? 'O prazo para responder terminou. Este orçamento expirou.'
+                      : 'Válido até ${dateFmt.format(expiresAt)}  •  ${_humanize(expiresAt.difference(now))}',
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    color: expired ? AppTheme.brandRed : Colors.grey[800],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (!expired) ...[
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: onReject,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppTheme.brandRed,
+                      side: const BorderSide(color: AppTheme.brandRed),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                    ),
+                    icon: const Icon(Icons.close, size: 18),
+                    label: const Text('Recusar', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: onAccept,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF16A34A),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                    ),
+                    icon: const Icon(Icons.check, size: 18),
+                    label: const Text('Aceitar', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
   }
 }
 

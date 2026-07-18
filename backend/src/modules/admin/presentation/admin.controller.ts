@@ -575,6 +575,12 @@ export class AdminController {
     if (d.yearlyPrice !== undefined) out.yearlyPrice = Number(d.yearlyPrice);
     if (d.displacementDiscountPct !== undefined) out.displacementDiscountPct = Number(d.displacementDiscountPct);
     if (d.freeVisitsCount !== undefined) out.freeVisitsCount = Math.trunc(Number(d.freeVisitsCount));
+    if (d.quoteExpiryDays !== undefined) {
+      out.quoteExpiryDays =
+        d.quoteExpiryDays === null || d.quoteExpiryDays === '' || Number.isNaN(Number(d.quoteExpiryDays))
+          ? null
+          : Math.trunc(Number(d.quoteExpiryDays));
+    }
     if (d.priorityScheduling !== undefined) out.priorityScheduling = !!d.priorityScheduling;
     if (d.isActive !== undefined) out.isActive = !!d.isActive;
     return out;

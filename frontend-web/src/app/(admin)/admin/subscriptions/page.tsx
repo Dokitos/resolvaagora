@@ -204,6 +204,9 @@ function PlanEditor({ plan, onClose, onSaved }: { plan: SubscriptionPlan; onClos
   const [yearlyPrice, setYearlyPrice] = useState(String(plan.yearlyPrice))
   const [discount, setDiscount] = useState(String(plan.displacementDiscountPct))
   const [freeVisits, setFreeVisits] = useState(String(plan.freeVisitsCount))
+  const [quoteExpiryDays, setQuoteExpiryDays] = useState(
+    plan.quoteExpiryDays != null ? String(plan.quoteExpiryDays) : '',
+  )
   const [priority, setPriority] = useState(plan.priorityScheduling)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -234,6 +237,7 @@ function PlanEditor({ plan, onClose, onSaved }: { plan: SubscriptionPlan; onClos
         yearlyPrice: Number(yearlyPrice),
         displacementDiscountPct: Number(discount),
         freeVisitsCount: Number(freeVisits),
+        quoteExpiryDays: quoteExpiryDays.trim() === '' ? null : Number(quoteExpiryDays),
         priorityScheduling: priority,
       })
       onSaved()
@@ -287,6 +291,13 @@ function PlanEditor({ plan, onClose, onSaved }: { plan: SubscriptionPlan; onClos
               <label className={label}>Visitas grátis</label>
               <input className={field} type="number" value={freeVisits} onChange={(e) => setFreeVisits(e.target.value)} />
             </div>
+          </div>
+          <div>
+            <label className={label}>Prazo p/ aceitar orçamento (dias)</label>
+            <input className={field} type="number" min="1" value={quoteExpiryDays}
+              onChange={(e) => setQuoteExpiryDays(e.target.value)}
+              placeholder="Padrão: 2 dias (deixar vazio)" />
+            <p className="text-xs text-gray-400 mt-1">Clientes deste plano têm este prazo para aceitar/recusar orçamentos. Vazio = 2 dias (padrão).</p>
           </div>
           <label className="flex items-center gap-2 text-sm text-gray-700">
             <input type="checkbox" checked={priority} onChange={(e) => setPriority(e.target.checked)} />
