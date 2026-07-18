@@ -344,8 +344,10 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
               child: Column(
                 children: [
                   Builder(builder: (_) {
-                    final displacement =
-                        ref.watch(effectiveDisplacementProvider).valueOrNull ?? 0;
+                    // Visita grátis → deslocação 0 (o backend cobra 0).
+                    final displacement = booking.useFreeVisit
+                        ? 0.0
+                        : (ref.watch(effectiveDisplacementProvider).valueOrNull ?? 0);
                     final discount = _promo?.valid == true ? _promo!.discount : 0.0;
                     final grandTotal =
                         (booking.total + displacement - discount).clamp(0, double.infinity);

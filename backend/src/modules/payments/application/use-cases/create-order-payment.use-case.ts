@@ -43,9 +43,16 @@ export class CreateOrderPaymentUseCase {
     const displacement = Number(sr.displacementFee);
     const subtotal = Math.max(0, Number((items + displacement).toFixed(2)));
 
-    // Visita gratuita (subscrição) → sem cobrança.
+    // Visita gratuita (subscrição) → sem cobrança. Desconta a visita do plano
+    // no momento da confirmação (não na conclusão do serviço).
     if (sr.isFreeVisit && items === 0) {
       await this.markPaid(serviceRequestId, userId, subtotal, null, 'Free visit');
+      if (sr.subscriptionId) {
+        await this.prisma.subscription.update({
+          where: { id: sr.subscriptionId },
+          data: { freeVisitsUsed: { increment: 1 } },
+        });
+      }
       return { simulated: true, freeVisit: true, total: subtotal };
     }
 

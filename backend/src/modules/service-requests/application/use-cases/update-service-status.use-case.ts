@@ -124,12 +124,8 @@ export class UpdateServiceStatusUseCase {
       });
     }
 
-    if (sr.subscriptionId && sr.isFreeVisit) {
-      await this.prisma.subscription.update({
-        where: { id: sr.subscriptionId },
-        data: { freeVisitsUsed: { increment: 1 } },
-      });
-    }
+    // Nota: a visita grátis é descontada na CONFIRMAÇÃO do pagamento
+    // (create-order-payment), não aqui, para refletir logo na conta do cliente.
 
     await this.rabbitmq.publish(
       this.rabbitmq.exchanges.serviceRequests,

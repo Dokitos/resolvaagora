@@ -91,9 +91,12 @@ class _PaymentConfirmPageState extends ConsumerState<PaymentConfirmPage> {
     final fmt = NumberFormat.currency(locale: 'pt_PT', symbol: '€');
     final categoryName = booking.category?.name ?? l.priceService;
     // Deslocação efetiva (já com o desconto da subscrição) — bate certo com o
-    // valor cobrado pela Stripe.
-    final displacement = ref.watch(effectiveDisplacementProvider).valueOrNull ??
-        (ref.watch(appSettingsProvider).valueOrNull?.displacementFee ?? 25.0);
+    // valor cobrado pela Stripe. Numa visita grátis a deslocação é 0 (o backend
+    // cobra 0), por isso não a mostramos.
+    final displacement = booking.useFreeVisit
+        ? 0.0
+        : (ref.watch(effectiveDisplacementProvider).valueOrNull ??
+            (ref.watch(appSettingsProvider).valueOrNull?.displacementFee ?? 25.0));
     final itemsTotal = booking.total;
     final promoDiscount = booking.promoDiscount;
     final total = (itemsTotal + displacement - promoDiscount).clamp(0, double.infinity).toDouble();
