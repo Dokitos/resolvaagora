@@ -7,9 +7,15 @@ export class EmailService {
   private readonly logger = new Logger(EmailService.name);
   private readonly transporter: nodemailer.Transporter;
   private readonly from: string;
+  // A Resend é usada via API HTTP (porta 443) porque muitos hosts (ex.: Railway)
+  // bloqueiam as portas SMTP de saída. Cai para SMTP se não houver chave Resend.
+  private readonly resendKey: string;
 
   constructor(private readonly config: ConfigService) {
-    this.from = config.get('SMTP_FROM', 'ResolvaAgora <noreply@resolvaagora.pt>');
+    this.from = config.get('SMTP_FROM', 'ResolvaAgora <geral@resolvaagora.pt>');
+    const smtpPass = config.get<string>('SMTP_PASS') ?? '';
+    this.resendKey =
+      config.get<string>('RESEND_API_KEY') ?? (smtpPass.startsWith('re_') ? smtpPass : '');
     this.transporter = nodemailer.createTransport({
       host: config.get('SMTP_HOST', 'smtp.gmail.com'),
       port: config.get<number>('SMTP_PORT', 587),
@@ -21,12 +27,32 @@ export class EmailService {
     });
   }
 
-  /** True quando o SMTP está realmente configurado (utilizador + password). */
+  /** True quando há forma de enviar email (Resend API ou SMTP configurado). */
   get configured(): boolean {
-    return !!this.config.get('SMTP_USER') && !!this.config.get('SMTP_PASS');
+    return !!this.resendKey || (!!this.config.get('SMTP_USER') && !!this.config.get('SMTP_PASS'));
   }
 
   async send(to: string, subject: string, html: string): Promise<void> {
+    // Preferir a API HTTP da Resend (não depende de portas SMTP).
+    if (this.resendKey) {
+      try {
+        const res = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${this.resendKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ from: this.from, to, subject, html }),
+        });
+        if (!res.ok) {
+          this.logger.error(`Resend API falhou (${res.status}) para ${to}: ${await res.text()}`);
+        }
+      } catch (err) {
+        this.logger.error(`Resend API erro para ${to}`, err as Error);
+      }
+      return;
+    }
+    // Fallback: SMTP (nodemailer).
     try {
       await this.transporter.sendMail({ from: this.from, to, subject, html });
     } catch (err) {

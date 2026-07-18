@@ -10,6 +10,11 @@ export class FcmService implements OnModuleInit {
 
   private enabled = false;
 
+  /** True quando o Firebase Admin foi inicializado com credenciais válidas. */
+  get ready(): boolean {
+    return this.enabled;
+  }
+
   onModuleInit() {
     const projectId = this.config.get('FIREBASE_PROJECT_ID');
     const privateKey = this.config.get<string>('FIREBASE_PRIVATE_KEY')?.replace(/\\n/g, '\n');
@@ -51,14 +56,21 @@ export class FcmService implements OnModuleInit {
     }
   }
 
-  async sendToMultiple(tokens: string[], title: string, body: string, data?: Record<string, string>) {
-    if (!this.enabled || tokens.length === 0) return;
+  async sendToMultiple(
+    tokens: string[],
+    title: string,
+    body: string,
+    data?: Record<string, string>,
+  ): Promise<{ success: number; total: number }> {
+    if (!this.enabled || tokens.length === 0) return { success: 0, total: tokens.length };
     const messages: admin.messaging.Message[] = tokens.map((token) => ({
       token,
       notification: { title, body },
       data: data ?? {},
+      android: { priority: 'high' },
     }));
     const response = await admin.messaging().sendEach(messages);
     this.logger.log(`FCM sent ${response.successCount}/${tokens.length}`);
+    return { success: response.successCount, total: tokens.length };
   }
 }

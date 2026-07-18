@@ -739,9 +739,16 @@ export class AdminController {
           select: { token: true },
         })
       ).map((t) => t.token);
-      await this.fcm.sendToMultiple(tokens, body.title, body.body);
+      const push = await this.fcm.sendToMultiple(tokens, body.title, body.body);
+      return { sent: userIds.length, pushTokens: push.total, pushDelivered: push.success };
     }
-    return { sent: userIds.length };
+    return { sent: userIds.length, pushTokens: 0, pushDelivered: 0 };
+  }
+
+  /** Diagnóstico das notificações push: FCM ativo + nº de tokens registados. */
+  @Get('fcm-status')
+  async fcmStatus() {
+    return { ready: this.fcm.ready, tokens: await this.prisma.fcmToken.count() };
   }
 
   // ─── CLIENT ACCOUNT MANAGEMENT ─────────────────────────────────────────────

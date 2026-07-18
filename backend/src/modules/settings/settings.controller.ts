@@ -37,6 +37,10 @@ export class SettingsController {
       smsConfigured: this.sms.configured,
       // Diagnóstico: true se o SMTP (Resend) está configurado no backend.
       emailConfigured: !!(this.config.get('SMTP_USER') && this.config.get('SMTP_PASS')),
+      // Diagnóstico: true se as credenciais Firebase (FCM) estão no ambiente.
+      pushConfigured: !!(
+        this.config.get('FIREBASE_PROJECT_ID') && this.config.get('FIREBASE_PRIVATE_KEY')
+      ),
     };
   }
 }
