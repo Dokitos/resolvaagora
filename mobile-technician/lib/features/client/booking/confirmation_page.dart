@@ -3,6 +3,8 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../../core/services/client_service.dart';
+import '../../../core/services/settings_service.dart';
 import '../../../data/catalog_i18n.dart';
 import 'booking_provider.dart';
 
@@ -15,6 +17,15 @@ class ConfirmationPage extends ConsumerWidget {
     final l = AppLocalizations.of(context);
     final fmt = NumberFormat.currency(locale: 'pt_PT', symbol: '€');
     final dateFmt = DateFormat("d 'de' MMMM 'de' yyyy", 'pt_PT');
+
+    // Total pago = itens + deslocação − desconto (igual ao cobrado). Mesmo
+    // fallback usado na página de confirmação de pagamento.
+    final displacement = ref.watch(effectiveDisplacementProvider).valueOrNull ??
+        (ref.watch(appSettingsProvider).valueOrNull?.displacementFee ?? 25.0);
+    final promoDiscount = booking.promoDiscount;
+    final total = (booking.total + displacement - promoDiscount)
+        .clamp(0, double.infinity)
+        .toDouble();
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -89,12 +100,21 @@ class ConfirmationPage extends ConsumerWidget {
                               sub: '${booking.postalCode} ${booking.locationDescription}',
                             ),
                           const Divider(height: 20),
+                          // Detalhe: serviço + deslocação (− desconto) → total.
+                          _AmountRow(label: l.priceService, value: fmt.format(booking.total)),
+                          const SizedBox(height: 6),
+                          _AmountRow(label: l.priceDisplacement, value: fmt.format(displacement)),
+                          if (promoDiscount > 0) ...[
+                            const SizedBox(height: 6),
+                            _AmountRow(label: l.priceDiscount, value: '- ${fmt.format(promoDiscount)}'),
+                          ],
+                          const Divider(height: 20),
                           Row(
                             children: [
                               Text(l.totalPaid, style: const TextStyle(color: Colors.grey, fontSize: 13)),
                               const Spacer(),
                               Text(
-                                fmt.format(booking.total),
+                                fmt.format(total),
                                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF161616)),
                               ),
                             ],
@@ -180,6 +200,23 @@ class ConfirmationPage extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _AmountRow extends StatelessWidget {
+  final String label;
+  final String value;
+  const _AmountRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Text(label, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+        const Spacer(),
+        Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87)),
+      ],
     );
   }
 }

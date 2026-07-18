@@ -31,10 +31,15 @@ class ClientAccountScreen extends ConsumerWidget {
                 CircleAvatar(
                   radius: 32,
                   backgroundColor: Colors.white,
-                  child: Text(
-                    profile.valueOrNull?.initials ?? '?',
-                    style: const TextStyle(color: AppTheme.brandRed, fontSize: 24, fontWeight: FontWeight.bold),
-                  ),
+                  backgroundImage: (profile.valueOrNull?.photoUrl?.isNotEmpty ?? false)
+                      ? NetworkImage(profile.valueOrNull!.photoUrl!)
+                      : null,
+                  child: (profile.valueOrNull?.photoUrl?.isNotEmpty ?? false)
+                      ? null
+                      : Text(
+                          profile.valueOrNull?.initials ?? '?',
+                          style: const TextStyle(color: AppTheme.brandRed, fontSize: 24, fontWeight: FontWeight.bold),
+                        ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -42,7 +47,9 @@ class ClientAccountScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        profile.valueOrNull?.fullName ?? auth?.name ?? l.accountRoleClient,
+                        // Prefere o nome da sessão atual (auth) para não mostrar
+                        // um nome em cache enquanto o perfil recarrega.
+                        auth?.name ?? profile.valueOrNull?.fullName ?? l.accountRoleClient,
                         style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 2),

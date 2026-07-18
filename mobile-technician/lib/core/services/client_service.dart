@@ -31,6 +31,15 @@ class ClientService {
     return ClientProfile.fromJson(r.data as Map<String, dynamic>);
   }
 
+  /// Faz upload da foto de perfil do cliente (multipart → R2). Devolve o URL.
+  Future<String> uploadPhoto(List<int> bytes, String filename) async {
+    final form = FormData.fromMap({
+      'file': MultipartFile.fromBytes(bytes, filename: filename),
+    });
+    final r = await _dio.post('/clients/me/photo', data: form);
+    return (r.data as Map)['photoUrl']?.toString() ?? '';
+  }
+
   // ── Addresses ───────────────────────────────────────────────────────────────
   Future<List<ClientAddress>> listAddresses() async {
     final r = await _dio.get('/clients/me/addresses');
@@ -105,6 +114,7 @@ class ClientService {
     required String description,
     DateTime? scheduledDate,
     String? promoCode,
+    bool useFreeVisit = false,
   }) async {
     final r = await _dio.post('/service-requests', data: {
       'addressId': addressId,
@@ -112,6 +122,7 @@ class ClientService {
       'description': description,
       if (scheduledDate != null) 'scheduledDate': scheduledDate.toUtc().toIso8601String(),
       if (promoCode != null && promoCode.isNotEmpty) 'promoCode': promoCode,
+      if (useFreeVisit) 'useFreeVisit': true,
     });
     return ServiceRequest.fromJson(r.data as Map<String, dynamic>);
   }
@@ -188,8 +199,11 @@ class ClientService {
     return ClientSubscription.fromJson(r.data as Map<String, dynamic>);
   }
 
-  Future<void> subscribe(String planId) async {
-    await _dio.post('/subscriptions', data: {'planId': planId});
+  /// Subscreve o plano. Devolve o mapa da resposta (como [payOrder]):
+  /// { simulated, clientSecret?, publishableKey?, ... }.
+  Future<Map<String, dynamic>> subscribe(String planId) async {
+    final r = await _dio.post('/subscriptions', data: {'planId': planId});
+    return Map<String, dynamic>.from(r.data as Map);
   }
 
   Future<void> cancelSubscription() async {

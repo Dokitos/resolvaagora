@@ -43,7 +43,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final auth = authState.valueOrNull;
     if (auth?.isAuthenticated == true) {
       if (auth!.isClient) {
-        context.go(widget.from?.isNotEmpty == true ? widget.from! : '/client/home');
+        // Só honra `from` se for uma rota válida para o cliente; caso contrário
+        // (ex.: /profile capturado quando um técnico saiu) vai para a home.
+        final from = widget.from;
+        final validForClient = from != null &&
+            (from.startsWith('/client') || from.startsWith('/booking'));
+        context.go(validForClient ? from : '/client/home');
       } else if (auth.isAdmin) {
         context.go('/admin/home');
       } else {

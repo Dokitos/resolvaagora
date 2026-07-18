@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../core/models/client_profile.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/client_service.dart';
@@ -21,6 +22,8 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   final _nif = TextEditingController();
   bool _initialised = false;
   bool _saving = false;
+  bool _uploadingPhoto = false;
+  String? _photoUrl;
 
   void _fill(ClientProfile p) {
     if (_initialised) return;
@@ -28,7 +31,35 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     _lastName.text = p.lastName;
     _phone.text = p.phone ?? '';
     _nif.text = p.nif ?? '';
+    _photoUrl = p.photoUrl;
     _initialised = true;
+  }
+
+  Future<void> _pickPhoto() async {
+    try {
+      final picked = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1024,
+        imageQuality: 85,
+      );
+      if (picked == null) return;
+      setState(() => _uploadingPhoto = true);
+      final bytes = await picked.readAsBytes();
+      final url = await ref.read(clientServiceProvider).uploadPhoto(bytes, picked.name);
+      ref.invalidate(clientProfileProvider);
+      if (!mounted) return;
+      setState(() => _photoUrl = url);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Perfil atualizado com sucesso')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Não foi possível guardar as alterações')),
+      );
+    } finally {
+      if (mounted) setState(() => _uploadingPhoto = false);
+    }
   }
 
   @override
@@ -106,6 +137,37 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
           return ListView(
             padding: const EdgeInsets.all(20),
             children: [
+              Center(
+                child: GestureDetector(
+                  onTap: _uploadingPhoto ? null : _pickPhoto,
+                  child: Stack(
+                    children: [
+                      CircleAvatar(
+                        radius: 44,
+                        backgroundColor: AppTheme.brandRed.withOpacity(0.1),
+                        backgroundImage: (_photoUrl != null && _photoUrl!.isNotEmpty)
+                            ? NetworkImage(_photoUrl!)
+                            : null,
+                        child: _uploadingPhoto
+                            ? const CircularProgressIndicator(strokeWidth: 2, color: AppTheme.brandRed)
+                            : ((_photoUrl == null || _photoUrl!.isEmpty)
+                                ? Text(p.initials,
+                                    style: const TextStyle(color: AppTheme.brandRed, fontSize: 28, fontWeight: FontWeight.bold))
+                                : null),
+                      ),
+                      Positioned(
+                        right: 0, bottom: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: const BoxDecoration(color: AppTheme.brandRed, shape: BoxShape.circle),
+                          child: const Icon(Icons.photo_camera, size: 16, color: Colors.white),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
               _label('Email'),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),

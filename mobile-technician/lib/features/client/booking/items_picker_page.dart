@@ -62,7 +62,7 @@ class ItemsPickerPage extends ConsumerWidget {
           BookingFooterBar(
             onBack: () => context.pop(),
             onNext: () => context.push('/booking/details'),
-            nextEnabled: sub.hasCustomQuote || booking.hasItems,
+            nextEnabled: sub.hasCustomQuote || booking.hasItems || booking.useFreeVisit,
           ),
         ],
       ),

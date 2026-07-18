@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../network/api_client.dart';
+import 'client_service.dart';
 
 const _storage = FlutterSecureStorage();
 
@@ -86,6 +87,9 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
         name: name,
         role: role,
       ));
+      // Nova identidade → descarta os dados de cliente em cache (perfil, moradas,
+      // pedidos, subscrição, notificações…) para o próximo ecrã voltar a buscar.
+      _invalidateClientData();
     } on DioException catch (e) {
       final msg = e.response?.data?['message'] ?? 'Erro ao iniciar sessão';
       state = AsyncError(msg, e.stackTrace);
@@ -154,6 +158,21 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     await dio.post('/auth/logout').catchError((_) => Response(requestOptions: RequestOptions()));
     await _storage.deleteAll();
     state = AsyncData(AuthState.unauthenticated());
+    // Limpa a cache de dados do cliente para não vazar para a próxima sessão.
+    _invalidateClientData();
+  }
+
+  /// Descarta os providers de dados do cliente para forçarem novo fetch com a
+  /// identidade atual (evita mostrar o perfil/dados da sessão anterior).
+  void _invalidateClientData() {
+    ref.invalidate(clientProfileProvider);
+    ref.invalidate(clientAddressesProvider);
+    ref.invalidate(clientServiceRequestsProvider);
+    ref.invalidate(mySubscriptionProvider);
+    ref.invalidate(notificationsProvider);
+    ref.invalidate(unreadCountProvider);
+    ref.invalidate(referralInfoProvider);
+    ref.invalidate(subscriptionPlansProvider);
   }
 }
 

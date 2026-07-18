@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/models/client_profile.dart';
 import '../../../core/services/client_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../booking/booking_provider.dart';
 
 class SubscriptionPage extends ConsumerWidget {
   const SubscriptionPage({super.key});
@@ -92,11 +96,37 @@ class _OfferViewState extends ConsumerState<_OfferView> {
   Future<void> _subscribe() async {
     setState(() => _busy = true);
     try {
-      await ref.read(clientServiceProvider).subscribe(widget.plan.id);
-      ref.invalidate(mySubscriptionProvider);
+      final res = await ref.read(clientServiceProvider).subscribe(widget.plan.id);
+
+      // Modo de teste / simulado → já ficou ativa no servidor.
+      if (res['simulated'] == true) {
+        _success();
+        return;
+      }
+
+      // Pagamento real → PaymentSheet nativa da Stripe.
+      final clientSecret = res['clientSecret'] as String?;
+      final pk = res['publishableKey'] as String?;
+      if (clientSecret == null || pk == null || pk.isEmpty) {
+        throw Exception('Pagamento indisponível de momento.');
+      }
+      Stripe.publishableKey = pk;
+      await Stripe.instance.applySettings();
+      await Stripe.instance.initPaymentSheet(
+        paymentSheetParameters: SetupPaymentSheetParameters(
+          paymentIntentClientSecret: clientSecret,
+          merchantDisplayName: 'ResolvaAgora',
+          style: ThemeMode.light,
+        ),
+      );
+      await Stripe.instance.presentPaymentSheet();
+      _success();
+    } on StripeException catch (_) {
+      // Utilizador cancelou a folha de pagamento.
       if (!mounted) return;
+      setState(() => _busy = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Subscrição ativada! Bem-vindo ao Plano Premium 🎉')),
+        SnackBar(content: Text(AppLocalizations.of(context).paymentCancelled)),
       );
     } catch (_) {
       if (!mounted) return;
@@ -105,6 +135,15 @@ class _OfferViewState extends ConsumerState<_OfferView> {
         const SnackBar(content: Text('Não foi possível subscrever. Tenta novamente.')),
       );
     }
+  }
+
+  void _success() {
+    ref.invalidate(mySubscriptionProvider);
+    if (!mounted) return;
+    setState(() => _busy = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Subscrição ativada! Bem-vindo ao Plano Premium 🎉')),
+    );
   }
 
   @override
@@ -262,11 +301,25 @@ class _ActiveViewState extends ConsumerState<_ActiveView> {
     }
   }
 
+  /// Arranca um fluxo de visita grátis: sem itens (backend cobra 0). Leva o
+  /// cliente a escolher um serviço; o resto do fluxo (agenda + morada) segue igual.
+  void _useFreeVisit() {
+    ref.read(bookingProvider.notifier).startFreeVisit();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(AppLocalizations.of(context).freeVisitHint)),
+    );
+    context.go('/client/home');
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = widget.subscription;
     final p = s.plan;
     final dateFmt = DateFormat("d 'de' MMMM 'de' yyyy", 'pt_PT');
+    final l = AppLocalizations.of(context);
+    final freeVisitsLeft =
+        p != null ? (p.freeVisitsCount - s.freeVisitsUsed) : 0;
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -325,6 +378,24 @@ class _ActiveViewState extends ConsumerState<_ActiveView> {
           ),
         ],
         const SizedBox(height: 24),
+        // Visita grátis — só ativa quando ainda há visitas disponíveis no plano.
+        SizedBox(
+          height: 54,
+          child: ElevatedButton.icon(
+            onPressed: freeVisitsLeft > 0 ? _useFreeVisit : null,
+            icon: const Icon(Icons.card_giftcard),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.brandYellow,
+              foregroundColor: Colors.black,
+              disabledBackgroundColor: Colors.grey[300],
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+              elevation: 0,
+            ),
+            label: Text(l.freeVisitButton,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, letterSpacing: 0.5)),
+          ),
+        ),
+        const SizedBox(height: 12),
         OutlinedButton(
           onPressed: _busy ? null : _cancel,
           style: OutlinedButton.styleFrom(

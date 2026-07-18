@@ -224,5 +224,8 @@
 
   "joinProviderTitle": "Want to provide services with ResolvaAgora?",
   "joinProviderDesc": "Join our network of certified professionals and start receiving requests from clients across the country.",
-  "joinProviderButton": "GET STARTED"
+  "joinProviderButton": "GET STARTED",
+
+  "freeVisitButton": "Use free visit",
+  "freeVisitHint": "Pick a service to use your free visit."
 }

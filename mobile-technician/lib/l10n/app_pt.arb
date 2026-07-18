@@ -232,5 +232,8 @@
 
   "joinProviderTitle": "Queres prestar serviços com a ResolvaAgora?",
   "joinProviderDesc": "Junta-te à nossa rede de técnicos certificados e começa a receber pedidos de clientes de todo o país.",
-  "joinProviderButton": "COMEÇAR AGORA"
+  "joinProviderButton": "COMEÇAR AGORA",
+
+  "freeVisitButton": "Usar visita grátis",
+  "freeVisitHint": "Escolhe um serviço para usar a tua visita grátis."
 }

@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../services/auth_service.dart';
 
 const String _baseUrl = String.fromEnvironment(
   'API_URL',
@@ -33,6 +34,10 @@ final dioProvider = Provider<Dio>((ref) {
           final response = await dio.fetch(error.requestOptions);
           return handler.resolve(response);
         }
+        // Refresh falhou → _tryRefresh já limpou o storage. Força o authProvider
+        // a reavaliar (build() lê o storage vazio → não-autenticado) para o
+        // router redirecionar ao login.
+        ref.invalidate(authProvider);
       }
       handler.next(error);
     },

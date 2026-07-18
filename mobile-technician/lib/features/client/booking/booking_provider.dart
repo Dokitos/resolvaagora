@@ -44,6 +44,9 @@ class BookingState {
   final String billingNumber;
   final String billingPostalCode;
   final String billingCity;
+  // Visita grátis (subscrição): quando true, o pedido é criado sem itens e o
+  // backend cobra 0 (consome uma visita grátis do plano).
+  final bool useFreeVisit;
 
   const BookingState({
     this.category,
@@ -70,6 +73,7 @@ class BookingState {
     this.billingNumber = '',
     this.billingPostalCode = '',
     this.billingCity = '',
+    this.useFreeVisit = false,
   });
 
   double get total =>
@@ -104,6 +108,7 @@ class BookingState {
     String? billingNumber,
     String? billingPostalCode,
     String? billingCity,
+    bool? useFreeVisit,
   }) =>
       BookingState(
         category: category ?? this.category,
@@ -130,6 +135,7 @@ class BookingState {
         billingNumber: billingNumber ?? this.billingNumber,
         billingPostalCode: billingPostalCode ?? this.billingPostalCode,
         billingCity: billingCity ?? this.billingCity,
+        useFreeVisit: useFreeVisit ?? this.useFreeVisit,
       );
 }
 
@@ -137,9 +143,16 @@ class BookingNotifier extends StateNotifier<BookingState> {
   BookingNotifier() : super(const BookingState());
 
   void selectCategory(ServiceCategory cat) {
+    // Preserva a flag de visita grátis ao arrancar um novo fluxo de categoria.
+    final free = state.useFreeVisit;
     state = const BookingState();
-    state = state.copyWith(category: cat);
+    state = state.copyWith(category: cat, useFreeVisit: free);
   }
+
+  /// Arranca um fluxo de visita grátis (sem itens; backend cobra 0).
+  void startFreeVisit() => state = const BookingState().copyWith(useFreeVisit: true);
+
+  void setUseFreeVisit(bool v) => state = state.copyWith(useFreeVisit: v);
 
   void selectSubcategory(ServiceSubcategory sub) {
     // Initialise items list with qty=0 for each item
@@ -329,6 +342,7 @@ class BookingNotifier extends StateNotifier<BookingState> {
       description: _buildDescription(),
       scheduledDate: _scheduledDateTime(),
       promoCode: state.promoCode.isNotEmpty ? state.promoCode : null,
+      useFreeVisit: state.useFreeVisit,
     );
   }
 }

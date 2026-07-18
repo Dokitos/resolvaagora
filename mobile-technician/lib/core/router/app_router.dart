@@ -88,12 +88,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               loc.startsWith('/jobs');
           return techArea ? null : '/schedule';
         }
-        // Client: keep out of technician/admin areas; otherwise free to browse.
-        if (loc.startsWith('/admin') || loc.startsWith('/schedule') ||
-            loc.startsWith('/earnings') || loc.startsWith('/jobs')) {
-          return '/client/home';
-        }
-        return null;
+        // Client: ALLOWLIST — may only be in their own area (/client, /booking)
+        // or on a public route. Anything else (technician /profile, /schedule,
+        // /earnings, /jobs, admin, etc.) → back to the client home.
+        final clientArea =
+            loc.startsWith('/client') || loc.startsWith('/booking') || isPublic;
+        return clientArea ? null : '/client/home';
       }
 
       // Unauthenticated: only public routes are allowed; everything else needs login.
