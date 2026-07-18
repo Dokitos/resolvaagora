@@ -123,7 +123,10 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
                           top: 4,
                           right: 4,
                           child: GestureDetector(
-                            onTap: () => setState(() => _imageBytes.removeAt(i)),
+                            onTap: () {
+                              setState(() => _imageBytes.removeAt(i));
+                              _syncPhotos();
+                            },
                             child: Container(
                               decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
                               child: const Icon(Icons.close, color: Colors.white, size: 16),
@@ -146,6 +149,11 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
     );
   }
 
+  /// Sincroniza os bytes das fotos com o provider para serem enviadas no submit.
+  void _syncPhotos() {
+    ref.read(bookingProvider.notifier).setPhotoBytes(List<Uint8List>.of(_imageBytes));
+  }
+
   Future<void> _pickPhoto() async {
     final remaining = 5 - _imageBytes.length;
     if (remaining <= 0) {
@@ -160,6 +168,7 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
       for (final f in files.take(remaining)) {
         _imageBytes.add(await f.readAsBytes());
       }
+      _syncPhotos();
       if (mounted) setState(() {});
     } catch (_) {
       if (mounted) {

@@ -28,10 +28,17 @@ class _UploadPhotosScreenState extends ConsumerState<UploadPhotosScreen> {
     if (_selected.isEmpty) return;
     setState(() => _uploading = true);
     try {
-      // In production: upload to cloud storage and pass back the URL.
-      // For development: pass local file paths as placeholder URLs.
-      final urls = _selected.map((f) => 'file://${f.path}').toList();
-      await ref.read(technicianServiceProvider).uploadProofPhotos(widget.jobId, urls);
+      // Faz upload de cada foto para o R2 e recolhe os URLs permanentes.
+      final service = ref.read(technicianServiceProvider);
+      final urls = <String>[];
+      for (final f in _selected) {
+        final url = await service.uploadImage(await f.readAsBytes(), f.name);
+        if (url.isNotEmpty) urls.add(url);
+      }
+      if (urls.isEmpty) {
+        throw Exception('Não foi possível carregar as fotos. Tenta novamente.');
+      }
+      await service.uploadProofPhotos(widget.jobId, urls);
       ref.invalidate(jobDetailProvider(widget.jobId));
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

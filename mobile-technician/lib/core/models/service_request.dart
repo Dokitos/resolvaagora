@@ -119,14 +119,16 @@ class Quote {
 
 class ServicePhoto {
   final String id;
-  final String type;
+  final String type; // 'PROBLEM' | 'PROOF'
   final String url;
+  final String? uploadedByRole; // 'CLIENT' | 'TECHNICIAN' | 'ADMIN'
   final DateTime createdAt;
 
   const ServicePhoto({
     required this.id,
     required this.type,
     required this.url,
+    this.uploadedByRole,
     required this.createdAt,
   });
 
@@ -134,6 +136,7 @@ class ServicePhoto {
     id: j['id'] as String,
     type: j['type'] as String,
     url: j['url'] as String,
+    uploadedByRole: j['uploadedByRole'] as String?,
     createdAt: DateTime.parse(j['createdAt'] as String),
   );
 }
@@ -214,6 +217,10 @@ class ServiceRequest {
 
   List<ServicePhoto> get proofPhotos =>
       photos?.where((p) => p.type == 'PROOF').toList() ?? [];
+
+  /// Fotos do problema enviadas pelo cliente na marcação.
+  List<ServicePhoto> get problemPhotos =>
+      photos?.where((p) => p.type == 'PROBLEM').toList() ?? [];
 
   static String? _technicianName(dynamic t) {
     if (t is! Map<String, dynamic>) return null;

@@ -45,6 +45,15 @@ class TechnicianService {
     );
   }
 
+  /// Faz upload de uma imagem (multipart → R2) e devolve o URL público.
+  Future<String> uploadImage(List<int> bytes, String filename) async {
+    final form = FormData.fromMap({
+      'file': MultipartFile.fromBytes(bytes, filename: filename),
+    });
+    final r = await _dio.post('/uploads/image', data: form);
+    return (r.data as Map)['url']?.toString() ?? '';
+  }
+
   Future<void> setAvailability(bool available) async {
     await _dio.patch('/technician/availability', data: {
       'status': available ? 'AVAILABLE' : 'BUSY',

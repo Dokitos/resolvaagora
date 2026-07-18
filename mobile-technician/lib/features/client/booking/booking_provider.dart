@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../data/services_data.dart';
@@ -19,6 +20,8 @@ class BookingState {
   final List<BookingItem> items;
   final String description;
   final List<String> photoUrls;
+  // Fotos do problema escolhidas pelo cliente (bytes), enviadas para R2 no submit.
+  final List<Uint8List> photoBytes;
   // Location
   final String postalCode;
   final String locationDescription; // e.g. "Samouco, Alcochete"
@@ -54,6 +57,7 @@ class BookingState {
     this.items = const [],
     this.description = '',
     this.photoUrls = const [],
+    this.photoBytes = const [],
     this.postalCode = '',
     this.locationDescription = '',
     this.scheduledDate,
@@ -89,6 +93,7 @@ class BookingState {
     List<BookingItem>? items,
     String? description,
     List<String>? photoUrls,
+    List<Uint8List>? photoBytes,
     String? postalCode,
     String? locationDescription,
     DateTime? scheduledDate,
@@ -116,6 +121,7 @@ class BookingState {
         items: items ?? this.items,
         description: description ?? this.description,
         photoUrls: photoUrls ?? this.photoUrls,
+        photoBytes: photoBytes ?? this.photoBytes,
         postalCode: postalCode ?? this.postalCode,
         locationDescription: locationDescription ?? this.locationDescription,
         scheduledDate: scheduledDate ?? this.scheduledDate,
@@ -180,6 +186,10 @@ class BookingNotifier extends StateNotifier<BookingState> {
       photoUrls: state.photoUrls.where((p) => p != url).toList(),
     );
   }
+
+  /// Guarda os bytes das fotos do problema; são enviadas para R2 no [submit].
+  void setPhotoBytes(List<Uint8List> bytes) =>
+      state = state.copyWith(photoBytes: bytes);
 
   void setLocation(String postalCode, String description) =>
       state = state.copyWith(
@@ -336,6 +346,18 @@ class BookingNotifier extends StateNotifier<BookingState> {
       }
     }
 
+    // Envia as fotos do problema para o R2. Falhas não bloqueiam o pedido —
+    // o pedido segue sem as fotos que não conseguiram carregar.
+    final photoUrls = <String>[];
+    for (var i = 0; i < state.photoBytes.length; i++) {
+      try {
+        final url = await service.uploadImage(state.photoBytes[i], 'photo_${i + 1}.jpg');
+        if (url.isNotEmpty) photoUrls.add(url);
+      } catch (_) {
+        // Ignora esta foto e continua.
+      }
+    }
+
     return service.createServiceRequest(
       addressId: address.id,
       specialty: _specialtyFor(state.category),
@@ -343,6 +365,7 @@ class BookingNotifier extends StateNotifier<BookingState> {
       scheduledDate: _scheduledDateTime(),
       promoCode: state.promoCode.isNotEmpty ? state.promoCode : null,
       useFreeVisit: state.useFreeVisit,
+      photoUrls: photoUrls.isNotEmpty ? photoUrls : null,
     );
   }
 }

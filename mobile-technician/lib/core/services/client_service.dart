@@ -40,6 +40,15 @@ class ClientService {
     return (r.data as Map)['photoUrl']?.toString() ?? '';
   }
 
+  /// Faz upload de uma imagem genérica (multipart → R2). Devolve o URL público.
+  Future<String> uploadImage(List<int> bytes, String filename) async {
+    final form = FormData.fromMap({
+      'file': MultipartFile.fromBytes(bytes, filename: filename),
+    });
+    final r = await _dio.post('/uploads/image', data: form);
+    return (r.data as Map)['url']?.toString() ?? '';
+  }
+
   // ── Addresses ───────────────────────────────────────────────────────────────
   Future<List<ClientAddress>> listAddresses() async {
     final r = await _dio.get('/clients/me/addresses');
@@ -115,6 +124,7 @@ class ClientService {
     DateTime? scheduledDate,
     String? promoCode,
     bool useFreeVisit = false,
+    List<String>? photoUrls,
   }) async {
     final r = await _dio.post('/service-requests', data: {
       'addressId': addressId,
@@ -123,6 +133,7 @@ class ClientService {
       if (scheduledDate != null) 'scheduledDate': scheduledDate.toUtc().toIso8601String(),
       if (promoCode != null && promoCode.isNotEmpty) 'promoCode': promoCode,
       if (useFreeVisit) 'useFreeVisit': true,
+      if (photoUrls != null && photoUrls.isNotEmpty) 'photoUrls': photoUrls,
     });
     return ServiceRequest.fromJson(r.data as Map<String, dynamic>);
   }

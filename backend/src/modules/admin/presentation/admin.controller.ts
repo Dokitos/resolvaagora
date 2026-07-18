@@ -98,6 +98,7 @@ export class AdminController {
         technician: true,
         address: true,
         quote: true,
+        photos: true,
         slaAlerts: { where: { resolvedAt: null } },
       },
       orderBy: [{ isPriority: 'desc' }, { createdAt: 'desc' }],

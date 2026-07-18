@@ -105,7 +105,7 @@ export default function AdminServiceRequestDetailPage({ params }: { params: { id
   const statusOptions = EDITABLE_STATUSES.map((s) => ({ value: s, label: STATUS_LABELS[s] }))
   const payments = (sr as any).payments as Array<{ id: string; type: string; amount: number; status: string; paidAt?: string }> | undefined
   const paidTotal = (payments ?? []).filter((p) => p.status === 'COMPLETED').reduce((a, p) => a + Number(p.amount), 0)
-  const problemPhotos = sr.photos?.filter((p) => p.type === 'PROBLEM') ?? []
+  const problemPhotos = sr.photos?.filter((p) => p.type === 'PROBLEM' || p.uploadedByRole === 'CLIENT') ?? []
   const proofPhotos = sr.photos?.filter((p) => p.type === 'PROOF') ?? []
   const client = sr.client as any
   const phone = client?.phone as string | undefined
@@ -257,20 +257,24 @@ export default function AdminServiceRequestDetailPage({ params }: { params: { id
           <CardContent className="space-y-4">
             {problemPhotos.length > 0 && (
               <div>
-                <p className="text-xs text-gray-500 mb-2">Enviadas pelo cliente</p>
+                <p className="text-xs text-gray-500 mb-2">Fotos do cliente</p>
                 <div className="grid grid-cols-4 gap-2">
                   {problemPhotos.map((p) => (
-                    <img key={p.id} src={p.url} alt="Problema" onClick={() => setLightbox(p.url)} className="rounded-lg aspect-square object-cover w-full cursor-zoom-in" />
+                    <a key={p.id} href={p.url} target="_blank" rel="noreferrer" onClick={(e) => { e.preventDefault(); setLightbox(p.url) }}>
+                      <img src={p.url} alt="Problema" className="rounded-lg aspect-square object-cover w-full cursor-zoom-in" />
+                    </a>
                   ))}
                 </div>
               </div>
             )}
             {proofPhotos.length > 0 && (
               <div>
-                <p className="text-xs text-gray-500 mb-2">Provas do técnico</p>
+                <p className="text-xs text-gray-500 mb-2">Fotos de prova (técnico)</p>
                 <div className="grid grid-cols-4 gap-2">
                   {proofPhotos.map((p) => (
-                    <img key={p.id} src={p.url} alt="Prova" onClick={() => setLightbox(p.url)} className="rounded-lg aspect-square object-cover w-full cursor-zoom-in" />
+                    <a key={p.id} href={p.url} target="_blank" rel="noreferrer" onClick={(e) => { e.preventDefault(); setLightbox(p.url) }}>
+                      <img src={p.url} alt="Prova" className="rounded-lg aspect-square object-cover w-full cursor-zoom-in" />
+                    </a>
                   ))}
                 </div>
               </div>

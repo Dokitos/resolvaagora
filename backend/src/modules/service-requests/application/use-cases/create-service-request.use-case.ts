@@ -79,7 +79,7 @@ export class CreateServiceRequestUseCase {
       const promoCode: string | null =
         !isFreeVisit && dto.promoCode ? dto.promoCode.trim().toUpperCase() || null : null;
 
-      return tx.serviceRequest.create({
+      const created = await tx.serviceRequest.create({
         data: {
           clientId,
           addressId: dto.addressId,
@@ -102,6 +102,20 @@ export class CreateServiceRequestUseCase {
         },
         include: { address: true, client: true },
       });
+
+      // Fotos do problema tiradas pelo cliente na marcação (URLs R2).
+      if (dto.photoUrls?.length) {
+        await tx.servicePhoto.createMany({
+          data: dto.photoUrls.map((url) => ({
+            serviceRequestId: created.id,
+            type: 'PROBLEM',
+            uploadedByRole: 'CLIENT',
+            url,
+          })),
+        });
+      }
+
+      return created;
     });
 
     await this.rabbitmq.publish(

@@ -207,6 +207,50 @@ class _JobDetailBodyState extends ConsumerState<_JobDetailBody> {
             ),
           ),
 
+          // Fotos enviadas pelo cliente (problema)
+          if (job.problemPhotos.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Fotos do cliente', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey, fontSize: 13)),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Enviadas pelo cliente para ilustrar o problema',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: 90,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: job.problemPhotos.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 8),
+                        itemBuilder: (_, i) => ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.network(
+                            job.problemPhotos[i].url,
+                            width: 90,
+                            height: 90,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
+                              width: 90, height: 90,
+                              color: Colors.grey[200],
+                              child: const Icon(Icons.image_not_supported_outlined, color: Colors.grey),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+
           // Quote info (if exists)
           if (job.quote != null) ...[
             const SizedBox(height: 12),

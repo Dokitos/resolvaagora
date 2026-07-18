@@ -41,7 +41,14 @@ const Map<String, String> specialtyIcons = {
   'TV_ANTENNA': '📺',
 };
 
+// Rótulos de estado consistentes com [ServiceStatusUi] (ecrãs do cliente).
+// Cobre TODOS os estados para nunca mostrar o nome cru do enum (ex.: um pedido
+// em IN_DISTRIBUTION mostrava 'IN_DISTRIBUTION' e divergia do detalhe).
 const Map<String, String> statusLabels = {
+  'DRAFT': 'Rascunho',
+  'AWAITING_PAYMENT': 'Aguarda pagamento',
+  'PAID': 'Pago',
+  'IN_DISTRIBUTION': 'A procurar técnico',
   'ASSIGNED': 'Atribuído',
   'IN_TRANSIT': 'Em trânsito',
   'ARRIVED': 'No local',
@@ -50,7 +57,9 @@ const Map<String, String> statusLabels = {
   'QUOTE_APPROVED': 'Orçamento aprovado',
   'IN_EXECUTION': 'Em execução',
   'COMPLETED': 'Concluído',
+  'CANCELLED': 'Cancelado',
   'QUOTE_REJECTED': 'Orçamento rejeitado',
+  'EXPIRED': 'Expirado',
 };
 
 const Map<String, Map<String, String>> nextStatusOptions = {
