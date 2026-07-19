@@ -12,11 +12,24 @@ import '../../../core/widgets/pressable.dart';
 import '../../../core/widgets/shimmer.dart';
 import '../services/service_status_ui.dart';
 
-class ClientServicesScreen extends ConsumerWidget {
+class ClientServicesScreen extends ConsumerStatefulWidget {
   const ClientServicesScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ClientServicesScreen> createState() => _ClientServicesScreenState();
+}
+
+class _ClientServicesScreenState extends ConsumerState<ClientServicesScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Refresca a lista sempre que o ecrã é aberto — evita mostrar um estado
+    // desatualizado quando o pedido muda no servidor (ex.: reatribuição pelo admin).
+    Future.microtask(() => ref.invalidate(clientServiceRequestsProvider));
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final requests = ref.watch(clientServiceRequestsProvider);
     final l = AppLocalizations.of(context);
 
@@ -63,19 +76,23 @@ class ClientServicesScreen extends ConsumerWidget {
   }
 }
 
-class _RequestCard extends StatelessWidget {
+class _RequestCard extends ConsumerWidget {
   final ServiceRequest request;
   const _RequestCard({required this.request});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final emoji = specialtyIcons[request.specialty.name] ?? '🛠️';
     final label = specialtyLabels[request.specialty.name] ?? 'Serviço';
     final dateFmt = DateFormat("d MMM yyyy", 'pt_PT');
     final (_, tint) = AppTheme.categoryColors(request.specialty.name);
 
     return Pressable(
-      onTap: () => context.push('/client/services/${request.id}'),
+      onTap: () async {
+        await context.push('/client/services/${request.id}');
+        // Ao voltar do detalhe, refresca a lista (o estado pode ter mudado).
+        ref.invalidate(clientServiceRequestsProvider);
+      },
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
