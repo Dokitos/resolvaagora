@@ -30,7 +30,11 @@ class NotificationsPage extends ConsumerWidget {
           ),
         ],
       ),
-      body: RefreshIndicator(
+      body: Column(
+        children: [
+          const _EmailPrefToggle(),
+          Expanded(
+            child: RefreshIndicator(
         color: AppTheme.brandRed,
         onRefresh: () async {
           ref.invalidate(notificationsProvider);
@@ -49,6 +53,9 @@ class NotificationsPage extends ConsumerWidget {
             );
           },
         ),
+      ),
+            ),
+        ],
       ),
     );
   }
@@ -142,6 +149,66 @@ class _NotificationCard extends ConsumerWidget {
         ),
       ),
     );
+  }
+}
+
+/// Preferência do cliente: receber (ou não) notificações por email.
+/// O push mantém-se sempre; isto só controla o email.
+class _EmailPrefToggle extends ConsumerStatefulWidget {
+  const _EmailPrefToggle();
+
+  @override
+  ConsumerState<_EmailPrefToggle> createState() => _EmailPrefToggleState();
+}
+
+class _EmailPrefToggleState extends ConsumerState<_EmailPrefToggle> {
+  bool? _value;
+  bool _saving = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = ref.watch(clientProfileProvider);
+    final current = _value ?? profile.valueOrNull?.emailNotifications ?? true;
+    return Column(
+      children: [
+        SwitchListTile(
+          value: current,
+          activeColor: AppTheme.brandRed,
+          tileColor: Colors.white,
+          secondary: const Icon(Icons.mark_email_read_outlined, color: AppTheme.brandRed),
+          title: const Text('Notificações por email',
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+          subtitle: Text(
+            current
+                ? 'Recebes atualizações dos pedidos por email.'
+                : 'Só recebes notificações na app (push).',
+            style: TextStyle(color: Colors.grey[600], fontSize: 12),
+          ),
+          onChanged: _saving ? null : _toggle,
+        ),
+        const Divider(height: 1),
+      ],
+    );
+  }
+
+  Future<void> _toggle(bool v) async {
+    setState(() {
+      _value = v;
+      _saving = true;
+    });
+    try {
+      await ref.read(clientServiceProvider).updateProfile(emailNotifications: v);
+      ref.invalidate(clientProfileProvider);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _value = !v);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Não foi possível atualizar a preferência.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 }
 

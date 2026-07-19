@@ -138,7 +138,12 @@ export class NotificationQueueConsumer implements OnModuleInit {
       include: { user: true },
     });
     if (!c?.user) return null;
-    return { userId: c.user.id, email: c.user.email, firstName: c.firstName };
+    // Só devolve email se o cliente aceitar notificações por email (definição da app).
+    return {
+      userId: c.user.id,
+      email: c.emailNotifications ? c.user.email : null,
+      firstName: c.firstName,
+    };
   }
 
   // ── Handlers ────────────────────────────────────────────────────────────────
@@ -192,7 +197,7 @@ export class NotificationQueueConsumer implements OnModuleInit {
     if (sr.client?.user) {
       await this.deliver(
         sr.client.user.id,
-        sr.client.user.email,
+        sr.client.emailNotifications ? sr.client.user.email : null,
         'SERVICE_ASSIGNED',
         'Técnico atribuído!',
         `O técnico ${sr.technician?.firstName ?? ''} foi atribuído ao seu serviço.`,
@@ -257,10 +262,12 @@ export class NotificationQueueConsumer implements OnModuleInit {
     } catch (e) {
       this.logger.error(`Falha no push (quote) para ${client.userId}: ${e}`);
     }
-    try {
-      await this.email.send(client.email, title, this.email.quoteReceivedEmail(totalCost, new Date(expiresAt)));
-    } catch (e) {
-      this.logger.error(`Falha no email (quote) para ${client.email}: ${e}`);
+    if (client.email) {
+      try {
+        await this.email.send(client.email, title, this.email.quoteReceivedEmail(totalCost, new Date(expiresAt)));
+      } catch (e) {
+        this.logger.error(`Falha no email (quote) para ${client.email}: ${e}`);
+      }
     }
     await this.saveNotification(client.userId, 'QUOTE_RECEIVED', title, body, { serviceRequestId });
     this.gateway.emitToUser(client.userId, 'quote-received', { serviceRequestId });
@@ -285,10 +292,12 @@ export class NotificationQueueConsumer implements OnModuleInit {
     } catch (e) {
       this.logger.error(`Falha no push (completion) para ${client.userId}: ${e}`);
     }
-    try {
-      await this.email.send(client.email, title, this.email.serviceCompletedEmail(techName));
-    } catch (e) {
-      this.logger.error(`Falha no email (completion) para ${client.email}: ${e}`);
+    if (client.email) {
+      try {
+        await this.email.send(client.email, title, this.email.serviceCompletedEmail(techName));
+      } catch (e) {
+        this.logger.error(`Falha no email (completion) para ${client.email}: ${e}`);
+      }
     }
     await this.saveNotification(client.userId, 'SERVICE_COMPLETED', title, body, { serviceRequestId });
     this.gateway.emitToUser(client.userId, 'service-status-updated', { serviceRequestId, newStatus: 'COMPLETED' });

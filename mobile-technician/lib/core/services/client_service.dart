@@ -22,12 +22,14 @@ class ClientService {
     String? lastName,
     String? phone,
     String? nif,
+    bool? emailNotifications,
   }) async {
     final r = await _dio.patch('/clients/me', data: {
       if (firstName != null) 'firstName': firstName,
       if (lastName != null) 'lastName': lastName,
       if (phone != null) 'phone': phone,
       if (nif != null) 'nif': nif,
+      if (emailNotifications != null) 'emailNotifications': emailNotifications,
     });
     return ClientProfile.fromJson(r.data as Map<String, dynamic>);
   }

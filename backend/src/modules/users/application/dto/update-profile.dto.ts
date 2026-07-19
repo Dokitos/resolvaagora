@@ -1,4 +1,4 @@
-import { IsString, IsOptional, Matches } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, Matches } from 'class-validator';
 
 export class UpdateProfileDto {
   @IsOptional()
@@ -17,4 +17,8 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsString()
   nif?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  emailNotifications?: boolean;
 }
