@@ -64,10 +64,21 @@ class TechnicianService {
     final r = await _dio.get('/technician/earnings', queryParameters: {'period': period});
     return EarningsSummary.fromJson(r.data);
   }
+
+  /// Perfil do técnico autenticado (nome, telefone, email, photoUrl).
+  Future<Map<String, dynamic>> me() async {
+    final r = await _dio.get('/technician/me');
+    return Map<String, dynamic>.from(r.data as Map);
+  }
 }
 
 final technicianServiceProvider = Provider<TechnicianService>((ref) {
   return TechnicianService(ref.read(dioProvider));
+});
+
+/// Perfil do técnico autenticado (inclui `photoUrl`, nome, telefone, email).
+final technicianProfileProvider = FutureProvider<Map<String, dynamic>>((ref) {
+  return ref.read(technicianServiceProvider).me();
 });
 
 final assignedJobsProvider = FutureProvider<List<ServiceRequest>>((ref) {

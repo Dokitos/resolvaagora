@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/i18n/language_selector.dart';
 import '../../core/i18n/locale_provider.dart';
 import '../../core/services/auth_service.dart';
+import '../../core/services/technician_service.dart';
 import '../../core/theme/app_theme.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -61,6 +62,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    // Foto de perfil do técnico (vinda de GET /technician/me).
+    final rawPhoto = ref.watch(technicianProfileProvider).valueOrNull?['photoUrl']?.toString();
+    final photoUrl = (rawPhoto != null && rawPhoto.isNotEmpty) ? rawPhoto : null;
     final currentLang = (ref.watch(localeProvider)?.languageCode ??
                 Localizations.localeOf(context).languageCode) ==
             'en'
@@ -79,7 +83,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   CircleAvatar(
                     radius: 30,
                     backgroundColor: AppTheme.primaryLight,
-                    child: const Icon(Icons.person, size: 32, color: AppTheme.primary),
+                    backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
+                    child: photoUrl != null
+                        ? null
+                        : const Icon(Icons.person, size: 32, color: AppTheme.primary),
                   ),
                   const SizedBox(width: 16),
                   Expanded(

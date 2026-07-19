@@ -9,6 +9,16 @@ class _FinRange {
   final String? from;
   final String? to;
   const _FinRange(this.from, this.to);
+
+  // IMPORTANTE: o family do Riverpod compara os argumentos. Sem igualdade
+  // estrutural, cada build criava um provider novo → pedido infinito (loading
+  // eterno no ecrã Financeiro).
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) || (other is _FinRange && other.from == from && other.to == to);
+
+  @override
+  int get hashCode => Object.hash(from, to);
 }
 
 final _adminFinancialsRangeProvider =

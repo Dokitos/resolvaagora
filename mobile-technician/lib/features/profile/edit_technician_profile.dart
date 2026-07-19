@@ -6,6 +6,7 @@ import 'package:dio/dio.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../core/network/api_client.dart';
 import '../../core/services/auth_service.dart';
+import '../../core/services/technician_service.dart';
 import '../../core/theme/app_theme.dart';
 
 /// Ecrã para o técnico editar o próprio perfil (nome, contacto, email).
@@ -106,6 +107,8 @@ class _EditTechnicianProfileScreenState extends ConsumerState<EditTechnicianProf
       final url = (r.data as Map)['photoUrl']?.toString();
       if (!mounted) return;
       setState(() => _photoUrl = url);
+      // Atualiza o avatar no ecrã Perfil.
+      ref.invalidate(technicianProfileProvider);
       _toast(l.profileUpdated);
     } on DioException catch (e) {
       _toast(e.response?.data?['message']?.toString() ?? l.couldntSave);
