@@ -18,6 +18,7 @@ import { RolesGuard } from '../../auth/presentation/guards/roles.guard';
 import { CurrentUser } from '../../auth/presentation/decorators/current-user.decorator';
 import { AuthenticatedUser } from '../../auth/infrastructure/jwt.strategy';
 import { CreateServiceRequestUseCase } from '../application/use-cases/create-service-request.use-case';
+import { DisplacementFeeService } from '../application/displacement-fee.service';
 import { CreateServiceRequestDto } from '../application/dto/create-service-request.dto';
 import { CreateReviewDto } from '../application/dto/create-review.dto';
 import { EmailService } from '../../notifications/infrastructure/email.service';
@@ -30,6 +31,7 @@ import { RabbitMQService } from '@shared/infrastructure/messaging/rabbitmq.servi
 export class ServiceRequestsController {
   constructor(
     private readonly createServiceRequest: CreateServiceRequestUseCase,
+    private readonly displacementFee: DisplacementFeeService,
     private readonly prisma: PrismaService,
     private readonly rabbitmq: RabbitMQService,
     private readonly email: EmailService,
@@ -65,6 +67,49 @@ export class ServiceRequestsController {
       skip: (Number(page) - 1) * Number(limit),
       take: Number(limit),
     });
+  }
+
+  /**
+   * Cotação da taxa de deslocação para uma morada do cliente.
+   * `base`/`fee` são pré-desconto; `feeAfterDiscount` aplica o desconto da subscrição ativa.
+   */
+  @Get('displacement-quote')
+  async displacementQuote(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('addressId') addressId: string,
+  ) {
+    if (!addressId) throw new BadRequestException('addressId é obrigatório');
+
+    const clientUser = await this.prisma.user.findUnique({
+      where: { id: user.id },
+      include: {
+        client: {
+          include: {
+            subscriptions: {
+              where: { status: 'ACTIVE' },
+              include: { plan: true },
+              take: 1,
+            },
+          },
+        },
+      },
+    });
+    if (!clientUser?.client) throw new NotFoundException('Client not found');
+
+    const address = await this.prisma.address.findFirst({
+      where: { id: addressId, clientId: clientUser.client.id },
+    });
+    if (!address) throw new NotFoundException('Address not found');
+
+    const activeSubscription = clientUser.client.subscriptions[0] ?? null;
+    const discountPct = activeSubscription
+      ? Number(activeSubscription.plan.displacementDiscountPct)
+      : 0;
+
+    return this.displacementFee.quoteForAddress(
+      { latitude: address.latitude, longitude: address.longitude },
+      discountPct,
+    );
   }
 
   @Get(':id')

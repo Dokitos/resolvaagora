@@ -19,9 +19,12 @@ class ConfirmationPage extends ConsumerWidget {
     final dateFmt = DateFormat("d 'de' MMMM 'de' yyyy", 'pt_PT');
 
     // Total pago = itens + deslocação − desconto (igual ao cobrado). Mesmo
-    // fallback usado na página de confirmação de pagamento.
-    final displacement = ref.watch(effectiveDisplacementProvider).valueOrNull ??
-        (ref.watch(appSettingsProvider).valueOrNull?.displacementFee ?? 25.0);
+    // fallback usado na página de confirmação de pagamento. Numa visita grátis
+    // a deslocação é 0 (o backend cobra 0), tal como em payment_confirm_page.
+    final displacement = booking.useFreeVisit
+        ? 0.0
+        : (ref.watch(effectiveDisplacementProvider).valueOrNull ??
+            (ref.watch(appSettingsProvider).valueOrNull?.displacementFee ?? 25.0));
     final promoDiscount = booking.promoDiscount;
     final total = (booking.total + displacement - promoDiscount)
         .clamp(0, double.infinity)

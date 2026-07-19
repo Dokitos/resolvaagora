@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../core/services/admin_service.dart';
 import '../../core/services/auth_service.dart';
@@ -28,6 +29,22 @@ class AdminMoreScreen extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            // Ferramentas de administração
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.grey.shade200)),
+              child: Column(children: [
+                _navTile(context, Icons.attach_money, 'Financeiro (detalhe)', 'Receita por dia e filtro de datas', '/admin/financials'),
+                const Divider(height: 1),
+                _navTile(context, Icons.insights, 'Analytics', 'Indicadores e distribuição por especialidade', '/admin/analytics'),
+                const Divider(height: 1),
+                _navTile(context, Icons.campaign, 'Enviar notificação', 'Push para clientes ou técnicos', '/admin/notifications'),
+                const Divider(height: 1),
+                _navTile(context, Icons.person_add, 'Criar técnico', 'Adicionar novo técnico', '/admin/technicians/new'),
+              ]),
+            ),
+            const SizedBox(height: 12),
+
             // Financeiro
             _section('Financeiro', fin.when(
               loading: () => const LinearProgressIndicator(),
@@ -98,6 +115,14 @@ class AdminMoreScreen extends ConsumerWidget {
       ),
     );
   }
+
+  Widget _navTile(BuildContext context, IconData icon, String title, String subtitle, String route) => ListTile(
+        leading: CircleAvatar(backgroundColor: const Color(0xFFEEF2FF), child: Icon(icon, color: AppTheme.brandBlue, size: 20)),
+        title: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+        subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
+        trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+        onTap: () => context.push(route),
+      );
 
   Widget _section(String title, Widget child) => Container(
         width: double.infinity,

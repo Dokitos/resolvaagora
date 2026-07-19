@@ -1,5 +1,5 @@
 import { api } from './client'
-import type { DashboardMetrics, AnalyticsData, ServiceRequest, Technician, SlaAlert } from './types'
+import type { DashboardMetrics, AnalyticsData, ServiceRequest, Technician, SlaAlert, Email, EmailTemplate, EmailFolder } from './types'
 
 export const adminApi = {
   dashboard: () =>
@@ -123,4 +123,29 @@ export const adminApi = {
 
   deleteClient: (clientUserId: string) =>
     api.delete(`/admin/clients/${clientUserId}`),
+
+  // ── Email ────────────────────────────────────────────────
+  emails: (folder: EmailFolder = 'inbox', page = 1) =>
+    api.get<{ items: Email[]; total: number }>('/admin/emails', { params: { folder, page } }).then((r) => r.data),
+
+  email: (id: string) =>
+    api.get<Email>(`/admin/emails/${id}`).then((r) => r.data),
+
+  updateEmail: (id: string, patch: { isRead?: boolean; isStarred?: boolean; folder?: EmailFolder }) =>
+    api.patch<Email>(`/admin/emails/${id}`, patch).then((r) => r.data),
+
+  sendEmail: (payload: { to: string; subject: string; html: string }) =>
+    api.post('/admin/emails/send', payload).then((r) => r.data),
+
+  emailTemplates: () =>
+    api.get<EmailTemplate[]>('/admin/email-templates').then((r) => r.data),
+
+  createEmailTemplate: (data: Partial<EmailTemplate>) =>
+    api.post<EmailTemplate>('/admin/email-templates', data).then((r) => r.data),
+
+  updateEmailTemplate: (id: string, data: Partial<EmailTemplate>) =>
+    api.patch<EmailTemplate>(`/admin/email-templates/${id}`, data).then((r) => r.data),
+
+  deleteEmailTemplate: (id: string) =>
+    api.delete(`/admin/email-templates/${id}`),
 }

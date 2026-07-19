@@ -4,6 +4,7 @@ import { TechnicianServiceRequestsController } from './presentation/technician-s
 import { CreateServiceRequestUseCase } from './application/use-cases/create-service-request.use-case';
 import { UpdateServiceStatusUseCase } from './application/use-cases/update-service-status.use-case';
 import { UploadProofPhotosUseCase } from './application/use-cases/upload-proof-photos.use-case';
+import { DisplacementFeeService } from './application/displacement-fee.service';
 import { PromotionsModule } from '../promotions/promotions.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 
@@ -14,6 +15,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     CreateServiceRequestUseCase,
     UpdateServiceStatusUseCase,
     UploadProofPhotosUseCase,
+    DisplacementFeeService,
   ],
   exports: [CreateServiceRequestUseCase],
 })

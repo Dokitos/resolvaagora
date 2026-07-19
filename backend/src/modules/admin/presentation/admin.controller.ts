@@ -706,12 +706,24 @@ export class AdminController {
 
   @Patch('settings')
   updateSettings(@Body() data: any) {
+    // Coerção segura de campos numéricos: só encaminha quando presentes e válidos.
+    const num = (v: any): number | undefined => {
+      if (v === undefined || v === null || v === '') return undefined;
+      const n = Number(v);
+      return Number.isFinite(n) ? n : undefined;
+    };
     return this.settings.update({
       maintenanceMode: data.maintenanceMode,
       maintenanceMessage: data.maintenanceMessage,
       registrationEnabled: data.registrationEnabled,
       paymentsEnabled: data.paymentsEnabled,
       paymentsTestMode: data.paymentsTestMode,
+      smsVerificationEnabled: data.smsVerificationEnabled,
+      displacementOriginLat: num(data.displacementOriginLat),
+      displacementOriginLng: num(data.displacementOriginLng),
+      displacementPerKm: num(data.displacementPerKm),
+      displacementBaseFee: num(data.displacementBaseFee),
+      displacementMinFee: num(data.displacementMinFee),
     });
   }
 

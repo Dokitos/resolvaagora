@@ -50,6 +50,10 @@ class BookingState {
   // Visita grátis (subscrição): quando true, o pedido é criado sem itens e o
   // backend cobra 0 (consome uma visita grátis do plano).
   final bool useFreeVisit;
+  // Morada guardada selecionada (se o cliente escolheu uma morada existente).
+  // Permite obter a cotação de deslocação por distância ANTES de criar o
+  // pedido. `null` quando ainda não há morada escolhida.
+  final String? selectedAddressId;
 
   const BookingState({
     this.category,
@@ -78,6 +82,7 @@ class BookingState {
     this.billingPostalCode = '',
     this.billingCity = '',
     this.useFreeVisit = false,
+    this.selectedAddressId,
   });
 
   double get total =>
@@ -114,6 +119,7 @@ class BookingState {
     String? billingPostalCode,
     String? billingCity,
     bool? useFreeVisit,
+    String? selectedAddressId,
   }) =>
       BookingState(
         category: category ?? this.category,
@@ -142,6 +148,7 @@ class BookingState {
         billingPostalCode: billingPostalCode ?? this.billingPostalCode,
         billingCity: billingCity ?? this.billingCity,
         useFreeVisit: useFreeVisit ?? this.useFreeVisit,
+        selectedAddressId: selectedAddressId ?? this.selectedAddressId,
       );
 }
 
@@ -159,6 +166,11 @@ class BookingNotifier extends StateNotifier<BookingState> {
   void startFreeVisit() => state = const BookingState().copyWith(useFreeVisit: true);
 
   void setUseFreeVisit(bool v) => state = state.copyWith(useFreeVisit: v);
+
+  /// Guarda a morada existente escolhida (para a cotação de deslocação por
+  /// distância). `null` limpa a seleção.
+  void setSelectedAddress(String? id) =>
+      state = state.copyWith(selectedAddressId: id);
 
   void selectSubcategory(ServiceSubcategory sub) {
     // Initialise items list with qty=0 for each item

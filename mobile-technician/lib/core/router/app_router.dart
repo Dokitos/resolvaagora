@@ -22,6 +22,10 @@ import '../../features/admin/admin_request_detail_screen.dart';
 import '../../features/admin/admin_clients_screen.dart';
 import '../../features/admin/admin_chat_screen.dart';
 import '../../features/admin/admin_more_screen.dart';
+import '../../features/admin/admin_send_notification_screen.dart';
+import '../../features/admin/admin_financials_screen.dart';
+import '../../features/admin/admin_analytics_screen.dart';
+import '../../features/admin/admin_create_technician_screen.dart';
 // Client screens
 import '../models/client_profile.dart';
 import '../../features/client/shell/client_shell.dart';
@@ -157,6 +161,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/admin/requests/:id',
         builder: (_, state) => AdminRequestDetailScreen(id: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/admin/notifications',
+        builder: (_, __) => const AdminSendNotificationScreen(),
+      ),
+      GoRoute(
+        path: '/admin/financials',
+        builder: (_, __) => const AdminFinancialsScreen(),
+      ),
+      GoRoute(
+        path: '/admin/analytics',
+        builder: (_, __) => const AdminAnalyticsScreen(),
+      ),
+      GoRoute(
+        path: '/admin/technicians/new',
+        builder: (_, __) => const AdminCreateTechnicianScreen(),
       ),
       GoRoute(
         path: '/admin/chat',

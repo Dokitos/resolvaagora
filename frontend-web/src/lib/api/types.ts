@@ -147,6 +147,33 @@ export interface SlaAlert {
   serviceRequest?: ServiceRequest
 }
 
+export type EmailFolder = 'inbox' | 'sent' | 'trash'
+
+export interface Email {
+  id: string
+  messageId: string
+  subject: string
+  fromName: string
+  fromEmail: string
+  toEmail: string[]
+  bodyText: string
+  bodyHtml: string
+  isRead: boolean
+  isStarred: boolean
+  folder: EmailFolder
+  receivedAt: string
+}
+
+export interface EmailTemplate {
+  id: string
+  nome: string
+  slug: string
+  assunto: string
+  bodyHtml: string
+  variaveis: string[]
+  ativo: boolean
+}
+
 export interface DashboardMetrics {
   today: { totalRequests: number; revenue: number }
   byStatus: { status: ServiceStatus; count: number }[]

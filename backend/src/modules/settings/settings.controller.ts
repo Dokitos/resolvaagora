@@ -29,7 +29,9 @@ export class SettingsController {
       paymentsTestMode: s.paymentsTestMode,
       smsVerificationEnabled: s.smsVerificationEnabled,
       // A app usa isto para iniciar a Stripe e mostrar o total com deslocação.
-      displacementFee: DISPLACEMENT_FEE,
+      // Builds antigos esperam um número: usa a taxa mínima/base das definições
+      // (cai para a constante legada se ambas forem 0/indefinidas).
+      displacementFee: s.displacementMinFee || s.displacementBaseFee || DISPLACEMENT_FEE,
       stripePublishableKey: pk.includes('placeholder') ? '' : pk,
       // Indicador de diagnóstico: true se o R2 está configurado (não stub).
       imageUploadsEnabled: this.storage.configured,

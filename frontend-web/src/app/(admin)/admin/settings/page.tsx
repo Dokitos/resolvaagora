@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
-import { Settings, Megaphone, Wrench, Gift } from 'lucide-react'
+import { Settings, Megaphone, Wrench, Gift, MapPin } from 'lucide-react'
 
 type AppSettings = {
   maintenanceMode: boolean
@@ -15,6 +15,19 @@ type AppSettings = {
   registrationEnabled: boolean
   paymentsEnabled: boolean
   paymentsTestMode: boolean
+  displacementOriginLat?: number | null
+  displacementOriginLng?: number | null
+  displacementPerKm?: number | null
+  displacementBaseFee?: number | null
+  displacementMinFee?: number | null
+}
+
+type DisplacementForm = {
+  displacementOriginLat: string
+  displacementOriginLng: string
+  displacementPerKm: string
+  displacementBaseFee: string
+  displacementMinFee: string
 }
 
 type ReferralConfig = {
@@ -29,11 +42,39 @@ export default function AdminSettingsPage() {
   const [sending, setSending] = useState(false)
   const [rc, setRc] = useState<ReferralConfig | null>(null)
   const [savingRc, setSavingRc] = useState(false)
+  const [disp, setDisp] = useState<DisplacementForm | null>(null)
+  const [savingDisp, setSavingDisp] = useState(false)
 
   useEffect(() => {
-    adminApi.settings().then(setS)
+    adminApi.settings().then((data: AppSettings) => {
+      setS(data)
+      setDisp({
+        displacementOriginLat: data.displacementOriginLat != null ? String(data.displacementOriginLat) : '',
+        displacementOriginLng: data.displacementOriginLng != null ? String(data.displacementOriginLng) : '',
+        displacementPerKm: data.displacementPerKm != null ? String(data.displacementPerKm) : '',
+        displacementBaseFee: data.displacementBaseFee != null ? String(data.displacementBaseFee) : '',
+        displacementMinFee: data.displacementMinFee != null ? String(data.displacementMinFee) : '',
+      })
+    })
     adminApi.referralConfig().then(setRc)
   }, [])
+
+  async function saveDisplacement() {
+    if (!disp) return
+    setSavingDisp(true)
+    try {
+      const num = (v: string) => (v.trim() === '' ? null : Number(v))
+      const updated: AppSettings = await adminApi.updateSettings({
+        displacementOriginLat: num(disp.displacementOriginLat),
+        displacementOriginLng: num(disp.displacementOriginLng),
+        displacementPerKm: num(disp.displacementPerKm),
+        displacementBaseFee: num(disp.displacementBaseFee),
+        displacementMinFee: num(disp.displacementMinFee),
+      })
+      setS(updated)
+      toast.success('Taxa de deslocação atualizada')
+    } catch (err: any) { toast.error(err.message) } finally { setSavingDisp(false) }
+  }
 
   async function saveReferral() {
     if (!rc) return
@@ -109,6 +150,40 @@ export default function AdminSettingsPage() {
                 <p className="text-xs text-gray-400 mt-1">Dica: escreve <code>{'{code}'}</code> onde queres que apareça o código do cliente.</p>
               </div>
               <Button onClick={saveReferral} loading={savingRc} className="bg-brand-600 hover:bg-brand-700">Guardar</Button>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle className="flex items-center gap-2"><MapPin className="h-4 w-4" />Taxa de deslocação (por distância)</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          {!disp ? <p className="text-sm text-gray-400 py-4">A carregar...</p> : (
+            <>
+              <p className="text-xs text-gray-400">A taxa de deslocação é calculada a partir da origem definida até à morada do cliente.</p>
+              <div className="grid md:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Latitude da origem</label>
+                  <Input type="number" step="any" placeholder="Ex: 38.7223" value={disp.displacementOriginLat} onChange={(e) => setDisp({ ...disp, displacementOriginLat: e.target.value })} />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Longitude da origem</label>
+                  <Input type="number" step="any" placeholder="Ex: -9.1393" value={disp.displacementOriginLng} onChange={(e) => setDisp({ ...disp, displacementOriginLng: e.target.value })} />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Preço por km (€)</label>
+                  <Input type="number" step="0.01" min="0" placeholder="Ex: 0.50" value={disp.displacementPerKm} onChange={(e) => setDisp({ ...disp, displacementPerKm: e.target.value })} />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Taxa base (€)</label>
+                  <Input type="number" step="0.01" min="0" placeholder="Ex: 5.00" value={disp.displacementBaseFee} onChange={(e) => setDisp({ ...disp, displacementBaseFee: e.target.value })} />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Taxa mínima (€)</label>
+                  <Input type="number" step="0.01" min="0" placeholder="Ex: 10.00" value={disp.displacementMinFee} onChange={(e) => setDisp({ ...disp, displacementMinFee: e.target.value })} />
+                </div>
+              </div>
+              <Button onClick={saveDisplacement} loading={savingDisp} className="bg-brand-600 hover:bg-brand-700">Guardar</Button>
             </>
           )}
         </CardContent>

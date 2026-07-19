@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../network/api_client.dart';
 import '../models/client_profile.dart';
 import '../models/service_request.dart';
+import '../../features/client/booking/booking_provider.dart';
 import 'settings_service.dart';
 
 /// Customer-facing API layer. Mirrors [TechnicianService] but for the CLIENT role.
@@ -140,6 +141,17 @@ class ClientService {
 
   Future<void> cancelServiceRequest(String id) async {
     await _dio.delete('/service-requests/$id');
+  }
+
+  /// Cotação de deslocação baseada na distância até à morada indicada.
+  /// Devolve { base, fee, feeAfterDiscount } — `feeAfterDiscount` é o valor que
+  /// o cliente paga (desconto do plano premium já aplicado).
+  Future<Map<String, dynamic>> displacementQuote(String addressId) async {
+    final r = await _dio.get(
+      '/service-requests/displacement-quote',
+      queryParameters: {'addressId': addressId},
+    );
+    return Map<String, dynamic>.from(r.data as Map);
   }
 
   /// Paga o pedido completo (itens + deslocação). Devolve o mapa da resposta:
@@ -344,21 +356,42 @@ final homeBannersProvider = FutureProvider<List<HomeBanner>>((ref) async {
   }
 });
 
-/// Taxa de deslocação efetiva para o cliente atual: parte da taxa base
-/// (definições) e aplica o desconto da subscrição ativa, tal como o backend
-/// faz ao criar o pedido. Assim o total mostrado bate certo com o cobrado.
+/// Taxa de deslocação efetiva para o cliente atual.
+///
+/// Quando há uma morada selecionada na reserva, obtém a cotação por distância
+/// no backend (`GET /service-requests/displacement-quote`) e devolve o
+/// `feeAfterDiscount` (o que o cliente paga, com o desconto premium já
+/// aplicado). Sem morada selecionada — ou se a cotação falhar — recorre ao
+/// comportamento antigo: taxa base das definições com o desconto da subscrição
+/// ativa, para a UI nunca partir.
 final effectiveDisplacementProvider = FutureProvider<double>((ref) async {
-  final settings = await ref.watch(appSettingsProvider.future);
-  final base = settings.displacementFee;
-  try {
-    final sub = await ref.watch(mySubscriptionProvider.future);
-    final plan = sub?.plan;
-    if (sub != null && sub.isActive && plan != null) {
-      final pct = plan.displacementDiscountPct.clamp(0, 100) / 100.0;
-      return double.parse((base * (1 - pct)).toStringAsFixed(2));
+  // Comportamento antigo (fallback): taxa base × desconto da subscrição.
+  Future<double> fallback() async {
+    final settings = await ref.watch(appSettingsProvider.future);
+    final base = settings.displacementFee;
+    try {
+      final sub = await ref.watch(mySubscriptionProvider.future);
+      final plan = sub?.plan;
+      if (sub != null && sub.isActive && plan != null) {
+        final pct = plan.displacementDiscountPct.clamp(0, 100) / 100.0;
+        return double.parse((base * (1 - pct)).toStringAsFixed(2));
+      }
+    } catch (_) {
+      // Sem subscrição / falha a obter → usa a taxa base.
     }
-  } catch (_) {
-    // Sem subscrição / falha a obter → usa a taxa base.
+    return base;
   }
-  return base;
+
+  final addressId = ref.watch(bookingProvider.select((b) => b.selectedAddressId));
+  if (addressId == null || addressId.isEmpty) {
+    return fallback();
+  }
+  try {
+    final quote = await ref.read(clientServiceProvider).displacementQuote(addressId);
+    final fee = (quote['feeAfterDiscount'] as num?)?.toDouble();
+    if (fee != null) return fee;
+  } catch (_) {
+    // Cotação por distância indisponível → mantém o comportamento antigo.
+  }
+  return fallback();
 });

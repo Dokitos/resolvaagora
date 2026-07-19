@@ -19,6 +19,11 @@ export class SettingsService {
     paymentsEnabled?: boolean;
     paymentsTestMode?: boolean;
     smsVerificationEnabled?: boolean;
+    displacementOriginLat?: number | null;
+    displacementOriginLng?: number | null;
+    displacementPerKm?: number;
+    displacementBaseFee?: number;
+    displacementMinFee?: number;
   }) {
     return this.prisma.appSetting.upsert({
       where: { id: 'app' },

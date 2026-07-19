@@ -4,8 +4,7 @@ import { PrismaService } from '@shared/infrastructure/database/prisma.service';
 import { RabbitMQService } from '@shared/infrastructure/messaging/rabbitmq.service';
 import { PromoService } from '../../../promotions/application/promo.service';
 import { CreateServiceRequestDto } from '../dto/create-service-request.dto';
-
-const DISPLACEMENT_FEE = 25.00; // configurável futuramente
+import { DisplacementFeeService } from '../displacement-fee.service';
 
 @Injectable()
 export class CreateServiceRequestUseCase {
@@ -14,6 +13,7 @@ export class CreateServiceRequestUseCase {
     private readonly rabbitmq: RabbitMQService,
     private readonly config: ConfigService,
     private readonly promoService: PromoService,
+    private readonly displacementFee: DisplacementFeeService,
   ) {}
 
   async execute(userId: string, dto: CreateServiceRequestDto) {
@@ -57,7 +57,13 @@ export class CreateServiceRequestUseCase {
 
     let isFreeVisit = false;
     let subscriptionId: string | undefined;
-    let displacementFee = DISPLACEMENT_FEE;
+
+    // Taxa de deslocação calculada por distância a partir das coordenadas da morada.
+    const { fee: baseFee } = this.displacementFee.computeFee(settings, {
+      latitude: address.latitude,
+      longitude: address.longitude,
+    });
+    let displacementFee = baseFee;
 
     if (dto.useFreeVisit && activeSubscription) {
       const plan = activeSubscription.plan;
@@ -68,8 +74,10 @@ export class CreateServiceRequestUseCase {
       subscriptionId = activeSubscription.id;
       displacementFee = 0;
     } else if (activeSubscription) {
-      const discount = Number(activeSubscription.plan.displacementDiscountPct) / 100;
-      displacementFee = DISPLACEMENT_FEE * (1 - discount);
+      displacementFee = this.displacementFee.applyDiscount(
+        baseFee,
+        Number(activeSubscription.plan.displacementDiscountPct),
+      );
     }
 
     const serviceRequest = await this.prisma.$transaction(async (tx) => {

@@ -13,8 +13,11 @@ class AdminService {
     return Map<String, dynamic>.from(r.data as Map);
   }
 
-  Future<Map<String, dynamic>> financials() async {
-    final r = await _dio.get('/admin/financials');
+  Future<Map<String, dynamic>> financials({String? from, String? to}) async {
+    final r = await _dio.get('/admin/financials', queryParameters: {
+      if (from != null && from.isNotEmpty) 'from': from,
+      if (to != null && to.isNotEmpty) 'to': to,
+    });
     return Map<String, dynamic>.from(r.data as Map);
   }
 
@@ -66,6 +69,44 @@ class AdminService {
     final r = await _dio.post('/admin/clients/$clientUserId/messages', data: {'body': body});
     return Map<String, dynamic>.from(r.data as Map);
   }
+
+  // ── Notificações push (broadcast) ─────────────────────────────────────────
+  Future<Map<String, dynamic>> broadcast({
+    required String target,
+    String? userId,
+    required String title,
+    required String body,
+  }) async {
+    final r = await _dio.post('/admin/notifications/broadcast', data: {
+      'target': target,
+      if (userId != null && userId.isNotEmpty) 'userId': userId,
+      'title': title,
+      'body': body,
+    });
+    return Map<String, dynamic>.from(r.data as Map);
+  }
+
+  // ── Criar técnico ─────────────────────────────────────────────────────────
+  Future<void> createTechnician({
+    required String firstName,
+    required String lastName,
+    required String email,
+    required String phone,
+    required String password,
+    required List<String> specialties,
+    required List<String> coverageDistricts,
+    int? dailyServiceLimit,
+  }) =>
+      _dio.post('/admin/technicians', data: {
+        'firstName': firstName,
+        'lastName': lastName,
+        'email': email,
+        'phone': phone,
+        'password': password,
+        'specialties': specialties,
+        'coverageDistricts': coverageDistricts,
+        if (dailyServiceLimit != null) 'dailyServiceLimit': dailyServiceLimit,
+      });
 
   // ── App settings (feature flags) ──────────────────────────────────────────
   Future<Map<String, dynamic>> settings() async {

@@ -171,6 +171,9 @@ export function TechnicianForm({ technicianId, defaultValues }: TechnicianFormPr
             onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
             error={errors.password}
           />
+          <p className="text-xs text-gray-500 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+            As credenciais de acesso são enviadas automaticamente por email ao técnico aquando da criação da conta.
+          </p>
         </Card>
       )}
 

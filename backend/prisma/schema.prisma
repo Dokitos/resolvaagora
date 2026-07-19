@@ -587,7 +587,64 @@ model AppSetting {
   paymentsEnabled     Boolean  @default(true)  @map("payments_enabled")
   paymentsTestMode    Boolean  @default(true)  @map("payments_test_mode")
   smsVerificationEnabled Boolean @default(false) @map("sms_verification_enabled")
+  // Origem e parâmetros do cálculo da taxa de deslocação por distância.
+  displacementOriginLat Float?  @default(38.7169) @map("displacement_origin_lat")
+  displacementOriginLng Float?  @default(-9.1395) @map("displacement_origin_lng")
+  displacementPerKm     Float   @default(1.10)    @map("displacement_per_km")
+  displacementBaseFee   Float   @default(0)       @map("displacement_base_fee")
+  displacementMinFee    Float   @default(0)       @map("displacement_min_fee")
   updatedAt           DateTime @updatedAt @map("updated_at")
 
   @@map("app_settings")
+}
+
+// ─── EMAIL (caixa de entrada + envios + templates) ────────────────────────────
+
+/// Emails recebidos (via webhook inbound da Resend/Svix) e geridos no admin.
+model Email {
+  id          String   @id @default(uuid())
+  messageId   String   @unique @map("message_id")
+  subject     String?
+  fromName    String?  @map("from_name")
+  fromEmail   String   @map("from_email")
+  toEmail     String[] @map("to_email")
+  bodyText    String?  @map("body_text") @db.Text
+  bodyHtml    String?  @map("body_html") @db.Text
+  isRead      Boolean  @default(false) @map("is_read")
+  isStarred   Boolean  @default(false) @map("is_starred")
+  folder      String   @default("inbox")
+  attachments Json?
+  receivedAt  DateTime @default(now()) @map("received_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("emails")
+}
+
+/// Registo de emails enviados (auditoria / diagnóstico).
+model EmailLog {
+  id           String   @id @default(uuid())
+  resendId     String?  @map("resend_id")
+  toEmail      String   @map("to_email")
+  subject      String
+  bodyHtml     String   @map("body_html") @db.Text
+  templateType String?  @map("template_type")
+  status       String
+  sentAt       DateTime @default(now()) @map("sent_at")
+
+  @@map("email_logs")
+}
+
+/// Templates de email geridos no admin.
+model EmailTemplate {
+  id        String   @id @default(uuid())
+  nome      String
+  slug      String   @unique
+  assunto   String
+  bodyHtml  String   @map("body_html") @db.Text
+  variaveis Json?
+  ativo     Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("email_templates")
 }
