@@ -33,9 +33,12 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       {/* Sidebar */}
       <aside className="w-60 bg-white border-r border-gray-200 flex flex-col shrink-0">
         <div className="h-16 flex items-center gap-3 px-6 bg-brand-600 text-white">
-          <div className="w-9 h-9 bg-white/15 rounded-lg flex items-center justify-center font-black">
-            SM
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo.png"
+            alt="ResolvaAgora"
+            className="w-9 h-9 rounded-lg object-contain bg-white/15 p-0.5"
+          />
           <div className="leading-tight">
             <p className="text-sm font-bold">ResolvaAgora</p>
             <p className="text-xs text-white/70">Administração</p>

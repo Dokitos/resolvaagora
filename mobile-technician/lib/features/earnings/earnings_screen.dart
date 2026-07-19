@@ -6,9 +6,61 @@ import '../../core/models/earning.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/theme/app_theme.dart';
 
+/// Período selecionado nos Ganhos. Por defeito 'all' — assim o técnico vê
+/// sempre o histórico completo, e não só o mês atual.
+final earningsPeriodProvider = StateProvider<String>((ref) => 'all');
+
 final earningsProvider = FutureProvider<EarningsSummary>((ref) {
-  return ref.read(technicianServiceProvider).getEarnings();
+  final period = ref.watch(earningsPeriodProvider);
+  return ref.read(technicianServiceProvider).getEarnings(period: period);
 });
+
+/// Seletor de período dos ganhos (Semana / Mês / Tudo).
+class _PeriodSelector extends ConsumerWidget {
+  const _PeriodSelector();
+
+  static const _options = [
+    ('week', 'Semana'),
+    ('month', 'Mês'),
+    ('all', 'Tudo'),
+  ];
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selected = ref.watch(earningsPeriodProvider);
+    return Row(
+      children: [
+        for (final (value, label) in _options) ...[
+          Expanded(
+            child: GestureDetector(
+              onTap: () => ref.read(earningsPeriodProvider.notifier).state = value,
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  color: selected == value ? AppTheme.primary : Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: selected == value ? AppTheme.primary : Colors.grey.shade300,
+                  ),
+                ),
+                child: Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: selected == value ? Colors.white : Colors.grey[700],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          if (value != _options.last.$1) const SizedBox(width: 8),
+        ],
+      ],
+    );
+  }
+}
 
 class EarningsScreen extends ConsumerWidget {
   const EarningsScreen({super.key});
@@ -28,6 +80,8 @@ class EarningsScreen extends ConsumerWidget {
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              const _PeriodSelector(),
+              const SizedBox(height: 14),
               // Summary cards
               Row(
                 children: [

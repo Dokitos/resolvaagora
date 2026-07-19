@@ -69,12 +69,8 @@ export function Landing() {
       <header className="sticky top-0 z-50 border-b border-brand-100/60 bg-white/80 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 sm:px-8">
           <div className="flex items-center gap-2">
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600">
-              <Zap className="h-5 w-5 text-accent-500" fill="currentColor" />
-            </span>
-            <span className="text-lg font-extrabold tracking-tight text-brand-600">
-              Resolva<span className="text-accent-500">Agora</span>
-            </span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.png" alt="ResolvaAgora" className="h-10 w-auto object-contain" />
           </div>
           <nav className="hidden items-center gap-8 text-sm font-medium text-brand-500 md:flex">
             <a href="#servicos" className="transition-colors hover:text-brand-600">Serviços</a>

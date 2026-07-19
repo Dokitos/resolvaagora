@@ -31,5 +31,15 @@
             android:name="flutterEmbedding"
             android:value="2"/>
 
+        <!-- Ícone e cor das notificações push (FCM). Sem isto o Android mostra
+             um quadrado cinzento em vez da marca. O ícone é branco/transparente:
+             o Android pinta-o pela cor definida abaixo. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_notification"/>
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/notification_color"/>
+
     </application>
 </manifest>
