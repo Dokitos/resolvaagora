@@ -134,6 +134,24 @@ export class EmailService {
     `;
   }
 
+  /** Email genérico de notificação (atualizações de pedidos, etc.). */
+  genericEmail(title: string, body: string): string {
+    return `
+      <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;border:1px solid #E5E7EB;border-radius:12px;overflow:hidden">
+        <div style="background:#161616;color:#F5B301;padding:20px 24px">
+          <h2 style="margin:0">ResolvaAgora</h2>
+        </div>
+        <div style="padding:24px">
+          <h3 style="margin:0 0 10px;color:#161616">${title}</h3>
+          <p style="margin:0;color:#374151;font-size:15px;line-height:1.6">${body}</p>
+        </div>
+        <div style="padding:0 24px 20px">
+          <p style="color:#9CA3AF;font-size:12px;margin:0">Podes acompanhar tudo na app ResolvaAgora.</p>
+        </div>
+      </div>
+    `;
+  }
+
   /** Email de boas-vindas ao técnico com as credenciais de acesso. */
   technicianWelcomeEmail(name: string, email: string, password: string): string {
     return `
