@@ -134,6 +134,27 @@ export class EmailService {
     `;
   }
 
+  /** Email de boas-vindas ao técnico com as credenciais de acesso. */
+  technicianWelcomeEmail(name: string, email: string, password: string): string {
+    return `
+      <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;border:1px solid #E5E7EB;border-radius:12px;overflow:hidden">
+        <div style="background:#161616;color:#F5B301;padding:20px 24px">
+          <h2 style="margin:0">ResolvaAgora</h2>
+          <p style="margin:4px 0 0;color:#fff;opacity:.85">Bem-vindo à equipa de técnicos</p>
+        </div>
+        <div style="padding:24px">
+          <p>Olá ${name},</p>
+          <p>Foi criada uma conta de técnico para ti na ResolvaAgora. Podes entrar na aplicação com estas credenciais:</p>
+          <div style="background:#FFF7E0;border:1px solid #F5B301;border-radius:10px;padding:16px 18px;margin:18px 0">
+            <p style="margin:0 0 6px"><strong>Email:</strong> ${email}</p>
+            <p style="margin:0"><strong>Palavra-passe:</strong> ${password}</p>
+          </div>
+          <p style="color:#6B7280;font-size:13px">Por segurança, recomendamos que alteres a palavra-passe após o primeiro acesso.</p>
+        </div>
+      </div>
+    `;
+  }
+
   passwordResetEmail(code: string): string {
     return `
       <h2>Recuperação de palavra-passe</h2>

@@ -28,7 +28,7 @@ export class CreateTechnicianDto {
 
   @IsArray()
   @IsString({ each: true })
-  districts: string[];
+  coverageDistricts: string[];
 
   @IsOptional()
   @IsInt()
