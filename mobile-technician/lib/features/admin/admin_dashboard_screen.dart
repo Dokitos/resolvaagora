@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/widgets/onboarding_overlay.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -25,6 +26,7 @@ class AdminDashboardScreen extends ConsumerWidget {
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
+            const OnboardingTrigger(role: OnboardingRole.admin),
             Container(
               color: AppTheme.brandRed,
               padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + 20, 20, 24),

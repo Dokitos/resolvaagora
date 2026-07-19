@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/widgets/onboarding_overlay.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -25,6 +26,7 @@ class ClientHomeScreen extends StatelessWidget {
       backgroundColor: Colors.grey[50],
       body: CustomScrollView(
         slivers: [
+          const SliverToBoxAdapter(child: OnboardingTrigger(role: OnboardingRole.client)),
           _buildAppBar(context),
           SliverToBoxAdapter(child: Consumer(builder: (context, ref, _) {
             final settings = ref.watch(appSettingsProvider).valueOrNull;

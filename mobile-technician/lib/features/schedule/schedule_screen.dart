@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/widgets/onboarding_overlay.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -22,6 +23,7 @@ class ScheduleScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(l.scheduleScreenTitle),
         actions: [
+          const OnboardingTrigger(role: OnboardingRole.technician),
           Padding(
             padding: const EdgeInsets.only(right: 16),
             child: Row(
