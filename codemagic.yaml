@@ -1,0 +1,72 @@
+workflows:
+  # Corre em cada push — só compila (sem assinatura) para confirmar que o
+  # projeto iOS continua válido. Não precisa de conta Apple Developer.
+  ios-build-verify:
+    name: iOS - Build de verificação (sem assinatura)
+    max_build_duration: 30
+    instance_type: mac_mini_m2
+    working_directory: mobile-technician
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+    scripts:
+      - name: Get Flutter packages
+        script: flutter pub get
+      - name: Gerar localizacao
+        script: flutter gen-l10n
+      - name: Build iOS (sem assinatura)
+        script: flutter build ios --release --no-codesign
+    artifacts:
+      - build/ios/iphoneos/*.app
+
+  # Workflow de distribuição — só funciona depois de:
+  #   1. Criar conta Apple Developer Program (developer.apple.com)
+  #   2. Ligar essa conta ao Codemagic (Teams > Integrations > Apple Developer Portal)
+  #   3. Configurar `app_store_connect` + `ios_signing` nas Codemagic UI env vars
+  #      (App Store Connect API key + grupo de certificados)
+  # Depois disso, ativar o trigger abaixo e o publishing.
+  ios-release:
+    name: iOS - Build assinado + TestFlight
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    working_directory: mobile-technician
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: pt.resolvaagora.app
+      vars:
+        APP_STORE_APPLE_ID: 0 # substituir pelo Apple ID numérico da app depois de criada em App Store Connect
+    triggering:
+      events:
+        - tag
+      tag_patterns:
+        - pattern: "ios-v*"
+          include: true
+    scripts:
+      - name: Get Flutter packages
+        script: flutter pub get
+      - name: Gerar localizacao
+        script: flutter gen-l10n
+      - name: Set up code signing
+        script: xcode-project use-profiles
+      - name: Build IPA assinado
+        script: |
+          flutter build ipa --release \
+            --export-options-plist=/Users/builder/export_options.plist
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true

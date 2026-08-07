@@ -46,3 +46,7 @@ app.*.map.json
 
 # Firebase config (contem api key) — manter local
 /android/app/google-services.json
+/ios/Runner/GoogleService-Info.plist
+
+# Localizacao gerada (flutter gen-l10n / build)
+/lib/l10n/generated/
