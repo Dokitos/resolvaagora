@@ -9,10 +9,12 @@ import {
   Body,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/presentation/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/presentation/guards/roles.guard';
 import { Roles } from '../auth/presentation/decorators/roles.decorator';
 import { EmailInboxService } from './email-inbox.service';
+import { SendEmailDto } from './dto/send-email.dto';
 
 type Folder = 'inbox' | 'sent' | 'trash';
 
@@ -41,7 +43,8 @@ export class EmailController {
   }
 
   @Post('emails/send')
-  send(@Body() body: { to: string; subject: string; html: string }) {
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  send(@Body() body: SendEmailDto) {
     return this.emails.send(body.to, body.subject, body.html);
   }
 
