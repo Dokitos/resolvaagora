@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../data/services_data.dart';
 import '../../../data/catalog_i18n.dart';
+import '../../../core/services/client_service.dart';
 import 'booking_provider.dart';
 
 class CategoryDetailPage extends ConsumerWidget {
@@ -69,6 +70,7 @@ class _SubcategoryCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(catalogPricesLoadedProvider); // rebuild quando os preços do admin chegarem
     final locale = Localizations.localeOf(context);
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),

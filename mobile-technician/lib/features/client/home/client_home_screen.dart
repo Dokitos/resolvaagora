@@ -418,17 +418,22 @@ class _Chip extends StatelessWidget {
 }
 
 // ── Featured services (horizontal scroll) ────────────────────────────────────
-class _FeaturedServices extends StatelessWidget {
+class _FeaturedServices extends ConsumerWidget {
+  // `id` tem de corresponder a ServiceCategory.id em services_data.dart — usado
+  // para encontrar a categoria real (preço e navegação), em vez de comparar
+  // por nome (frágil: já esteve dessincronizado, ex. "Montagem Móveis" vs
+  // "Montagem de Móveis", o que fazia cair sempre na 1ª categoria da lista).
   static const _featured = [
-    (color: Color(0xFFFFF3E0), icon: Icons.electrical_services, name: 'Eletricidade', sub: 'Reparações, instalações e substituições', price: '€30,00'),
-    (color: Color(0xFFE3F2FD), icon: Icons.ac_unit, name: 'Ar Condicionado', sub: 'Instalação, manutenção e recarga de gás', price: '€60,00'),
-    (color: Color(0xFFE8F5E9), icon: Icons.plumbing, name: 'Canalização', sub: 'Fugas, entupimentos e instalações', price: '€30,00'),
-    (color: Color(0xFFFCE4EC), icon: Icons.chair, name: 'Montagem Móveis', sub: 'IKEA, Leroy Merlin e outras marcas', price: '€15,00'),
-    (color: Color(0xFFF3E5F5), icon: Icons.cleaning_services, name: 'Limpeza', sub: 'Geral, pós-obra e vidros', price: '€35,00'),
+    (id: 'ELECTRICITY', color: Color(0xFFFFF3E0), icon: Icons.electrical_services, name: 'Eletricidade', sub: 'Reparações, instalações e substituições'),
+    (id: 'AC', color: Color(0xFFE3F2FD), icon: Icons.ac_unit, name: 'Ar Condicionado', sub: 'Instalação, manutenção e recarga de gás'),
+    (id: 'PLUMBING', color: Color(0xFFE8F5E9), icon: Icons.plumbing, name: 'Canalização', sub: 'Fugas, entupimentos e instalações'),
+    (id: 'FURNITURE', color: Color(0xFFFCE4EC), icon: Icons.chair, name: 'Montagem de Móveis', sub: 'IKEA, Leroy Merlin e outras marcas'),
+    (id: 'CLEANING', color: Color(0xFFF3E5F5), icon: Icons.cleaning_services, name: 'Limpeza', sub: 'Geral, pós-obra e vidros'),
   ];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(catalogPricesLoadedProvider); // rebuild quando os preços do admin chegarem
     final l = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -449,14 +454,12 @@ class _FeaturedServices extends StatelessWidget {
             separatorBuilder: (_, __) => const SizedBox(width: 12),
             itemBuilder: (context, i) {
               final f = _featured[i];
+              final cat = kServiceCategories.firstWhere(
+                (c) => c.id == f.id,
+                orElse: () => kServiceCategories.first,
+              );
               return Pressable(
-                onTap: () {
-                  final cat = kServiceCategories.firstWhere(
-                    (c) => c.name == f.name,
-                    orElse: () => kServiceCategories.first,
-                  );
-                  context.push('/booking/category/${cat.id}');
-                },
+                onTap: () => context.push('/booking/category/${cat.id}'),
                 child: Container(
                   width: 200,
                   decoration: BoxDecoration(
@@ -480,7 +483,7 @@ class _FeaturedServices extends StatelessWidget {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          'desde ${f.price}',
+                          'desde €${cat.basePrice.toStringAsFixed(2)}',
                           style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
                         ),
                       ),

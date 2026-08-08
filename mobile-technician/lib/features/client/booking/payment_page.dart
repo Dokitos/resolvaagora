@@ -82,6 +82,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(catalogPricesLoadedProvider); // rebuild quando os preços do admin chegarem
     final booking = ref.watch(bookingProvider);
     final notifier = ref.read(bookingProvider.notifier);
     final l = AppLocalizations.of(context);

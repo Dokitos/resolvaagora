@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../network/api_client.dart';
 import '../models/client_profile.dart';
 import '../models/service_request.dart';
+import '../../data/services_data.dart';
 import '../../features/client/booking/booking_provider.dart';
 import 'settings_service.dart';
 
@@ -355,6 +356,39 @@ final homeBannersProvider = FutureProvider<List<HomeBanner>>((ref) async {
         .toList();
   } catch (_) {
     return const [];
+  }
+});
+
+/// Aplica os preços editados no painel de admin (GET /service-prices) por
+/// cima dos valores por omissão do catálogo em código — muta os objetos de
+/// [kServiceCategories] diretamente (os seus campos de preço não são
+/// `final` exatamente para isto), pelo que qualquer ecrã que já leia
+/// `item.price` / `category.basePrice` passa a ver o valor atual sem
+/// precisar de mudar como lê o catálogo. Basta este provider ser observado
+/// (watch) uma vez em cada ecrã que mostra preços, para forçar o rebuild
+/// assim que a resposta chegar.
+final catalogPricesLoadedProvider = FutureProvider<bool>((ref) async {
+  try {
+    final dio = ref.read(dioProvider);
+    final r = await dio.get('/service-prices');
+    final data = Map<String, dynamic>.from(r.data as Map);
+    final categoryPrices = Map<String, dynamic>.from(data['categories'] as Map? ?? {});
+    final itemPrices = Map<String, dynamic>.from(data['items'] as Map? ?? {});
+
+    for (final cat in kServiceCategories) {
+      final catPrice = categoryPrices[cat.id];
+      if (catPrice is num) cat.basePrice = catPrice.toDouble();
+      for (final sub in cat.subcategories) {
+        for (final item in sub.items) {
+          final itemPrice = itemPrices['${cat.id}:${sub.id}:${item.id}'];
+          if (itemPrice is num) item.price = itemPrice.toDouble();
+        }
+      }
+    }
+    return true;
+  } catch (_) {
+    // Sem backend / falha de rede — mantém os preços por omissão do catálogo.
+    return false;
   }
 });
 

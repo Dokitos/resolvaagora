@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:moura_technician/l10n/generated/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../data/catalog_i18n.dart';
+import '../../../../core/services/client_service.dart';
 import '../booking_provider.dart';
 
 class BookingFooterBar extends ConsumerWidget {
@@ -20,6 +21,7 @@ class BookingFooterBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(catalogPricesLoadedProvider); // rebuild quando os preços do admin chegarem
     final booking = ref.watch(bookingProvider);
     final l = AppLocalizations.of(context);
     final total = booking.total;

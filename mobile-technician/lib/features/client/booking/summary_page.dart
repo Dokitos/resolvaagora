@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../../core/services/client_service.dart';
 import 'booking_provider.dart';
 
 class SummaryPage extends ConsumerWidget {
@@ -9,6 +10,7 @@ class SummaryPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(catalogPricesLoadedProvider); // rebuild quando os preços do admin chegarem
     final booking = ref.watch(bookingProvider);
     final fmt = NumberFormat.currency(locale: 'pt_PT', symbol: '€');
     final dateFmt = DateFormat('dd/MM/yyyy', 'pt_PT');

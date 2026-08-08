@@ -86,6 +86,7 @@ class _PaymentConfirmPageState extends ConsumerState<PaymentConfirmPage> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(catalogPricesLoadedProvider); // rebuild quando os preços do admin chegarem
     final booking = ref.watch(bookingProvider);
     final l = AppLocalizations.of(context);
     final fmt = NumberFormat.currency(locale: 'pt_PT', symbol: '€');
