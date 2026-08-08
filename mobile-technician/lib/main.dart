@@ -26,21 +26,47 @@ void main() async {
   runApp(const ProviderScope(child: MouraTechnicianApp()));
 }
 
-class MouraTechnicianApp extends ConsumerWidget {
+class MouraTechnicianApp extends ConsumerStatefulWidget {
   const MouraTechnicianApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final router = ref.watch(appRouterProvider);
-    final locale = ref.watch(localeProvider);
+  ConsumerState<MouraTechnicianApp> createState() => _MouraTechnicianAppState();
+}
+
+class _MouraTechnicianAppState extends ConsumerState<MouraTechnicianApp> {
+  ProviderSubscription<AsyncValue<AuthState>>? _authSub;
+
+  @override
+  void initState() {
+    super.initState();
 
     // Regista o token de push sempre que há sessão (login ou arranque já
-    // autenticado). É idempotente e não bloqueia a UI.
-    ref.listen(authProvider, (prev, next) {
+    // autenticado). Isto usa `ref.listenManual` (em vez de `ref.listen` no
+    // `build`) precisamente para poder usar `fireImmediately: true`: garante
+    // que também corre logo no arranque quando a app já tem uma sessão
+    // guardada — sem isto, o registo ficava dependente do timing de uma
+    // transição de estado a acontecer DEPOIS do listener estar registado
+    // (ex.: só disparava com um login manual, não com uma sessão já
+    // autenticada ao abrir a app). `init()` é idempotente e não bloqueia a
+    // UI; `prev` é `null` nesta primeira chamada e não é usado na condição,
+    // por isso não há risco de crash.
+    _authSub = ref.listenManual(authProvider, (prev, next) {
       if (next.valueOrNull?.isAuthenticated == true) {
         ref.read(pushServiceProvider).init();
       }
-    });
+    }, fireImmediately: true);
+  }
+
+  @override
+  void dispose() {
+    _authSub?.close();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final router = ref.watch(appRouterProvider);
+    final locale = ref.watch(localeProvider);
 
     return MaterialApp.router(
       title: 'ResolvaAgora',
