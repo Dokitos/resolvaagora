@@ -25,14 +25,20 @@ async function bootstrap() {
   app.enableCors({
     origin: (origin, callback) => {
       // Allow server-to-server requests (no Origin header, e.g. the mobile app),
-      // configured origins, any Vercel deployment (*.vercel.app cobre o alias de
-      // produção e URLs de preview), e todo o domínio resolvaagora.pt (apex, www
-      // e subdomínios como admin.).
+      // configured origins, Vercel deployments do NOSSO projeto (nome do projeto
+      // "resolvaagora" — ver .vercel/repo.json — cobre o alias de produção
+      // "resolvaagora.vercel.app" e URLs de preview como
+      // "resolvaagora-git-<branch>-<team>.vercel.app" ou
+      // "resolvaagora-<hash>-<team>.vercel.app"; NOTA: não foi possível
+      // confirmar aqui o slug exato da equipa/team no Vercel — se os previews
+      // usarem um prefixo diferente de "resolvaagora-", esta regex terá de
+      // ser ajustada), e todo o domínio resolvaagora.pt (apex, www e
+      // subdomínios como admin.).
       // In development, also allow any localhost port.
       if (
         !origin ||
         allowedOrigins.includes(origin) ||
-        /^https:\/\/([a-z0-9-]+\.)*vercel\.app$/i.test(origin) ||
+        /^https:\/\/resolvaagora(-[a-z0-9]+)*\.vercel\.app$/i.test(origin) ||
         /^https:\/\/([a-z0-9-]+\.)*resolvaagora\.pt$/i.test(origin) ||
         (isDev && /^http:\/\/localhost(:\d+)?$/.test(origin))
       ) {

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { randomInt } from 'crypto';
 import { PrismaService } from '@shared/infrastructure/database/prisma.service';
 import { RedisService } from '@shared/infrastructure/cache/redis.service';
 import { EmailService } from '../../../notifications/infrastructure/email.service';
@@ -25,8 +26,11 @@ export class ForgotPasswordUseCase {
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) return generic;
 
-    const code = String(Math.floor(100000 + Math.random() * 900000));
-    await this.redis.set(`pwreset:${code}`, user.id, 15 * 60);
+    const code = String(randomInt(100000, 1000000));
+    // A chave inclui o email para que um código só sirva para a conta a que
+    // foi emitido — sem isto, qualquer código válido de qualquer utilizador
+    // permitiria redefinir a password de outra conta (IDOR).
+    await this.redis.set(`pwreset:${email}:${code}`, user.id, 15 * 60);
     await this.email.send(email, 'Código de recuperação — ResolvaAgora', this.email.passwordResetEmail(code));
 
     const isDev = this.config.get('NODE_ENV', 'development') !== 'production';

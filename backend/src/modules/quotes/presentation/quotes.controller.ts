@@ -7,6 +7,8 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  ForbiddenException,
+  NotFoundException,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard';
 import { Roles } from '../../auth/presentation/decorators/roles.decorator';
@@ -42,8 +44,23 @@ export class QuotesController {
   // Cliente vê orçamento
   @Get('service-requests/:id/quote')
   @Roles('CLIENT')
-  async getQuote(@Param('id') id: string) {
-    return this.prisma.quote.findUnique({ where: { serviceRequestId: id } });
+  async getQuote(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    const clientUser = await this.prisma.user.findUnique({
+      where: { id: user.id },
+      include: { client: true },
+    });
+    if (!clientUser?.client) throw new ForbiddenException('Client only');
+
+    // Confirma que o pedido de serviço pertence ao cliente autenticado antes
+    // de devolver o orçamento (evita IDOR — ver auditoria de segurança).
+    const sr = await this.prisma.serviceRequest.findFirst({
+      where: { id, clientId: clientUser.client.id },
+    });
+    if (!sr) throw new NotFoundException('Service request not found');
+
+    const quote = await this.prisma.quote.findUnique({ where: { serviceRequestId: id } });
+    if (!quote) throw new NotFoundException('Quote not found');
+    return quote;
   }
 
   // Cliente aprova

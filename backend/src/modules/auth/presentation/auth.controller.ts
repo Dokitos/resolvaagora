@@ -69,7 +69,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   resetPassword(@Body() dto: ResetPasswordDto) {
-    return this.resetPasswordUseCase.execute(dto.token, dto.newPassword);
+    return this.resetPasswordUseCase.execute(dto.email, dto.code, dto.newPassword);
   }
 
   /** Link clicado no email de confirmação → devolve uma página simples. */

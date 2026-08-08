@@ -37,12 +37,19 @@ export class EmailWebhookController {
   ) {
     const raw = req.rawBody?.toString('utf8') ?? JSON.stringify(req.body ?? {});
     const secret = this.config.get<string>('RESEND_WEBHOOK_SECRET');
+    const isProduction = this.config.get('NODE_ENV', 'development') === 'production';
 
     if (secret) {
       const ok = this.verifySvix(secret, svixId, svixTimestamp, svixSignature, raw);
       if (!ok) throw new BadRequestException('Assinatura inválida');
+    } else if (isProduction) {
+      // Em produção nunca aceitamos o webhook sem conseguir verificar a
+      // assinatura — caso contrário qualquer pedido não autenticado poderia
+      // injetar "emails recebidos" falsos na caixa de entrada.
+      this.logger.error('RESEND_WEBHOOK_SECRET não definido em produção — webhook recusado.');
+      throw new BadRequestException('Webhook não configurado');
     } else {
-      this.logger.warn('RESEND_WEBHOOK_SECRET não definido — webhook aceite sem verificação.');
+      this.logger.warn('RESEND_WEBHOOK_SECRET não definido — webhook aceite sem verificação (dev).');
     }
 
     let payload: any;
