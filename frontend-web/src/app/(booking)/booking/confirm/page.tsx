@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
@@ -17,12 +17,15 @@ export default function ConfirmPage() {
   const state = useBookingStore()
   const [loading, setLoading] = useState(false)
   const [checkout, setCheckout] = useState<{ clientSecret: string; publishableKey?: string } | null>(null)
+  const isSubmittingRef = useRef(false)
 
   useEffect(() => {
     if (!state.categoryId) router.replace('/booking/category')
   }, [state.categoryId, router])
 
   async function handlePay() {
+    if (isSubmittingRef.current) return
+    isSubmittingRef.current = true
     setLoading(true)
     try {
       let requestId = state.createdRequestId
@@ -46,6 +49,7 @@ export default function ConfirmPage() {
       toast.error(err.message)
     } finally {
       setLoading(false)
+      isSubmittingRef.current = false
     }
   }
 
