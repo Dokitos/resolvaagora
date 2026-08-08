@@ -31,7 +31,13 @@ export default function AddressesPage() {
 
   async function load() {
     setLoading(true)
-    try { setAddresses(await clientApi.getAddresses()) } finally { setLoading(false) }
+    try {
+      setAddresses(await clientApi.getAddresses())
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Erro ao carregar moradas')
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => { load() }, [])

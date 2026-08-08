@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import toast from 'react-hot-toast'
 import { adminApi } from '@/lib/api/admin'
 import type { Technician } from '@/lib/api/types'
 import { Badge } from '@/components/ui/badge'
@@ -22,7 +23,10 @@ export default function AdminTechniciansPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    adminApi.technicians().then(setTechnicians).finally(() => setLoading(false))
+    adminApi.technicians()
+      .then(setTechnicians)
+      .catch((err: any) => toast.error(err?.message ?? 'Erro ao carregar técnicos'))
+      .finally(() => setLoading(false))
   }, [])
 
   if (loading) return <div className="flex justify-center py-12"><div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" /></div>

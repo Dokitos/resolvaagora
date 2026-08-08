@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ChevronRight } from 'lucide-react'
 import { mergeServicePrices } from '@/lib/data/services-catalog'
+import { DEFAULT_API_URL } from '@/lib/api/client'
 import { SiteHeader } from '../_components/site-header'
 import { SiteFooter } from '../_components/site-footer'
 
@@ -12,7 +13,7 @@ export const metadata: Metadata = {
   alternates: { canonical: '/servicos' },
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? process.env.API_URL ?? 'http://localhost:3002/api/v1'
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? process.env.API_URL ?? DEFAULT_API_URL
 
 async function getServiceCategories() {
   try {

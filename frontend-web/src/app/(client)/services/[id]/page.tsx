@@ -28,9 +28,14 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
   const [checkout, setCheckout] = useState<{ clientSecret: string; amount: number } | null>(null)
 
   async function load() {
-    const data = await serviceRequestsApi.get(id)
-    setSr(data)
-    setLoading(false)
+    try {
+      const data = await serviceRequestsApi.get(id)
+      setSr(data)
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Erro ao carregar pedido')
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => { load() }, [id])

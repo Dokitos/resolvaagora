@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import toast from 'react-hot-toast'
 import { adminApi } from '@/lib/api/admin'
 import type { DashboardMetrics, SlaAlert, AnalyticsData } from '@/lib/api/types'
 import { StatCard } from '@/components/ui/stat-card'
@@ -19,6 +20,7 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     Promise.all([adminApi.dashboard(), adminApi.slaAlerts(), adminApi.analytics()])
       .then(([m, a, an]) => { setMetrics(m); setAlerts(a); setAnalytics(an) })
+      .catch((err: any) => toast.error(err?.message ?? 'Erro ao carregar dashboard'))
       .finally(() => setLoading(false))
   }, [])
 

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import toast from 'react-hot-toast'
 import { adminApi } from '@/lib/api/admin'
 import type { AnalyticsData } from '@/lib/api/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -18,7 +19,10 @@ export default function AdminAnalyticsPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    adminApi.analytics().then(setData).finally(() => setLoading(false))
+    adminApi.analytics()
+      .then(setData)
+      .catch((err: any) => toast.error(err?.message ?? 'Erro ao carregar análises'))
+      .finally(() => setLoading(false))
   }, [])
 
   if (loading) return (
@@ -27,7 +31,7 @@ export default function AdminAnalyticsPage() {
     </div>
   )
 
-  if (!data) return null
+  if (!data) return <p className="text-center text-gray-400 py-12">Não foi possível carregar as análises.</p>
 
   const specialtyChartData = data.requestsBySpecialty.map((item) => ({
     name: SPECIALTY_LABELS[item.specialty],

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import toast from 'react-hot-toast'
 import { adminApi } from '@/lib/api/admin'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { StatCard } from '@/components/ui/stat-card'
@@ -28,9 +29,14 @@ export default function AdminFinancialsPage() {
 
   async function load() {
     setLoading(true)
-    const d = await adminApi.financials({ from, to })
-    setData(d)
-    setLoading(false)
+    try {
+      const d = await adminApi.financials({ from, to })
+      setData(d)
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Erro ao carregar dados financeiros')
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => { load() }, [from, to])

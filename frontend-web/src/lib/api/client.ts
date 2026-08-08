@@ -1,7 +1,16 @@
 import axios from 'axios'
 import { getSession } from 'next-auth/react'
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? process.env.API_URL ?? 'http://localhost:3001/api/v1'
+/**
+ * Fallback único para a URL da API quando nem `NEXT_PUBLIC_API_URL` nem
+ * `API_URL` estão definidos (ex: build local sem `.env`). Mantém-se aqui
+ * como fonte única da verdade — qualquer outro sítio que precise de um
+ * fallback (ex: Server Components que não podem importar `api`) deve
+ * importar esta constante em vez de repetir o valor.
+ */
+export const DEFAULT_API_URL = 'http://localhost:3002/api/v1'
+
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? process.env.API_URL ?? DEFAULT_API_URL
 
 export const api = axios.create({ baseURL: BASE_URL })
 

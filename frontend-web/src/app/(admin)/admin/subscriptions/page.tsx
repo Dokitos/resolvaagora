@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import toast from 'react-hot-toast'
 import { adminApi } from '@/lib/api/admin'
 import type { Subscription, SubscriptionPlan } from '@/lib/api/types'
 import { Badge } from '@/components/ui/badge'
@@ -38,7 +39,9 @@ export default function AdminSubscriptionsPage() {
     ]).then(([s, p]) => {
       setSubs(s)
       setPlans(p)
-    }).finally(() => setLoading(false))
+    })
+      .catch((err: any) => toast.error(err?.message ?? 'Erro ao carregar assinaturas'))
+      .finally(() => setLoading(false))
   }, [])
 
   const filtered = filter ? subs.filter((s) => s.status === filter) : subs

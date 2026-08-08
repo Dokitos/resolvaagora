@@ -41,10 +41,14 @@ export default function AdminServiceRequestDetailPage({ params }: { params: { id
   const clientUserId = (sr?.client as any)?.userId as string | undefined
 
   async function load() {
-    const [s, t] = await Promise.all([adminApi.getServiceRequest(id), adminApi.technicians({ status: 'AVAILABLE' })])
-    setSr(s); setTechnicians(t); setNewStatus(s.status)
-    if ((s.client as any)?.userId) {
-      adminApi.clientMessages((s.client as any).userId).then(setMessages).catch(() => {})
+    try {
+      const [s, t] = await Promise.all([adminApi.getServiceRequest(id), adminApi.technicians({ status: 'AVAILABLE' })])
+      setSr(s); setTechnicians(t); setNewStatus(s.status)
+      if ((s.client as any)?.userId) {
+        adminApi.clientMessages((s.client as any).userId).then(setMessages).catch(() => {})
+      }
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Erro ao carregar pedido')
     }
   }
 

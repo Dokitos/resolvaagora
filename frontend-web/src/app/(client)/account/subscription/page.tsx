@@ -21,13 +21,19 @@ export default function SubscriptionPage() {
   const [checkout, setCheckout] = useState<{ clientSecret: string; planName: string } | null>(null)
 
   async function load() {
-    const [c, p] = await Promise.all([
-      subscriptionsApi.current().catch(() => null),
-      subscriptionsApi.plans(),
-    ])
-    setCurrent(c)
-    setPlans(p)
-    setLoading(false)
+    setLoading(true)
+    try {
+      const [c, p] = await Promise.all([
+        subscriptionsApi.current().catch(() => null), // sem assinatura ativa é um estado normal, não um erro
+        subscriptionsApi.plans(),
+      ])
+      setCurrent(c)
+      setPlans(p)
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Erro ao carregar assinatura')
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => { load() }, [])

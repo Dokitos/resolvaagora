@@ -24,5 +24,9 @@ declare module 'next-auth/jwt' {
     role: Role
     accessToken: string
     refreshToken: string
+    /** epoch ms — quando o accessToken expira, decodificado do próprio JWT. */
+    accessTokenExpires?: number | null
+    /** Definido quando a renovação do accessToken falhou (refresh token inválido/revogado). */
+    error?: 'RefreshAccessTokenError'
   }
 }

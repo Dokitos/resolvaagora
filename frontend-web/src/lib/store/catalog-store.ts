@@ -23,8 +23,14 @@ export const useCatalogStore = create<CatalogState>()((set, get) => ({
     try {
       const prices = await servicePricesApi.get()
       set({ categories: mergeServicePrices(prices), pricesLoaded: true })
-    } catch {
-      // sem backend/erro de rede — mantém os valores por omissão
+    } catch (err) {
+      // Sem backend/erro de rede — mantém os valores por omissão, mas NÃO
+      // marca `pricesLoaded: true`. Se marcássemos, a sessão inteira ficava
+      // presa aos preços por omissão porque `loadPrices()` faz early-return
+      // quando `pricesLoaded` já é `true`. Ao deixá-lo `false`, a próxima
+      // chamada (ex: navegação para outra página que também chama
+      // `loadPrices()`) tenta novamente buscar os preços reais.
+      console.error('[catalog-store] falha ao carregar preços, a tentar novamente na próxima chamada:', err)
     }
   },
 }))

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import toast from 'react-hot-toast'
 import { serviceRequestsApi } from '@/lib/api/service-requests'
 import { bannersApi } from '@/lib/api/banners'
 import { subscriptionsApi } from '@/lib/api/subscriptions'
@@ -32,9 +33,15 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
-    serviceRequestsApi.list({ limit: 5 }).then(setRequests).finally(() => setLoading(false))
-    bannersApi.list().then(setBanners).catch(() => {})
-    subscriptionsApi.plans().then((plans) => setPlan(plans[0] ?? null)).catch(() => {})
+    setLoading(true)
+    serviceRequestsApi.list({ limit: 5 })
+      .then(setRequests)
+      .catch((err: any) => toast.error(err?.message ?? 'Erro ao carregar pedidos'))
+      .finally(() => setLoading(false))
+    // Banners e plano em destaque são conteúdo secundário — uma falha aqui não
+    // deve interromper o dashboard nem gerar um toast, mas fica registada.
+    bannersApi.list().then(setBanners).catch((err) => console.error('Erro ao carregar banners:', err))
+    subscriptionsApi.plans().then((plans) => setPlan(plans[0] ?? null)).catch((err) => console.error('Erro ao carregar planos:', err))
   }, [])
 
   const pending = requests.filter((r) =>

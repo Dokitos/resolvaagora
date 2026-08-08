@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import toast from 'react-hot-toast'
 import { serviceRequestsApi } from '@/lib/api/service-requests'
 import type { ServiceRequest } from '@/lib/api/types'
 import { StatusBadge } from '@/components/ui/status-badge'
@@ -27,6 +28,7 @@ export default function ServicesListPage() {
         if (data.length < PAGE_SIZE && page === 1) setTotal(data.length)
         else setTotal(Math.max(total, page * PAGE_SIZE + (data.length === PAGE_SIZE ? 1 : 0)))
       })
+      .catch((err: any) => toast.error(err?.message ?? 'Erro ao carregar pedidos'))
       .finally(() => setLoading(false))
   }, [page])
 
