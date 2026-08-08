@@ -36,14 +36,14 @@ export default function ServicesListPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Os meus serviços</h1>
-        <Link href="/services/new">
+        <Link href="/booking/category">
           <Button size="sm"><Plus className="h-4 w-4" />Novo pedido</Button>
         </Link>
       </div>
 
       {loading && (
         <div className="flex justify-center py-12">
-          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-4 border-accent-600 border-t-transparent rounded-full animate-spin" />
         </div>
       )}
 
@@ -51,7 +51,7 @@ export default function ServicesListPage() {
         <Card>
           <CardContent className="py-12 text-center">
             <p className="text-gray-500">Nenhum pedido encontrado.</p>
-            <Link href="/services/new">
+            <Link href="/booking/category">
               <Button className="mt-4" size="sm"><Plus className="h-4 w-4" />Criar pedido</Button>
             </Link>
           </CardContent>

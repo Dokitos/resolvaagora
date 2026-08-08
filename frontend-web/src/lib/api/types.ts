@@ -42,6 +42,31 @@ export interface Client {
   nif?: string
 }
 
+export interface ClientProfile {
+  id: string
+  email: string
+  role: Role
+  emailVerified: boolean
+  clientId: string
+  firstName: string
+  lastName: string
+  phone?: string
+  nif?: string
+  photoUrl?: string
+  emailNotifications: boolean
+  referralCode?: string
+  addresses: Address[]
+  subscriptions: Subscription[]
+}
+
+export interface StatusHistoryEntry {
+  id: string
+  oldStatus?: ServiceStatus | null
+  newStatus: ServiceStatus
+  notes?: string | null
+  createdAt: string
+}
+
 export interface Technician {
   id: string
   firstName: string
@@ -74,6 +99,9 @@ export interface ServiceRequest {
   photos?: ServicePhoto[]
   slaAlerts?: SlaAlert[]
   review?: Review
+  statusHistory?: StatusHistoryEntry[]
+  promoCode?: string
+  promoDiscount?: number
 }
 
 export interface Quote {
@@ -186,4 +214,80 @@ export interface AnalyticsData {
   averageRating: number
   quoteAcceptanceRate: number
   completionRate: number
+}
+
+export interface PromoValidation {
+  valid: boolean
+  message?: string
+  code?: string
+  discountType?: 'PERCENT' | 'FIXED'
+  discountValue?: number
+  discount?: number
+  finalAmount?: number
+}
+
+export interface ReferralEntry {
+  name: string
+  status: string
+  reward: number
+  createdAt: string
+}
+
+export interface ReferralsMe {
+  code: string
+  referredCount: number
+  rewardTotal: number
+  rewardAmount: number
+  active: boolean
+  shareMessage: string
+  referrals: ReferralEntry[]
+}
+
+export interface SupportMessage {
+  id: string
+  body: string
+  senderRole: Role
+  serviceRequestId?: string
+  readAt?: string
+  createdAt: string
+}
+
+export interface OtpSendResponse {
+  sent: boolean
+  configured: boolean
+}
+
+export interface OtpVerifyResponse {
+  valid: boolean
+}
+
+export interface PublicSettings {
+  maintenanceMode: boolean
+  maintenanceMessage: string
+  registrationEnabled: boolean
+  paymentsEnabled: boolean
+  paymentsTestMode: boolean
+  smsVerificationEnabled: boolean
+  displacementFee: number
+  stripePublishableKey: string
+  imageUploadsEnabled: boolean
+  smsConfigured: boolean
+  emailConfigured: boolean
+  pushConfigured: boolean
+}
+
+export interface DisplacementQuote {
+  base: number
+  fee: number
+  feeAfterDiscount: number
+}
+
+export interface PayFullResult {
+  simulated: boolean
+  total?: number
+  promoDiscount?: number
+  freeVisit?: boolean
+  clientSecret?: string
+  paymentIntentId?: string
+  publishableKey?: string
 }

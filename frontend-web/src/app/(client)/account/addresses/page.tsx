@@ -92,7 +92,7 @@ export default function AddressesPage() {
     }
   }
 
-  if (loading) return <div className="flex justify-center py-12"><div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" /></div>
+  if (loading) return <div className="flex justify-center py-12"><div className="w-8 h-8 border-4 border-accent-500 border-t-transparent rounded-full animate-spin" /></div>
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -142,7 +142,7 @@ export default function AddressesPage() {
                   id="district"
                   value={form.district}
                   onChange={(e) => setForm((f) => ({ ...f, district: e.target.value }))}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500"
                 >
                   {DISTRICTS.map((d) => <option key={d}>{d}</option>)}
                 </select>
@@ -151,7 +151,7 @@ export default function AddressesPage() {
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={form.isDefault}
                 onChange={(e) => setForm((f) => ({ ...f, isDefault: e.target.checked }))}
-                className="rounded border-gray-300 text-blue-600"
+                className="rounded border-gray-300 text-accent-600"
               />
               <span className="text-sm text-gray-700">Definir como morada predefinida</span>
             </label>
@@ -169,7 +169,7 @@ export default function AddressesPage() {
         <Card className="p-12 text-center">
           <MapPin className="h-10 w-10 text-gray-300 mx-auto mb-3" />
           <p className="text-gray-500 text-sm">Ainda não tem moradas guardadas.</p>
-          <button onClick={openNew} className="mt-3 text-sm text-blue-600 hover:underline">Adicionar morada</button>
+          <button onClick={openNew} className="mt-3 text-sm text-accent-600 hover:underline">Adicionar morada</button>
         </Card>
       ) : (
         <div className="space-y-3">
@@ -177,8 +177,8 @@ export default function AddressesPage() {
             <Card key={a.id} className="p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
-                  <div className="w-9 h-9 bg-blue-50 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <MapPin className="h-4 w-4 text-blue-600" />
+                  <div className="w-9 h-9 bg-accent-50 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <MapPin className="h-4 w-4 text-accent-600" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
@@ -196,7 +196,7 @@ export default function AddressesPage() {
                   </div>
                 </div>
                 <div className="flex gap-2 flex-shrink-0">
-                  <button onClick={() => openEdit(a)} className="text-gray-400 hover:text-blue-600 transition-colors">
+                  <button onClick={() => openEdit(a)} className="text-gray-400 hover:text-accent-600 transition-colors">
                     <Pencil className="h-4 w-4" />
                   </button>
                   <button onClick={() => handleDelete(a.id)} className="text-gray-400 hover:text-red-500 transition-colors">

@@ -84,7 +84,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
               placeholder="Partilhe a sua experiência com o técnico..."
               rows={4}
               maxLength={500}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-accent-500"
             />
             <p className="text-xs text-gray-400 text-right">{comment.length}/500</p>
           </div>

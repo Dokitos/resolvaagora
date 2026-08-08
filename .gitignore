@@ -48,3 +48,6 @@ Thumbs.db
 .obsidian/
 
 .vercel
+
+# Artefactos de testes locais (Playwright MCP)
+.playwright-mcp/

@@ -65,7 +65,7 @@ export default function NotificationsPage() {
 
       {loading && (
         <div className="flex justify-center py-12">
-          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-4 border-accent-600 border-t-transparent rounded-full animate-spin" />
         </div>
       )}
 
@@ -89,24 +89,24 @@ export default function NotificationsPage() {
               className={cn(
                 'flex items-start gap-4 p-4 rounded-xl border transition-colors cursor-pointer',
                 isUnread
-                  ? 'bg-blue-50 border-blue-100 hover:bg-blue-100'
+                  ? 'bg-accent-50 border-accent-100 hover:bg-accent-100'
                   : 'bg-white border-gray-100 hover:bg-gray-50'
               )}
               onClick={() => isUnread && handleMarkRead(n.id)}
             >
               <div className={cn(
                 'w-9 h-9 rounded-full flex items-center justify-center shrink-0',
-                isUnread ? 'bg-blue-100' : 'bg-gray-100'
+                isUnread ? 'bg-accent-100' : 'bg-gray-100'
               )}>
-                <Icon className={cn('h-4 w-4', isUnread ? 'text-blue-600' : 'text-gray-500')} />
+                <Icon className={cn('h-4 w-4', isUnread ? 'text-accent-600' : 'text-gray-500')} />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2">
-                  <p className={cn('text-sm font-medium', isUnread ? 'text-blue-900' : 'text-gray-900')}>
+                  <p className={cn('text-sm font-medium', isUnread ? 'text-accent-900' : 'text-gray-900')}>
                     {n.title}
                   </p>
                   {isUnread && (
-                    <span className="w-2 h-2 bg-blue-500 rounded-full shrink-0" />
+                    <span className="w-2 h-2 bg-accent-500 rounded-full shrink-0" />
                   )}
                 </div>
                 <p className="text-sm text-gray-600 mt-0.5 line-clamp-2">{n.body}</p>

@@ -8,12 +8,14 @@ import type { ServiceRequest } from '@/lib/api/types'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
-import { formatDate, formatCurrency, SPECIALTY_LABELS, SPECIALTY_ICONS } from '@/lib/utils'
-import { ArrowLeft, MapPin, Wrench, Clock, CheckCircle, XCircle, AlertTriangle, Star } from 'lucide-react'
+import { formatDate, formatCurrency, SPECIALTY_LABELS, SPECIALTY_ICONS, STATUS_LABELS } from '@/lib/utils'
+import { ArrowLeft, MapPin, Wrench, Clock, CheckCircle, XCircle, AlertTriangle, Star, Phone, Mail, Ban } from 'lucide-react'
 import Link from 'next/link'
 import { differenceInHours, formatDistanceToNow, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Modal } from '@/components/ui/modal'
+import { StripeCheckout } from '@/components/payment/stripe-checkout'
+import { useNotificationsSocket } from '@/lib/hooks/use-notifications-socket'
 
 export default function ServiceDetailPage({ params }: { params: { id: string } }) {
   const { id } = params
@@ -22,6 +24,8 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
   const [rejectModal, setRejectModal] = useState(false)
+  const [cancelModal, setCancelModal] = useState(false)
+  const [checkout, setCheckout] = useState<{ clientSecret: string; amount: number } | null>(null)
 
   async function load() {
     const data = await serviceRequestsApi.get(id)
@@ -31,19 +35,32 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
 
   useEffect(() => { load() }, [id])
 
+  useNotificationsSocket({
+    onServiceStatusUpdated: (data) => { if (data.serviceRequestId === id) load() },
+    onQuoteReceived: (data) => { if (data.serviceRequestId === id) load() },
+  })
+
   async function handlePayDisplacement() {
     setActionLoading(true)
     try {
       const result = await serviceRequestsApi.payDisplacement(id)
-      // In production: integrate Stripe Elements
-      // For now: mock success flow
-      toast.success('Pagamento simulado com sucesso!')
-      await load()
+      if (result.freeVisit) {
+        toast.success('Visita grátis confirmada!')
+        await load()
+        return
+      }
+      setCheckout({ clientSecret: result.clientSecret, amount: result.amount })
     } catch (err: any) {
       toast.error(err.message)
     } finally {
       setActionLoading(false)
     }
+  }
+
+  async function handlePaymentSuccess() {
+    setCheckout(null)
+    toast.success('Pagamento confirmado!')
+    await load()
   }
 
   async function handleApproveQuote() {
@@ -73,7 +90,33 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
     }
   }
 
-  if (loading) return <div className="flex items-center justify-center h-48"><div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" /></div>
+  async function handleSendReceipt() {
+    setActionLoading(true)
+    try {
+      const { email } = await serviceRequestsApi.sendReceiptEmail(id)
+      toast.success(`Recibo enviado para ${email}`)
+    } catch (err: any) {
+      toast.error(err.message)
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  async function handleCancel() {
+    setCancelModal(false)
+    setActionLoading(true)
+    try {
+      await serviceRequestsApi.cancel(id)
+      toast.success('Pedido cancelado.')
+      await load()
+    } catch (err: any) {
+      toast.error(err.message)
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  if (loading) return <div className="flex items-center justify-center h-48"><div className="w-8 h-8 border-4 border-accent-600 border-t-transparent rounded-full animate-spin" /></div>
   if (!sr) return <p>Pedido não encontrado.</p>
 
   const quoteExpiresIn = sr.quote?.expiresAt
@@ -96,6 +139,35 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
         <StatusBadge status={sr.status} />
       </div>
 
+      {/* Timeline de estado */}
+      {sr.statusHistory && sr.statusHistory.length > 0 && (
+        <Card>
+          <CardHeader><CardTitle>Estado do pedido</CardTitle></CardHeader>
+          <CardContent>
+            <div className="space-y-0">
+              {sr.statusHistory.map((h, i) => {
+                const isLast = i === sr.statusHistory!.length - 1
+                return (
+                  <div key={h.id} className="flex gap-3">
+                    <div className="flex flex-col items-center">
+                      <div className={`h-2.5 w-2.5 rounded-full ${isLast ? 'bg-accent-600' : 'bg-gray-300'}`} />
+                      {i < sr.statusHistory!.length - 1 && <div className="w-px flex-1 bg-gray-200 my-0.5" />}
+                    </div>
+                    <div className="pb-4">
+                      <p className={`text-sm font-medium ${isLast ? 'text-gray-900' : 'text-gray-600'}`}>
+                        {STATUS_LABELS[h.newStatus]}
+                      </p>
+                      <p className="text-xs text-gray-400">{formatDate(h.createdAt)}</p>
+                      {h.notes && <p className="text-xs text-gray-500 mt-0.5">{h.notes}</p>}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Pagar deslocação */}
       {sr.status === 'DRAFT' && (
         <Card className="border-amber-200 bg-amber-50">
@@ -110,26 +182,36 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
               </div>
             </div>
           </CardContent>
-          <CardFooter>
-            <Button onClick={handlePayDisplacement} loading={actionLoading} className="w-full">
-              Pagar {formatCurrency(Number(sr.displacementFee))} e confirmar
-            </Button>
-          </CardFooter>
+          {checkout ? (
+            <CardFooter className="flex-col items-stretch">
+              <StripeCheckout
+                clientSecret={checkout.clientSecret}
+                ctaLabel={`Pagar ${formatCurrency(checkout.amount)}`}
+                onSuccess={handlePaymentSuccess}
+              />
+            </CardFooter>
+          ) : (
+            <CardFooter>
+              <Button onClick={handlePayDisplacement} loading={actionLoading} className="w-full">
+                Pagar {formatCurrency(Number(sr.displacementFee))} e confirmar
+              </Button>
+            </CardFooter>
+          )}
         </Card>
       )}
 
       {/* Orçamento pendente */}
       {sr.status === 'QUOTE_SENT' && sr.quote && (
-        <Card className="border-blue-200 bg-blue-50">
+        <Card className="border-accent-100 bg-accent-50">
           <CardHeader>
-            <CardTitle className="text-blue-900 flex items-center gap-2">
+            <CardTitle className="text-accent-900 flex items-center gap-2">
               <Wrench className="h-5 w-5" />
               Orçamento recebido
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <p className="text-sm text-blue-800">{sr.quote.description}</p>
+              <p className="text-sm text-accent-700">{sr.quote.description}</p>
               <div className="grid grid-cols-3 gap-3 text-sm">
                 <div className="bg-white rounded-lg p-3">
                   <p className="text-gray-500 text-xs">Mão de obra</p>
@@ -139,9 +221,9 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
                   <p className="text-gray-500 text-xs">Materiais</p>
                   <p className="font-semibold">{formatCurrency(Number(sr.quote.materialsCost))}</p>
                 </div>
-                <div className="bg-white rounded-lg p-3 border-2 border-blue-200">
+                <div className="bg-white rounded-lg p-3 border-2 border-accent-100">
                   <p className="text-gray-500 text-xs">Total c/ IVA</p>
-                  <p className="font-bold text-blue-700">{formatCurrency(Number(sr.quote.totalCost))}</p>
+                  <p className="font-bold text-accent-700">{formatCurrency(Number(sr.quote.totalCost))}</p>
                 </div>
               </div>
               {quoteExpiresIn !== null && (
@@ -191,9 +273,24 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
           {sr.technician && (
             <div>
               <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Técnico</p>
-              <p className="text-sm text-gray-800 mt-1">
-                {sr.technician.firstName} {sr.technician.lastName}
-              </p>
+              <div className="flex items-center gap-2 mt-1">
+                <p className="text-sm text-gray-800">
+                  {sr.technician.firstName} {sr.technician.lastName}
+                </p>
+                <a href={`tel:${sr.technician.phone}`} className="text-accent-600">
+                  <Phone className="h-3.5 w-3.5" />
+                </a>
+              </div>
+            </div>
+          )}
+
+          {sr.client && (
+            <div>
+              <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Contacto</p>
+              <div className="flex items-start gap-2 mt-1">
+                <Phone className="h-4 w-4 text-gray-400 shrink-0 mt-0.5" />
+                <p className="text-sm text-gray-800">{sr.client.phone || '—'}</p>
+              </div>
             </div>
           )}
 
@@ -208,7 +305,7 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
             {sr.isPriority && (
               <div>
                 <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Prioridade</p>
-                <p className="text-sm text-blue-600 font-medium mt-1">⭐ Prioritário</p>
+                <p className="text-sm text-accent-600 font-medium mt-1">⭐ Prioritário</p>
               </div>
             )}
           </div>
@@ -263,7 +360,38 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
           </CardContent>
         </Card>
       )}
+
+      {/* Ações */}
+      <div className="flex flex-col gap-2">
+        {sr.status !== 'DRAFT' && sr.status !== 'AWAITING_PAYMENT' && sr.status !== 'CANCELLED' && (
+          <Button variant="outline" onClick={handleSendReceipt} loading={actionLoading}>
+            <Mail className="h-4 w-4" />
+            Enviar recibo por email
+          </Button>
+        )}
+        {(sr.status === 'DRAFT' || sr.status === 'AWAITING_PAYMENT') && (
+          <Button variant="outline" className="border-red-200 text-red-600 hover:bg-red-50" onClick={() => setCancelModal(true)}>
+            <Ban className="h-4 w-4" />
+            Cancelar pedido
+          </Button>
+        )}
+        <Link href="/account/terms" className="text-center text-xs text-gray-400 hover:underline">
+          Termos e condições
+        </Link>
+      </div>
     </div>
+
+    <Modal
+      open={cancelModal}
+      onClose={() => setCancelModal(false)}
+      title="Cancelar pedido"
+      description="Tem a certeza que quer cancelar este pedido?"
+      confirmLabel="Cancelar pedido"
+      cancelLabel="Voltar"
+      variant="danger"
+      onConfirm={handleCancel}
+      loading={actionLoading}
+    />
 
     <Modal
       open={rejectModal}

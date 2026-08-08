@@ -1,5 +1,5 @@
 import { api } from './client'
-import type { ServiceRequest, Specialty } from './types'
+import type { DisplacementQuote, PayFullResult, Quote, ServiceRequest, Specialty } from './types'
 
 export const serviceRequestsApi = {
   list: (params?: { page?: number; limit?: number }) =>
@@ -14,13 +14,21 @@ export const serviceRequestsApi = {
     description: string
     scheduledDate?: string
     useFreeVisit?: boolean
+    promoCode?: string
+    photoUrls?: string[]
   }) => api.post<ServiceRequest>('/service-requests', data).then((r) => r.data),
 
   cancel: (id: string) =>
     api.delete(`/service-requests/${id}`),
 
+  getDisplacementQuote: (addressId: string) =>
+    api.get<DisplacementQuote>('/service-requests/displacement-quote', { params: { addressId } }).then((r) => r.data),
+
   payDisplacement: (id: string) =>
-    api.post<{ clientSecret: string; amount: number }>(`/service-requests/${id}/pay-displacement`).then((r) => r.data),
+    api.post<{ clientSecret: string; amount: number; freeVisit?: boolean }>(`/service-requests/${id}/pay-displacement`).then((r) => r.data),
+
+  payFull: (id: string, itemsTotal: number) =>
+    api.post<PayFullResult>(`/service-requests/${id}/pay`, { itemsTotal }).then((r) => r.data),
 
   approveQuote: (id: string) =>
     api.post(`/service-requests/${id}/quote/approve`).then((r) => r.data),
@@ -29,8 +37,11 @@ export const serviceRequestsApi = {
     api.post(`/service-requests/${id}/quote/reject`, { reason }).then((r) => r.data),
 
   getQuote: (id: string) =>
-    api.get(`/service-requests/${id}/quote`).then((r) => r.data),
+    api.get<Quote | null>(`/service-requests/${id}/quote`).then((r) => r.data),
 
   review: (id: string, data: { rating: number; comment?: string }) =>
     api.post(`/service-requests/${id}/review`, data).then((r) => r.data),
+
+  sendReceiptEmail: (id: string) =>
+    api.post<{ sent: boolean; email: string }>(`/service-requests/${id}/receipt/email`).then((r) => r.data),
 }

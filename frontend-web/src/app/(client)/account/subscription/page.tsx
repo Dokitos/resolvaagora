@@ -9,6 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { Star, CheckCircle, Zap, Gift, AlertTriangle } from 'lucide-react'
+import { Dialog } from '@/components/ui/modal'
+import { StripeCheckout } from '@/components/payment/stripe-checkout'
 
 export default function SubscriptionPage() {
   const [current, setCurrent] = useState<Subscription | null>(null)
@@ -16,6 +18,7 @@ export default function SubscriptionPage() {
   const [loading, setLoading] = useState(true)
   const [subscribing, setSubscribing] = useState<string | null>(null)
   const [cancelling, setCancelling] = useState(false)
+  const [checkout, setCheckout] = useState<{ clientSecret: string; planName: string } | null>(null)
 
   async function load() {
     const [c, p] = await Promise.all([
@@ -29,17 +32,27 @@ export default function SubscriptionPage() {
 
   useEffect(() => { load() }, [])
 
-  async function handleSubscribe(planId: string) {
+  async function handleSubscribe(planId: string, planName: string) {
     setSubscribing(planId)
     try {
-      await subscriptionsApi.subscribe(planId)
-      toast.success('Assinatura ativada com sucesso!')
-      await load()
+      const result = await subscriptionsApi.subscribe(planId)
+      if (result.clientSecret) {
+        setCheckout({ clientSecret: result.clientSecret, planName })
+      } else {
+        toast.success('Assinatura ativada com sucesso!')
+        await load()
+      }
     } catch (err: any) {
       toast.error(err.message)
     } finally {
       setSubscribing(null)
     }
+  }
+
+  async function handleSubscriptionPaid() {
+    setCheckout(null)
+    toast.success('Assinatura ativada com sucesso!')
+    await load()
   }
 
   async function handleCancel() {
@@ -58,7 +71,7 @@ export default function SubscriptionPage() {
 
   if (loading) return (
     <div className="flex justify-center py-12">
-      <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+      <div className="w-8 h-8 border-4 border-accent-600 border-t-transparent rounded-full animate-spin" />
     </div>
   )
 
@@ -70,24 +83,24 @@ export default function SubscriptionPage() {
       </div>
 
       {current && current.status === 'ACTIVE' && (
-        <Card className="border-blue-200 bg-blue-50">
+        <Card className="border-accent-100 bg-accent-50">
           <CardContent className="py-5">
             <div className="flex items-center justify-between flex-wrap gap-3">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
-                  <Star className="h-5 w-5 text-blue-600" />
+                <div className="w-10 h-10 bg-accent-100 rounded-xl flex items-center justify-center">
+                  <Star className="h-5 w-5 text-accent-600" />
                 </div>
                 <div>
-                  <p className="font-semibold text-blue-900">{current.plan.name}</p>
-                  <p className="text-sm text-blue-700">Válida até {formatDate(current.expiresAt)}</p>
+                  <p className="font-semibold text-accent-900">{current.plan.name}</p>
+                  <p className="text-sm text-accent-700">Válida até {formatDate(current.expiresAt)}</p>
                 </div>
               </div>
               <div className="flex items-center gap-4">
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-blue-900">
+                  <p className="text-2xl font-bold text-accent-900">
                     {current.plan.freeVisitsCount - current.freeVisitsUsed}
                   </p>
-                  <p className="text-xs text-blue-600">visitas grátis restantes</p>
+                  <p className="text-xs text-accent-600">visitas grátis restantes</p>
                 </div>
                 <Button
                   variant="outline"
@@ -103,7 +116,7 @@ export default function SubscriptionPage() {
 
             <div className="mt-4 grid grid-cols-3 gap-3">
               <div className="bg-white rounded-xl p-3 text-center">
-                <Gift className="h-5 w-5 text-blue-500 mx-auto mb-1" />
+                <Gift className="h-5 w-5 text-accent-500 mx-auto mb-1" />
                 <p className="text-xs font-medium text-gray-600">{current.plan.freeVisitsCount} visitas grátis/ano</p>
               </div>
               <div className="bg-white rounded-xl p-3 text-center">
@@ -136,7 +149,7 @@ export default function SubscriptionPage() {
         {plans.map((plan) => {
           const isCurrentPlan = current?.plan.id === plan.id && current?.status === 'ACTIVE'
           return (
-            <Card key={plan.id} className={isCurrentPlan ? 'border-blue-400 ring-2 ring-blue-200' : ''}>
+            <Card key={plan.id} className={isCurrentPlan ? 'border-accent-500 ring-2 ring-accent-100' : ''}>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg">{plan.name}</CardTitle>
@@ -150,7 +163,7 @@ export default function SubscriptionPage() {
               <CardContent className="space-y-3">
                 <ul className="space-y-2 text-sm text-gray-600">
                   <li className="flex items-center gap-2">
-                    <Gift className="h-4 w-4 text-blue-500 shrink-0" />
+                    <Gift className="h-4 w-4 text-accent-500 shrink-0" />
                     {plan.freeVisitsCount} visitas gratuitas/ano
                   </li>
                   <li className="flex items-center gap-2">
@@ -168,7 +181,7 @@ export default function SubscriptionPage() {
                 {!isCurrentPlan && (
                   <Button
                     className="w-full"
-                    onClick={() => handleSubscribe(plan.id)}
+                    onClick={() => handleSubscribe(plan.id, plan.name)}
                     disabled={subscribing === plan.id || (current?.status === 'ACTIVE')}
                   >
                     {subscribing === plan.id ? 'A processar...' : 'Subscrever'}
@@ -179,6 +192,16 @@ export default function SubscriptionPage() {
           )
         })}
       </div>
+
+      <Dialog open={!!checkout} onClose={() => setCheckout(null)} title={checkout ? `Subscrever ${checkout.planName}` : undefined}>
+        {checkout && (
+          <StripeCheckout
+            clientSecret={checkout.clientSecret}
+            ctaLabel="Confirmar assinatura"
+            onSuccess={handleSubscriptionPaid}
+          />
+        )}
+      </Dialog>
     </div>
   )
 }
