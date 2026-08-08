@@ -101,6 +101,8 @@ workflows:
     working_directory: mobile-technician
     environment:
       flutter: stable
+      groups:
+        - android-release
       android_signing:
         - resolvaagora_keystore
     triggering:
