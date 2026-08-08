@@ -20,7 +20,7 @@ export class UploadsController {
   constructor(private readonly storage: StorageService) {}
 
   @Post('image')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 8 * 1024 * 1024 } }))
   async uploadImage(@UploadedFile() file: Express.Multer.File) {
     if (!file) throw new BadRequestException('Nenhum ficheiro enviado.');
     if (!this.storage.configured) {

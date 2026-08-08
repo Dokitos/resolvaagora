@@ -85,7 +85,7 @@ export class TechniciansController {
 
   /** Enviar/atualizar a foto de perfil do técnico (R2). */
   @Post('me/photo')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 8 * 1024 * 1024 } }))
   async uploadPhoto(
     @CurrentUser() user: AuthenticatedUser,
     @UploadedFile() file: Express.Multer.File,

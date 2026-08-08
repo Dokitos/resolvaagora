@@ -44,7 +44,13 @@ export class TechnicianSelectorService {
       return { technicianId: null, reason: 'No eligible technicians' };
     }
 
-    // Filtra técnicos que ainda têm capacidade no dia
+    // Filtra técnicos que ainda têm capacidade no dia. NOTA: esta leitura acontece
+    // fora de qualquer transação, por isso é apenas um filtro para efeitos de
+    // RANKING (escolher o melhor candidato) — não é a verificação autoritativa
+    // de limite. Entre esta leitura e o incremento real do contador (feito em
+    // AutoAssignUseCase) pode haver corrida com outro pedido concorrente; a
+    // verificação final e definitiva é repetida dentro da mesma transação que
+    // faz o upsert do TechnicianDailySchedule, imediatamente antes de incrementar.
     const available = candidates.filter((t) => {
       const schedule = t.dailySchedules[0];
       const currentCount = schedule?.serviceCount ?? 0;
