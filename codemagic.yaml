@@ -116,6 +116,8 @@ workflows:
         script: flutter pub get
       - name: Gerar localizacao
         script: flutter gen-l10n
+      - name: Escrever google-services.json
+        script: echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
       - name: Build app bundle assinado
         script: flutter build appbundle --release
     artifacts:
