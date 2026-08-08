@@ -63,7 +63,11 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     }
     setState(() => _loading = true);
     try {
-      await ref.read(authProvider.notifier).resetPassword(_codeCtrl.text.trim(), _passCtrl.text);
+      await ref.read(authProvider.notifier).resetPassword(
+            _emailCtrl.text.trim(),
+            _codeCtrl.text.trim(),
+            _passCtrl.text,
+          );
       if (!mounted) return;
       _toast('Palavra-passe redefinida. Inicia sessão.');
       context.go('/login');

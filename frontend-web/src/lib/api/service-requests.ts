@@ -16,6 +16,8 @@ export const serviceRequestsApi = {
     useFreeVisit?: boolean
     promoCode?: string
     photoUrls?: string[]
+    items?: { categoryId: string; subcategoryId: string; itemId: string; name: string; qty: number; unitPrice: number }[]
+    itemsTotal?: number
   }) => api.post<ServiceRequest>('/service-requests', data).then((r) => r.data),
 
   cancel: (id: string) =>

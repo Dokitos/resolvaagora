@@ -134,9 +134,9 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   }
 
   /// Redefine the password using the emailed code.
-  Future<void> resetPassword(String code, String newPassword) async {
+  Future<void> resetPassword(String email, String code, String newPassword) async {
     final dio = ref.read(dioProvider);
-    await dio.post('/auth/reset-password', data: {'token': code, 'newPassword': newPassword});
+    await dio.post('/auth/reset-password', data: {'email': email, 'code': code, 'newPassword': newPassword});
   }
 
   /// Refresh the cached display name after the client edits their profile.

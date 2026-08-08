@@ -56,6 +56,7 @@ interface BookingState {
   itemsTotal: () => number
   grandTotal: () => number
   buildDescription: () => string
+  bookingItems: () => { categoryId: string; subcategoryId: string; itemId: string; name: string; qty: number; unitPrice: number }[]
 }
 
 const initialState = {
@@ -136,6 +137,27 @@ export const useBookingStore = create<BookingState>()(
         const sub = findSubcategory(s.categoryId, s.subcategoryId, useCatalogStore.getState().categories)
         if (!sub) return 0
         return sub.items.reduce((sum, item) => sum + item.price * (s.itemQuantities[item.id] ?? 0), 0)
+      },
+
+      // Itens estruturados para o backend persistir no pedido — é este valor
+      // (não o total calculado aqui) que passa a decidir o que se cobra no
+      // pagamento, por isso tem de refletir exatamente o que foi mostrado ao
+      // cliente durante a reserva.
+      bookingItems: () => {
+        const s = get()
+        if (!s.categoryId || !s.subcategoryId) return []
+        const sub = findSubcategory(s.categoryId, s.subcategoryId, useCatalogStore.getState().categories)
+        if (!sub) return []
+        return sub.items
+          .filter((item) => (s.itemQuantities[item.id] ?? 0) > 0)
+          .map((item) => ({
+            categoryId: s.categoryId!,
+            subcategoryId: s.subcategoryId!,
+            itemId: item.id,
+            name: item.name,
+            qty: s.itemQuantities[item.id],
+            unitPrice: item.price,
+          }))
       },
 
       grandTotal: () => {

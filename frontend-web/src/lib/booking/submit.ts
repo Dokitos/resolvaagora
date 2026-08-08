@@ -74,5 +74,7 @@ export async function submitBooking(state: BookingSnapshot): Promise<ServiceRequ
     promoCode: state.promoCode.trim() || undefined,
     useFreeVisit: state.useFreeVisit || undefined,
     photoUrls: photoUrls.length ? photoUrls : undefined,
+    items: state.bookingItems().length ? state.bookingItems() : undefined,
+    itemsTotal: state.itemsTotal(),
   })
 }
