@@ -118,6 +118,14 @@ workflows:
         script: flutter gen-l10n
       - name: Escrever google-services.json
         script: echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+      - name: Escrever key.properties (assinatura de release)
+        script: |
+          cat > android/key.properties <<EOF
+          storeFile=$CM_KEYSTORE_PATH
+          storePassword=$CM_KEYSTORE_PASSWORD
+          keyAlias=$CM_KEY_ALIAS
+          keyPassword=$CM_KEY_PASSWORD
+          EOF
       - name: Build app bundle assinado
         script: flutter build appbundle --release
     artifacts:
