@@ -114,12 +114,9 @@ export class EmailInboxService {
   // ── Receção (webhook Resend inbound) ──────────────────────────────────────
   /** Guarda um email recebido (idempotente por messageId). */
   async ingestInbound(data: any) {
+    const emailId: string | undefined = data?.email_id ?? data?.id;
     const messageId =
-      data?.headers?.['message-id'] ??
-      data?.message_id ??
-      data?.email_id ??
-      data?.id ??
-      randomUUID();
+      data?.headers?.['message-id'] ?? data?.message_id ?? emailId ?? randomUUID();
 
     const fromRaw: string = data?.from ?? data?.sender ?? '';
     const { name, address } = this.parseFrom(fromRaw);
@@ -129,17 +126,26 @@ export class EmailInboxService {
         ? [String(data.to)]
         : [];
 
+    // O webhook só traz metadados — o corpo (html/text) vem sempre à parte.
+    let bodyHtml: string | null = data?.html ?? null;
+    let bodyText: string | null = data?.text ?? null;
+    if (!bodyHtml && !bodyText && emailId) {
+      const full = await this.email.fetchReceivedEmail(emailId);
+      bodyHtml = full?.html ?? null;
+      bodyText = full?.text ?? null;
+    }
+
     await this.prisma.email.upsert({
       where: { messageId },
-      update: {},
+      update: { bodyHtml, bodyText },
       create: {
         messageId,
         subject: data?.subject ?? '(sem assunto)',
         fromName: name,
         fromEmail: address || 'desconhecido',
         toEmail: to,
-        bodyText: data?.text ?? null,
-        bodyHtml: data?.html ?? null,
+        bodyText,
+        bodyHtml,
         folder: 'inbox',
         receivedAt: data?.created_at ? new Date(data.created_at) : new Date(),
       },

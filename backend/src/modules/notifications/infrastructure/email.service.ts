@@ -98,6 +98,29 @@ export class EmailService {
   }
 
   /**
+   * O webhook `email.received` da Resend só traz metadados (remetente,
+   * destinatário, assunto) — o corpo (html/text) tem de ser pedido à parte
+   * a este endpoint. Sem isto, todo o email recebido fica com corpo vazio.
+   */
+  async fetchReceivedEmail(id: string): Promise<{ html: string | null; text: string | null } | null> {
+    if (!this.resendKey) return null;
+    try {
+      const res = await fetch(`https://api.resend.com/emails/receiving/${id}`, {
+        headers: { Authorization: `Bearer ${this.resendKey}` },
+      });
+      if (!res.ok) {
+        this.logger.error(`Falha ao obter corpo do email recebido ${id}: ${res.status}`);
+        return null;
+      }
+      const data = await res.json();
+      return { html: data?.html ?? null, text: data?.text ?? null };
+    } catch (err) {
+      this.logger.error(`Erro ao obter corpo do email recebido ${id}`, err as Error);
+      return null;
+    }
+  }
+
+  /**
    * Envolve o conteúdo de qualquer email transacional com a identidade visual
    * da marca (cabeçalho + rodapé) — para que nenhum email automático saia
    * "sem cara", igual ao que os grandes serviços (Google, etc.) fazem.

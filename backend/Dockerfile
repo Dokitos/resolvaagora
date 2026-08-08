@@ -21,4 +21,9 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY prisma ./prisma
 
 EXPOSE 3000
-CMD ["node", "dist/src/main"]
+# Sincroniza o schema da base de dados com prisma/schema.prisma antes de
+# arrancar — sem isto, alterações ao schema (novos modelos/campos) nunca
+# chegavam à base de dados de produção, só à local (db push manual).
+# Sem --accept-data-loss: se alguma alteração for destrutiva, falha alto
+# em vez de apagar dados às escondidas.
+CMD ["sh", "-c", "npx prisma db push --skip-generate && node dist/src/main"]
