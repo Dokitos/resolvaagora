@@ -415,15 +415,45 @@ export const SERVICE_CATEGORIES: ServiceCategory[] = [
   },
 ]
 
-export function findCategory(id: string): ServiceCategory | undefined {
-  return SERVICE_CATEGORIES.find((c) => c.id === id)
+export function findCategory(id: string, categories: ServiceCategory[] = SERVICE_CATEGORIES): ServiceCategory | undefined {
+  return categories.find((c) => c.id === id)
 }
 
-export function findSubcategory(categoryId: string, subcategoryId: string): ServiceSubcategory | undefined {
-  return findCategory(categoryId)?.subcategories.find((s) => s.id === subcategoryId)
+export function findSubcategory(
+  categoryId: string,
+  subcategoryId: string,
+  categories: ServiceCategory[] = SERVICE_CATEGORIES,
+): ServiceSubcategory | undefined {
+  return findCategory(categoryId, categories)?.subcategories.find((s) => s.id === subcategoryId)
 }
 
 /** Mapeia o id da categoria do catálogo para o enum Specialty do backend (AC → HVAC, resto igual). */
 export function categoryToSpecialty(categoryId: string): string {
   return categoryId === 'AC' ? 'HVAC' : categoryId
+}
+
+export function itemPriceKey(categoryId: string, subcategoryId: string, itemId: string): string {
+  return `${categoryId}:${subcategoryId}:${itemId}`
+}
+
+/**
+ * Devolve uma cópia do catálogo com os preços editados no admin aplicados
+ * por cima dos valores por omissão — usado tanto no cliente (store) como em
+ * componentes de servidor (a página /servicos).
+ */
+export function mergeServicePrices(
+  prices: { categories?: Record<string, number>; items?: Record<string, number> } | null | undefined,
+): ServiceCategory[] {
+  if (!prices) return SERVICE_CATEGORIES
+  return SERVICE_CATEGORIES.map((cat) => ({
+    ...cat,
+    basePrice: prices.categories?.[cat.id] ?? cat.basePrice,
+    subcategories: cat.subcategories.map((sub) => ({
+      ...sub,
+      items: sub.items.map((item) => ({
+        ...item,
+        price: prices.items?.[itemPriceKey(cat.id, sub.id, item.id)] ?? item.price,
+      })),
+    })),
+  }))
 }

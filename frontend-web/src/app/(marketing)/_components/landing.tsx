@@ -17,12 +17,11 @@ import {
   Sparkles,
   Zap,
 } from 'lucide-react'
-import { SERVICE_CATEGORIES } from '@/lib/data/services-catalog'
+import { useCatalogStore } from '@/lib/store/catalog-store'
 import { SiteHeader } from './site-header'
 import { SiteFooter } from './site-footer'
 
 const FEATURED_IDS = ['ELECTRICITY', 'PLUMBING', 'AC', 'FURNITURE', 'CLEANING', 'PAINTING']
-const FEATURED = FEATURED_IDS.map((id) => SERVICE_CATEGORIES.find((c) => c.id === id)!)
 
 const TRUST_ROW = [
   { icon: BadgeCheck, label: 'Técnicos verificados' },
@@ -64,6 +63,8 @@ function Wind(props: { className?: string }) {
 export function Landing() {
   const router = useRouter()
   const [query, setQuery] = useState('')
+  const categories = useCatalogStore((s) => s.categories)
+  const FEATURED = FEATURED_IDS.map((id) => categories.find((c) => c.id === id)!)
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault()

@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Minus, Plus } from 'lucide-react'
 import { findSubcategory } from '@/lib/data/services-catalog'
+import { useCatalogStore } from '@/lib/store/catalog-store'
 import { useBookingStore } from '@/lib/store/booking-store'
 import { formatCurrency } from '@/lib/utils'
 import { PriceSummaryBar } from '@/components/ui/price-summary-bar'
@@ -16,7 +17,8 @@ export default function ItemsPage() {
   const setItemQuantity = useBookingStore((s) => s.setItemQuantity)
   const itemsTotal = useBookingStore((s) => s.itemsTotal())
 
-  const sub = categoryId && subcategoryId ? findSubcategory(categoryId, subcategoryId) : null
+  const categories = useCatalogStore((s) => s.categories)
+  const sub = categoryId && subcategoryId ? findSubcategory(categoryId, subcategoryId, categories) : null
 
   useEffect(() => {
     if (!sub) router.replace('/booking/category')

@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import { findCategory, findSubcategory } from '@/lib/data/services-catalog'
+import { useCatalogStore } from '@/lib/store/catalog-store'
 import { formatCurrency } from '@/lib/utils'
 import { slotLabel } from '@/components/ui/slot-picker'
 import type { PickedPhoto } from '@/components/ui/photo-upload'
@@ -132,7 +133,7 @@ export const useBookingStore = create<BookingState>()(
       itemsTotal: () => {
         const s = get()
         if (!s.categoryId || !s.subcategoryId) return 0
-        const sub = findSubcategory(s.categoryId, s.subcategoryId)
+        const sub = findSubcategory(s.categoryId, s.subcategoryId, useCatalogStore.getState().categories)
         if (!sub) return 0
         return sub.items.reduce((sum, item) => sum + item.price * (s.itemQuantities[item.id] ?? 0), 0)
       },
@@ -145,8 +146,9 @@ export const useBookingStore = create<BookingState>()(
 
       buildDescription: () => {
         const s = get()
-        const category = s.categoryId ? findCategory(s.categoryId) : undefined
-        const sub = s.categoryId && s.subcategoryId ? findSubcategory(s.categoryId, s.subcategoryId) : undefined
+        const liveCategories = useCatalogStore.getState().categories
+        const category = s.categoryId ? findCategory(s.categoryId, liveCategories) : undefined
+        const sub = s.categoryId && s.subcategoryId ? findSubcategory(s.categoryId, s.subcategoryId, liveCategories) : undefined
         const lines: string[] = []
 
         if (s.description.trim()) lines.push(s.description.trim(), '')

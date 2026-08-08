@@ -649,3 +649,30 @@ model EmailTemplate {
 
   @@map("email_templates")
 }
+
+/// Preço base (taxa mínima) de uma categoria do catálogo de serviços — a
+/// estrutura do catálogo (categorias/subcategorias/itens) vive em código no
+/// frontend (services-catalog.ts, espelho do services_data.dart da app);
+/// esta tabela guarda só as edições de preço feitas no admin. Sem registo
+/// para uma categoria = usa-se o valor por omissão do catálogo em código.
+model ServiceCategoryPrice {
+  id         String   @id @default(uuid())
+  categoryId String   @unique @map("category_id")
+  basePrice  Decimal  @map("base_price") @db.Decimal(10, 2)
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("service_category_prices")
+}
+
+/// Preço de um item de serviço — ver nota em ServiceCategoryPrice.
+model ServiceItemPrice {
+  id            String   @id @default(uuid())
+  categoryId    String   @map("category_id")
+  subcategoryId String   @map("subcategory_id")
+  itemId        String   @map("item_id")
+  price         Decimal  @db.Decimal(10, 2)
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@unique([categoryId, subcategoryId, itemId])
+  @@map("service_item_prices")
+}

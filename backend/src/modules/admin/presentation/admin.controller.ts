@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Patch,
+  Put,
   Delete,
   Body,
   Param,
@@ -623,6 +624,61 @@ export class AdminController {
     if (d.sortOrder !== undefined) out.sortOrder = Math.trunc(Number(d.sortOrder) || 0);
     if (d.isActive !== undefined) out.isActive = !!d.isActive;
     return out;
+  }
+
+  // ─── PREÇOS DO CATÁLOGO DE SERVIÇOS ───────────────────────────────────────
+  // A estrutura do catálogo (categorias/subcategorias/itens) vive em código
+  // no frontend; aqui só se guardam as edições de preço feitas no admin.
+
+  @Get('service-prices')
+  async listServicePrices() {
+    const [categories, items] = await Promise.all([
+      this.prisma.serviceCategoryPrice.findMany(),
+      this.prisma.serviceItemPrice.findMany(),
+    ]);
+    return {
+      categories: Object.fromEntries(categories.map((c) => [c.categoryId, Number(c.basePrice)])),
+      items: Object.fromEntries(
+        items.map((i) => [`${i.categoryId}:${i.subcategoryId}:${i.itemId}`, Number(i.price)]),
+      ),
+    };
+  }
+
+  @Put('service-prices')
+  async saveServicePrices(
+    @Body()
+    body: {
+      categories?: { categoryId: string; basePrice: number }[];
+      items?: { categoryId: string; subcategoryId: string; itemId: string; price: number }[];
+    },
+  ) {
+    const categories = body.categories ?? [];
+    const items = body.items ?? [];
+
+    await this.prisma.$transaction([
+      ...categories.map((c) =>
+        this.prisma.serviceCategoryPrice.upsert({
+          where: { categoryId: c.categoryId },
+          create: { categoryId: c.categoryId, basePrice: c.basePrice },
+          update: { basePrice: c.basePrice },
+        }),
+      ),
+      ...items.map((i) =>
+        this.prisma.serviceItemPrice.upsert({
+          where: {
+            categoryId_subcategoryId_itemId: {
+              categoryId: i.categoryId,
+              subcategoryId: i.subcategoryId,
+              itemId: i.itemId,
+            },
+          },
+          create: { categoryId: i.categoryId, subcategoryId: i.subcategoryId, itemId: i.itemId, price: i.price },
+          update: { price: i.price },
+        }),
+      ),
+    ]);
+
+    return this.listServicePrices();
   }
 
   // ─── PROMO CODES & REFERRALS ──────────────────────────────────────────────

@@ -7,6 +7,7 @@ import { CheckCircle2 } from 'lucide-react'
 import { useBookingStore } from '@/lib/store/booking-store'
 import { usePublicSettings } from '@/lib/hooks/use-public-settings'
 import { findCategory, findSubcategory } from '@/lib/data/services-catalog'
+import { useCatalogStore } from '@/lib/store/catalog-store'
 import { promoApi } from '@/lib/api/promo'
 import { formatCurrency, formatDateShort } from '@/lib/utils'
 import { slotLabel } from '@/components/ui/slot-picker'
@@ -44,8 +45,9 @@ export default function SummaryPage() {
     if (settings && !state.displacementFee) setDisplacementFee(settings.displacementFee)
   }, [settings, state.displacementFee, setDisplacementFee])
 
-  const category = state.categoryId ? findCategory(state.categoryId) : undefined
-  const sub = state.categoryId && state.subcategoryId ? findSubcategory(state.categoryId, state.subcategoryId) : undefined
+  const categories = useCatalogStore((s) => s.categories)
+  const category = state.categoryId ? findCategory(state.categoryId, categories) : undefined
+  const sub = state.categoryId && state.subcategoryId ? findSubcategory(state.categoryId, state.subcategoryId, categories) : undefined
   const pickedItems = sub?.items.filter((item) => (state.itemQuantities[item.id] ?? 0) > 0) ?? []
   const itemsTotal = state.itemsTotal()
 

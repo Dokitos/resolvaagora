@@ -22,6 +22,7 @@ import { StorageModule } from './modules/storage/storage.module';
 import { BannersModule } from './modules/banners/banners.module';
 import { OtpModule } from './modules/otp/otp.module';
 import { EmailModule } from './modules/email/email.module';
+import { ServicePricesModule } from './modules/service-prices/service-prices.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { EmailModule } from './modules/email/email.module';
     BannersModule,
     OtpModule,
     EmailModule,
+    ServicePricesModule,
   ],
   providers: [
     // Rate-limiting global (protege todos os endpoints; rotas sensíveis apertam com @Throttle)

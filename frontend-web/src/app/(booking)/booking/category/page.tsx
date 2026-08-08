@@ -2,8 +2,9 @@
 
 import { useRouter } from 'next/navigation'
 import { ChevronRight } from 'lucide-react'
-import { SERVICE_CATEGORIES, findCategory } from '@/lib/data/services-catalog'
+import { findCategory } from '@/lib/data/services-catalog'
 import { useBookingStore } from '@/lib/store/booking-store'
+import { useCatalogStore } from '@/lib/store/catalog-store'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 
@@ -13,7 +14,8 @@ export default function CategoryPage() {
   const setCategory = useBookingStore((s) => s.setCategory)
   const setSubcategory = useBookingStore((s) => s.setSubcategory)
 
-  const category = categoryId ? findCategory(categoryId) : null
+  const categories = useCatalogStore((s) => s.categories)
+  const category = categoryId ? findCategory(categoryId, categories) : null
 
   if (!category) {
     return (
@@ -24,7 +26,7 @@ export default function CategoryPage() {
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          {SERVICE_CATEGORIES.map((cat) => (
+          {categories.map((cat) => (
             <button
               key={cat.id}
               onClick={() => setCategory(cat.id)}

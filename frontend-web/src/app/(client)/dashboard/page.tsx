@@ -9,7 +9,7 @@ import { subscriptionsApi } from '@/lib/api/subscriptions'
 import type { ServiceRequest, HomeBanner, SubscriptionPlan } from '@/lib/api/types'
 import { useBookingStore } from '@/lib/store/booking-store'
 import { usePublicSettings } from '@/lib/hooks/use-public-settings'
-import { SERVICE_CATEGORIES } from '@/lib/data/services-catalog'
+import { useCatalogStore } from '@/lib/store/catalog-store'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -18,6 +18,7 @@ import { Plus, ClipboardList, AlertTriangle, Star, ShieldCheck, Award, Users } f
 
 export default function DashboardPage() {
   const router = useRouter()
+  const categories = useCatalogStore((s) => s.categories)
   const setCategory = useBookingStore((s) => s.setCategory)
   const { settings } = usePublicSettings()
   const [requests, setRequests] = useState<ServiceRequest[]>([])
@@ -151,7 +152,7 @@ export default function DashboardPage() {
       <div>
         <h2 className="text-base font-semibold text-gray-900 mb-3">Que serviço precisa?</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {SERVICE_CATEGORIES.map((cat) => (
+          {categories.map((cat) => (
             <button
               key={cat.id}
               onClick={() => startBooking(cat.id)}

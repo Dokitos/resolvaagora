@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ChevronRight } from 'lucide-react'
-import { SERVICE_CATEGORIES } from '@/lib/data/services-catalog'
+import { mergeServicePrices } from '@/lib/data/services-catalog'
 import { SiteHeader } from '../_components/site-header'
 import { SiteFooter } from '../_components/site-footer'
 
@@ -12,7 +12,21 @@ export const metadata: Metadata = {
   alternates: { canonical: '/servicos' },
 }
 
-export default function ServicosPage() {
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? process.env.API_URL ?? 'http://localhost:3002/api/v1'
+
+async function getServiceCategories() {
+  try {
+    const res = await fetch(`${API_URL}/service-prices`, { next: { revalidate: 60 } })
+    if (!res.ok) throw new Error('failed')
+    return mergeServicePrices(await res.json())
+  } catch {
+    return mergeServicePrices(null)
+  }
+}
+
+export default async function ServicosPage() {
+  const SERVICE_CATEGORIES = await getServiceCategories()
+
   return (
     <div className="min-h-screen bg-white text-brand-700">
       <SiteHeader />

@@ -6,7 +6,7 @@ import { signOut } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 import {
   LayoutDashboard, ClipboardList, Users, AlertTriangle,
-  BarChart2, CreditCard, Star, LogOut, MessageSquare, Tag, Settings, Image as ImageIcon, Mail,
+  BarChart2, CreditCard, Star, LogOut, MessageSquare, Tag, Settings, Image as ImageIcon, Mail, DollarSign,
 } from 'lucide-react'
 import { AdminNotificationBell } from '@/components/layout/admin-notification-bell'
 
@@ -21,6 +21,7 @@ const nav = [
   { href: '/admin/subscriptions',    label: 'Assinaturas',   icon: Star            },
   { href: '/admin/banners',          label: 'Banners',       icon: ImageIcon       },
   { href: '/admin/promo-codes',      label: 'Promoções',     icon: Tag             },
+  { href: '/admin/service-prices',   label: 'Preços',        icon: DollarSign      },
   { href: '/admin/analytics',        label: 'Analytics',     icon: BarChart2       },
   { href: '/admin/settings',         label: 'Definições',    icon: Settings        },
 ]
