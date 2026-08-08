@@ -29,7 +29,7 @@ export class HandleStripeWebhookUseCase {
     // Idempotência por evento: a Stripe pode reentregar o mesmo evento (retries,
     // "Resend" manual no dashboard, etc.). Sem isto, um payment_intent.succeeded
     // reprocessado voltaria a criar earnings/disparar eventos duplicados.
-    const alreadyProcessed = await this.prisma.payment.findUnique({
+    const alreadyProcessed = await this.prisma.payment.findFirst({
       where: { stripeEventId: event.id },
     });
     if (alreadyProcessed) {
