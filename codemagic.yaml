@@ -70,3 +70,47 @@ workflows:
       app_store_connect:
         auth: integration
         submit_to_testflight: true
+
+  # Workflow de distribuição Android — só funciona depois de:
+  #   1. Na Codemagic (Teams > Code signing identities > Android), fazer
+  #      upload do keystore de release (resolvaagora-upload.keystore) com a
+  #      referência "resolvaagora_keystore" (ou muda o nome abaixo em
+  #      android_signing para o que usares no upload).
+  #   2. Criar uma conta de serviço no Google Cloud com acesso à Play Console
+  #      (Play Console > Utilizadores e autorizações > Convidar utilizador,
+  #      permissões de gestão de versões) e gerar a chave JSON dessa conta.
+  #   3. Nesta app, em Application settings > Environment variables, criar a
+  #      variável GOOGLE_PLAY_SERVICE_ACCOUNT_CREDENTIALS = conteúdo do
+  #      ficheiro JSON da conta de serviço (marcar "Secret").
+  #   4. A app tem de já ter sido submetida manualmente à Play Console pelo
+  #      menos uma vez (a API não cria a ficha da app, só publica versões).
+  # Depois disso, cada push a "main" gera um app bundle assinado e publica-o
+  # automaticamente na faixa de testes interna da Play Store.
+  android-release:
+    name: Android - Build assinado + Play Store (testes internos)
+    max_build_duration: 60
+    instance_type: linux_x2
+    working_directory: mobile-technician
+    environment:
+      flutter: stable
+      android_signing:
+        - resolvaagora_keystore
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+    scripts:
+      - name: Get Flutter packages
+        script: flutter pub get
+      - name: Gerar localizacao
+        script: flutter gen-l10n
+      - name: Build app bundle assinado
+        script: flutter build appbundle --release
+    artifacts:
+      - build/app/outputs/bundle/release/*.aab
+    publishing:
+      google_play:
+        credentials: $GOOGLE_PLAY_SERVICE_ACCOUNT_CREDENTIALS
+        track: internal
