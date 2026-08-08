@@ -66,10 +66,18 @@ workflows:
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
-    publishing:
-      app_store_connect:
-        auth: integration
-        submit_to_testflight: true
+    # Publishing para o TestFlight desativado por agora: precisa de uma
+    # integração "App Store Connect" ligada em Teams > Integrations (só
+    # possível depois de teres conta Apple Developer). Quando a ligares,
+    # acrescenta a chave "integrations" ao nível do workflow (irmã de
+    # "scripts"/"publishing" acima) com o nome que deres à integração no
+    # Codemagic, e descomenta o bloco publishing abaixo:
+    # integrations:
+    #   app_store_connect: nome_da_integracao
+    # publishing:
+    #   app_store_connect:
+    #     auth: integration
+    #     submit_to_testflight: true
 
   # Workflow de distribuição Android — só funciona depois de:
   #   1. Na Codemagic (Teams > Code signing identities > Android), fazer
