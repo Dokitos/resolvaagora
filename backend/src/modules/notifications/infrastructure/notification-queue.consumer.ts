@@ -102,7 +102,7 @@ export class NotificationQueueConsumer implements OnModuleInit {
   ) {
     try {
       const tokens = await this.getUserTokens(userId);
-      if (tokens.length) await this.fcm.sendToMultiple(tokens, title, body);
+      if (tokens.length) await this.fcm.sendToMultiple(tokens, title, body, { serviceRequestId });
     } catch (e) {
       this.logger.error(`Falha no push para ${userId}: ${e}`);
     }
@@ -258,7 +258,7 @@ export class NotificationQueueConsumer implements OnModuleInit {
     const body = `Recebeu um orçamento de €${Number(totalCost).toFixed(2)}. Responda dentro do prazo.`;
     try {
       const tokens = await this.getUserTokens(client.userId);
-      if (tokens.length) await this.fcm.sendToMultiple(tokens, title, body);
+      if (tokens.length) await this.fcm.sendToMultiple(tokens, title, body, { serviceRequestId });
     } catch (e) {
       this.logger.error(`Falha no push (quote) para ${client.userId}: ${e}`);
     }
@@ -288,7 +288,7 @@ export class NotificationQueueConsumer implements OnModuleInit {
     const body = 'O seu serviço foi concluído. Por favor, avalie o técnico.';
     try {
       const tokens = await this.getUserTokens(client.userId);
-      if (tokens.length) await this.fcm.sendToMultiple(tokens, title, body);
+      if (tokens.length) await this.fcm.sendToMultiple(tokens, title, body, { serviceRequestId });
     } catch (e) {
       this.logger.error(`Falha no push (completion) para ${client.userId}: ${e}`);
     }
