@@ -7,6 +7,7 @@ import toast from 'react-hot-toast'
 import { ArrowLeft, Mail, Lock, Camera } from 'lucide-react'
 import { clientApi } from '@/lib/api/client-api'
 import type { ClientProfile } from '@/lib/api/types'
+import { isValidNif } from '@/lib/utils/nif'
 import { Avatar } from '@/components/ui/avatar'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -25,14 +26,19 @@ export default function ProfilePage() {
   const [nif, setNif] = useState('')
 
   useEffect(() => {
-    clientApi.getProfile().then((p) => {
-      setProfile(p)
-      setFirstName(p.firstName)
-      setLastName(p.lastName)
-      setPhone(p.phone ?? '')
-      setNif(p.nif ?? '')
-      setPhotoUrl(p.photoUrl)
-    }).finally(() => setLoading(false))
+    clientApi.getProfile()
+      .then((p) => {
+        setProfile(p)
+        setFirstName(p.firstName)
+        setLastName(p.lastName)
+        setPhone(p.phone ?? '')
+        setNif(p.nif ?? '')
+        setPhotoUrl(p.photoUrl)
+      })
+      .catch((err: any) => {
+        toast.error(err?.message ?? 'Erro ao carregar perfil')
+      })
+      .finally(() => setLoading(false))
   }, [])
 
   async function handlePickPhoto(e: React.ChangeEvent<HTMLInputElement>) {
@@ -51,9 +57,15 @@ export default function ProfilePage() {
     }
   }
 
+  const nifError = nif.trim() && !isValidNif(nif) ? 'NIF inválido.' : undefined
+
   async function handleSave() {
     if (!firstName.trim() || !lastName.trim()) {
       toast.error('Nome e apelido são obrigatórios')
+      return
+    }
+    if (nifError) {
+      toast.error(nifError)
       return
     }
     setSaving(true)
@@ -112,7 +124,13 @@ export default function ProfilePage() {
       <Input label="Nome" placeholder="O teu nome" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
       <Input label="Apelido" placeholder="O teu apelido" value={lastName} onChange={(e) => setLastName(e.target.value)} />
       <Input label="Telefone" placeholder="9XX XXX XXX" value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))} />
-      <Input label="NIF" placeholder="Número de contribuinte" value={nif} onChange={(e) => setNif(e.target.value.replace(/\D/g, ''))} />
+      <Input
+        label="NIF"
+        placeholder="Número de contribuinte"
+        value={nif}
+        error={nifError}
+        onChange={(e) => setNif(e.target.value.replace(/\D/g, ''))}
+      />
 
       <Button className="w-full" size="lg" loading={saving} onClick={handleSave}>
         Guardar alterações

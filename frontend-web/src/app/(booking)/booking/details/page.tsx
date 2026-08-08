@@ -3,6 +3,8 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useBookingStore } from '@/lib/store/booking-store'
+import { useCatalogStore } from '@/lib/store/catalog-store'
+import { findSubcategory } from '@/lib/data/services-catalog'
 import { Textarea } from '@/components/ui/textarea'
 import { PhotoUpload } from '@/components/ui/photo-upload'
 import { Button } from '@/components/ui/button'
@@ -13,13 +15,31 @@ const MIN_CHARS = 10
 export default function DetailsPage() {
   const router = useRouter()
   const categoryId = useBookingStore((s) => s.categoryId)
+  const subcategoryId = useBookingStore((s) => s.subcategoryId)
   const description = useBookingStore((s) => s.description)
   const photos = useBookingStore((s) => s.photos)
   const setDetails = useBookingStore((s) => s.setDetails)
+  const categories = useCatalogStore((s) => s.categories)
 
   useEffect(() => {
-    if (!categoryId) router.replace('/booking/category')
-  }, [categoryId, router])
+    if (!categoryId) {
+      router.replace('/booking/category')
+      return
+    }
+    // Sem subcategoria escolhida não há como chegar aqui legitimamente: em
+    // booking/category/page.tsx toda subcategoria (com ou sem
+    // `hasCustomQuote`) passa por setSubcategory() antes de navegar para
+    // /booking/items ou diretamente para /booking/details. Um acesso direto
+    // a esta rota sem subcategoryId é um salto inválido no wizard.
+    if (!subcategoryId) {
+      router.replace('/booking/category')
+      return
+    }
+    const sub = findSubcategory(categoryId, subcategoryId, categories)
+    if (!sub) {
+      router.replace('/booking/category')
+    }
+  }, [categoryId, subcategoryId, categories, router])
 
   const valid = description.trim().length >= MIN_CHARS
 

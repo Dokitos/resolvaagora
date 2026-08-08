@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useBookingStore } from '@/lib/store/booking-store'
+import { usePublicSettings } from '@/lib/hooks/use-public-settings'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
@@ -18,6 +19,9 @@ export default function AddressPage() {
   const addressFloor = useBookingStore((s) => s.addressFloor)
   const addressObservations = useBookingStore((s) => s.addressObservations)
   const setAddress = useBookingStore((s) => s.setAddress)
+  const phone = useBookingStore((s) => s.phone)
+  const otpVerified = useBookingStore((s) => s.otpVerified)
+  const { settings, loading: settingsLoading } = usePublicSettings()
 
   const [street, setStreet] = useState(addressStreet)
   const [number, setNumber] = useState(addressNumber)
@@ -25,9 +29,23 @@ export default function AddressPage() {
   const [observations, setObservations] = useState(addressObservations)
 
   useEffect(() => {
-    if (!categoryId) router.replace('/booking/category')
-    else if (!postalCode) router.replace('/booking/schedule')
-  }, [categoryId, postalCode, router])
+    if (!categoryId) {
+      router.replace('/booking/category')
+      return
+    }
+    if (!postalCode) {
+      router.replace('/booking/schedule')
+      return
+    }
+    // Espera a resolução das definições públicas antes de decidir se a
+    // verificação OTP é obrigatória, para não disparar um redirect falso
+    // enquanto `settings` ainda está a carregar.
+    if (settingsLoading) return
+    const otpRequired = Boolean(settings?.smsVerificationEnabled && settings?.smsConfigured)
+    if (otpRequired && !otpVerified) {
+      router.replace(phone ? '/booking/otp' : '/booking/contact')
+    }
+  }, [categoryId, postalCode, settingsLoading, settings, otpVerified, phone, router])
 
   const valid = street.trim().length > 0 && number.trim().length > 0
 

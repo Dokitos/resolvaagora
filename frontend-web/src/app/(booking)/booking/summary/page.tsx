@@ -3,12 +3,15 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
-import { CheckCircle2 } from 'lucide-react'
+import { CheckCircle2, Gift } from 'lucide-react'
 import { useBookingStore } from '@/lib/store/booking-store'
 import { usePublicSettings } from '@/lib/hooks/use-public-settings'
 import { findCategory, findSubcategory } from '@/lib/data/services-catalog'
 import { useCatalogStore } from '@/lib/store/catalog-store'
 import { promoApi } from '@/lib/api/promo'
+import { subscriptionsApi } from '@/lib/api/subscriptions'
+import type { Subscription } from '@/lib/api/types'
+import { isValidNif } from '@/lib/utils/nif'
 import { formatCurrency, formatDateShort } from '@/lib/utils'
 import { slotLabel } from '@/components/ui/slot-picker'
 import { Card, CardContent } from '@/components/ui/card'
@@ -25,6 +28,7 @@ export default function SummaryPage() {
   const setPromo = useBookingStore((s) => s.setPromo)
   const setNif = useBookingStore((s) => s.setNif)
   const setBilling = useBookingStore((s) => s.setBilling)
+  const setUseFreeVisit = useBookingStore((s) => s.setUseFreeVisit)
 
   const [showPromo, setShowPromo] = useState(false)
   const [promoInput, setPromoInput] = useState(state.promoCode)
@@ -36,6 +40,7 @@ export default function SummaryPage() {
   const [billingNumber, setBillingNumber] = useState(state.billingNumber)
   const [billingPostalCode, setBillingPostalCode] = useState(state.billingPostalCode)
   const [billingCity, setBillingCity] = useState(state.billingCity)
+  const [subscription, setSubscription] = useState<Subscription | null>(null)
 
   useEffect(() => {
     if (!state.categoryId) router.replace('/booking/category')
@@ -44,6 +49,16 @@ export default function SummaryPage() {
   useEffect(() => {
     if (settings && !state.displacementFee) setDisplacementFee(settings.displacementFee)
   }, [settings, state.displacementFee, setDisplacementFee])
+
+  useEffect(() => {
+    subscriptionsApi.current().then(setSubscription).catch(() => setSubscription(null))
+  }, [])
+
+  const freeVisitsAvailable = subscription && subscription.status === 'ACTIVE'
+    ? Math.max(0, subscription.plan.freeVisitsCount - subscription.freeVisitsUsed)
+    : 0
+
+  const nifError = nifInput.trim() && !isValidNif(nifInput) ? 'NIF inválido.' : undefined
 
   const categories = useCatalogStore((s) => s.categories)
   const category = state.categoryId ? findCategory(state.categoryId, categories) : undefined
@@ -71,6 +86,10 @@ export default function SummaryPage() {
   }
 
   function handleContinue() {
+    if (nifError) {
+      toast.error(nifError)
+      return
+    }
     setNif(nifInput)
     setBilling({
       different: billingDifferent,
@@ -132,6 +151,19 @@ export default function SummaryPage() {
         </CardContent>
       </Card>
 
+      {freeVisitsAvailable > 0 && (
+        <Card className="border-accent-100 bg-accent-50">
+          <CardContent className="p-4 flex items-start gap-2">
+            <Gift className="h-4 w-4 text-accent-600 mt-0.5 flex-shrink-0" />
+            <Checkbox
+              checked={state.useFreeVisit}
+              onChange={(e) => setUseFreeVisit(e.target.checked)}
+              label={`Usar visita grátis da assinatura (${freeVisitsAvailable} disponível${freeVisitsAvailable > 1 ? 'is' : ''})`}
+            />
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardContent className="p-4 space-y-3">
           {!showPromo ? (
@@ -148,7 +180,13 @@ export default function SummaryPage() {
             </div>
           )}
 
-          <Input label="NIF (para o recibo)" placeholder="Opcional" value={nifInput} onChange={(e) => setNifInput(e.target.value)} />
+          <Input
+            label="NIF (para o recibo)"
+            placeholder="Opcional"
+            value={nifInput}
+            error={nifError}
+            onChange={(e) => setNifInput(e.target.value.replace(/\D/g, ''))}
+          />
 
           <Checkbox
             label="Morada de faturação diferente"
@@ -176,6 +214,7 @@ export default function SummaryPage() {
         ]}
         total={state.grandTotal()}
         ctaLabel="Continuar para pagamento"
+        ctaDisabled={Boolean(nifError)}
         onCta={handleContinue}
       />
     </div>
