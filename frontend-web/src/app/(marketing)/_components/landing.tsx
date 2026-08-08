@@ -16,9 +16,10 @@ import {
   Settings2,
   Sparkles,
   Zap,
-  Award,
 } from 'lucide-react'
 import { SERVICE_CATEGORIES } from '@/lib/data/services-catalog'
+import { SiteHeader } from './site-header'
+import { SiteFooter } from './site-footer'
 
 const FEATURED_IDS = ['ELECTRICITY', 'PLUMBING', 'AC', 'FURNITURE', 'CLEANING', 'PAINTING']
 const FEATURED = FEATURED_IDS.map((id) => SERVICE_CATEGORIES.find((c) => c.id === id)!)
@@ -36,14 +37,6 @@ const STEPS = [
   { icon: ShieldCheck, title: 'Confirma', desc: 'Paga online em segurança e deixa o resto connosco.' },
 ]
 
-const WHY_US = [
-  { icon: Wrench, label: 'Técnicos especializados por área' },
-  { icon: ShieldCheck, label: 'Serviços com garantia de 6 meses' },
-  { icon: Lock, label: '100% online, sem complicações' },
-  { icon: BadgeCheck, label: 'Preço transparente antes de agendar' },
-  { icon: Headset, label: 'Suporte por chat, telefone e WhatsApp' },
-]
-
 const CATEGORY_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   ELECTRICITY: Zap,
   PLUMBING: Settings2,
@@ -59,7 +52,6 @@ const CATEGORY_ICONS: Record<string, React.ComponentType<{ className?: string }>
 }
 
 function Wind(props: { className?: string }) {
-  // pequeno ícone próprio para AC — evita depender de mais um import do lucide só para isto
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className={props.className}>
       <path d="M9.59 4.59A2 2 0 1 1 11 8H2" />
@@ -80,34 +72,7 @@ export function Landing() {
 
   return (
     <div className="min-h-screen bg-white text-brand-700">
-      {/* NAV */}
-      <header className="sticky top-0 z-50 border-b border-gray-200 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-3.5 sm:px-8">
-          <div className="flex items-center gap-2">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.png" alt="ResolvaAgora" className="h-9 w-auto object-contain" />
-          </div>
-          <nav className="hidden items-center gap-8 text-sm font-semibold text-brand-600 md:flex">
-            <a href="#servicos" className="transition-colors hover:text-accent-600">Serviços</a>
-            <a href="#como-funciona" className="transition-colors hover:text-accent-600">Como funciona</a>
-            <a href="#porque" className="transition-colors hover:text-accent-600">Porquê nós</a>
-          </nav>
-          <div className="flex items-center gap-2">
-            <Link
-              href="/login"
-              className="rounded-full px-4 py-2 text-sm font-bold text-brand-700 transition-colors hover:bg-gray-100"
-            >
-              Entrar
-            </Link>
-            <Link
-              href="/register"
-              className="rounded-full bg-accent-500 px-4 py-2 text-sm font-bold text-brand-900 transition-colors hover:bg-accent-600"
-            >
-              Criar conta
-            </Link>
-          </div>
-        </div>
-      </header>
+      <SiteHeader />
 
       {/* HERO */}
       <section className="relative overflow-hidden bg-gradient-to-br from-brand-700 to-brand-900">
@@ -154,7 +119,6 @@ export function Landing() {
           </form>
         </div>
 
-        {/* trust row sobreposta ao limite do hero */}
         <div className="relative border-t border-white/10 bg-white/[0.04]">
           <div className="mx-auto grid max-w-7xl grid-cols-2 gap-4 px-5 py-6 sm:px-8 md:grid-cols-4">
             {TRUST_ROW.map((t) => (
@@ -170,12 +134,20 @@ export function Landing() {
       </section>
 
       {/* EXPLORA SERVIÇOS */}
-      <section id="servicos" className="py-16 sm:py-20">
+      <section className="py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-5 sm:px-8">
-          <h2 className="text-2xl font-extrabold tracking-tight text-brand-700 sm:text-3xl">
-            Explora alguns dos nossos serviços
-          </h2>
-          <p className="mt-2 text-brand-500">Encontra rapidamente o serviço certo e faz já a tua reserva.</p>
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-extrabold tracking-tight text-brand-700 sm:text-3xl">
+                Explora alguns dos nossos serviços
+              </h2>
+              <p className="mt-2 text-brand-500">Encontra rapidamente o serviço certo e faz já a tua reserva.</p>
+            </div>
+            <Link href="/servicos" className="flex items-center gap-1 text-sm font-bold text-accent-700 hover:text-accent-800">
+              Ver todos os serviços
+              <ChevronRight className="h-4 w-4" />
+            </Link>
+          </div>
 
           <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURED.map((cat, i) => {
@@ -230,29 +202,8 @@ export function Landing() {
         </div>
       </section>
 
-      {/* SERVIÇOS POR CATEGORIA */}
-      <section className="py-16 sm:py-20">
-        <div className="mx-auto max-w-7xl px-5 sm:px-8">
-          <h2 className="text-2xl font-extrabold tracking-tight text-brand-700 sm:text-3xl">Serviços por categoria</h2>
-          <p className="mt-2 text-brand-500">Vê todos os serviços disponíveis em cada área.</p>
-
-          <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-            {SERVICE_CATEGORIES.map((cat) => (
-              <Link
-                key={cat.id}
-                href="/login?from=/booking/category"
-                className="flex flex-col items-center gap-2 rounded-2xl border border-gray-200 bg-white px-4 py-6 text-center transition-all hover:-translate-y-0.5 hover:border-accent-500 hover:shadow-md"
-              >
-                <span className="text-2xl">{cat.emoji}</span>
-                <span className="text-xs font-semibold text-brand-700">{cat.name}</span>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* COMO FUNCIONA */}
-      <section id="como-funciona" className="bg-gray-50 py-16 sm:py-20">
+      {/* COMO FUNCIONA (resumo — versão completa em /sobre) */}
+      <section className="bg-gray-50 py-16 sm:py-20">
         <div className="mx-auto max-w-7xl px-5 sm:px-8">
           <h2 className="text-2xl font-extrabold tracking-tight text-brand-700 sm:text-3xl">Como funciona</h2>
           <div className="mt-10 grid gap-10 sm:grid-cols-3">
@@ -266,46 +217,15 @@ export function Landing() {
               </div>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* PORQUÊ ESCOLHER-NOS */}
-      <section id="porque" className="py-16 sm:py-20">
-        <div className="mx-auto max-w-7xl px-5 sm:px-8">
-          <div className="grid overflow-hidden rounded-3xl border border-gray-200 lg:grid-cols-2">
-            <div className="relative flex min-h-[320px] items-center justify-center bg-gradient-to-br from-brand-700 to-brand-900 p-10">
-              <div className="pointer-events-none absolute -left-10 -top-10 h-52 w-52 rounded-full bg-accent-500/10 blur-3xl" />
-              <div className="pointer-events-none absolute bottom-0 right-0 h-64 w-64 rounded-full bg-accent-500/5 blur-3xl" />
-              <div className="relative text-center">
-                <Award className="mx-auto h-16 w-16 text-accent-500" />
-                <p className="mt-4 text-2xl font-extrabold tracking-tight">
-                  <span className="text-white">Resolva</span>
-                  <span className="text-accent-500">Agora</span>
-                </p>
-              </div>
-            </div>
-            <div className="flex flex-col justify-center p-10">
-              <h2 className="text-2xl font-extrabold tracking-tight text-brand-700 sm:text-3xl">Porquê escolher-nos?</h2>
-              <p className="mt-2 text-brand-500">
-                Garantimos a tua total satisfação com compromissos que nos diferenciam no mercado.
-              </p>
-              <ul className="mt-6 space-y-4">
-                {WHY_US.map((w) => (
-                  <li key={w.label} className="flex items-center gap-3">
-                    <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-accent-50">
-                      <w.icon className="h-4.5 w-4.5 text-accent-600" />
-                    </span>
-                    <span className="text-sm font-medium text-brand-700">{w.label}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
+          <Link href="/sobre" className="mt-8 inline-flex items-center gap-1 text-sm font-bold text-accent-700 hover:text-accent-800">
+            Saber mais sobre nós
+            <ChevronRight className="h-4 w-4" />
+          </Link>
         </div>
       </section>
 
       {/* CTA / APP */}
-      <section className="py-8">
+      <section className="py-16">
         <div className="mx-auto max-w-7xl px-5 sm:px-8">
           <div className="relative overflow-hidden rounded-3xl bg-brand-900 px-8 py-14 text-center sm:px-16">
             <div className="pointer-events-none absolute -left-16 -top-16 h-64 w-64 rounded-full bg-accent-500/20 blur-3xl" />
@@ -335,49 +255,7 @@ export function Landing() {
         </div>
       </section>
 
-      {/* FOOTER */}
-      <footer className="mt-8 border-t border-gray-200 bg-white">
-        <div className="mx-auto max-w-7xl px-5 py-12 sm:px-8">
-          <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
-            <div className="max-w-sm">
-              <div className="flex items-center gap-2">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-700">
-                  <Wrench className="h-4 w-4 text-accent-500" />
-                </span>
-                <span className="text-base font-extrabold tracking-tight text-brand-700">
-                  Resolva<span className="text-accent-500">Agora</span>
-                </span>
-              </div>
-              <p className="mt-3 text-sm text-brand-500">
-                Profissionais de confiança para a tua casa, em todo o país.
-              </p>
-            </div>
-            <div className="grid grid-cols-2 gap-8 text-sm text-brand-500 sm:gap-16">
-              <div>
-                <h4 className="font-semibold text-brand-700">Apoio</h4>
-                <ul className="mt-3 space-y-1.5">
-                  <li><a href="mailto:suporte@resolvaagora.pt" className="hover:text-accent-600">suporte@resolvaagora.pt</a></li>
-                  <li><Link href="/login" className="hover:text-accent-600">Ajuda e suporte</Link></li>
-                  <li><Link href="/login" className="hover:text-accent-600">Termos e condições</Link></li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="font-semibold text-brand-700">Empresa</h4>
-                <ul className="mt-3 space-y-1.5">
-                  <li>Per4manceMD · Douglas Miranda</li>
-                  <li>NIF 255568789</li>
-                  <li>
-                    <a href="https://www.resolvaagora.pt" className="hover:text-accent-600">www.resolvaagora.pt</a>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
-          <div className="mt-10 border-t border-gray-200 pt-6 text-xs text-brand-500">
-            © {new Date().getFullYear()} ResolvaAgora · Per4manceMD. Todos os direitos reservados.
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   )
 }
