@@ -26,18 +26,29 @@ export class HandleStripeWebhookUseCase {
       throw err;
     }
 
+    // Idempotência por evento: a Stripe pode reentregar o mesmo evento (retries,
+    // "Resend" manual no dashboard, etc.). Sem isto, um payment_intent.succeeded
+    // reprocessado voltaria a criar earnings/disparar eventos duplicados.
+    const alreadyProcessed = await this.prisma.payment.findUnique({
+      where: { stripeEventId: event.id },
+    });
+    if (alreadyProcessed) {
+      this.logger.log(`Evento Stripe ${event.id} já processado — a ignorar (idempotente)`);
+      return;
+    }
+
     if (event.type === 'payment_intent.succeeded') {
       const paymentIntent = event.data.object as Stripe.PaymentIntent;
-      await this.handlePaymentSuccess(paymentIntent);
+      await this.handlePaymentSuccess(paymentIntent, event.id);
     }
 
     if (event.type === 'payment_intent.payment_failed') {
       const paymentIntent = event.data.object as Stripe.PaymentIntent;
-      await this.handlePaymentFailure(paymentIntent);
+      await this.handlePaymentFailure(paymentIntent, event.id);
     }
   }
 
-  private async handlePaymentSuccess(pi: Stripe.PaymentIntent) {
+  private async handlePaymentSuccess(pi: Stripe.PaymentIntent, eventId: string) {
     const { serviceRequestId, type } = pi.metadata;
 
     // Subscrição Premium: ativar (ou confirmar) a subscrição do cliente.
@@ -50,7 +61,7 @@ export class HandleStripeWebhookUseCase {
     await this.prisma.$transaction(async (tx) => {
       await tx.payment.updateMany({
         where: { stripePaymentIntentId: pi.id },
-        data: { status: 'COMPLETED', paidAt: new Date() },
+        data: { status: 'COMPLETED', paidAt: new Date(), stripeEventId: eventId },
       });
 
       // Tanto o pagamento só da deslocação como o do pedido completo (ORDER)
@@ -132,10 +143,10 @@ export class HandleStripeWebhookUseCase {
     await this.redis.del(`subpending:${pi.id}`);
   }
 
-  private async handlePaymentFailure(pi: Stripe.PaymentIntent) {
+  private async handlePaymentFailure(pi: Stripe.PaymentIntent, eventId: string) {
     await this.prisma.payment.updateMany({
       where: { stripePaymentIntentId: pi.id },
-      data: { status: 'FAILED' },
+      data: { status: 'FAILED', stripeEventId: eventId },
     });
 
     this.logger.warn(`Payment failed for PI ${pi.id}`);

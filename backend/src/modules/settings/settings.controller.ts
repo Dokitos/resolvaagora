@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { SettingsService } from './settings.service';
 import { StorageService } from '../storage/storage.service';
 import { SmsService } from '../otp/sms.service';
+import { EmailService } from '../notifications/infrastructure/email.service';
 
 /** Taxa de deslocação (mantida em sincronia com create-service-request). */
 export const DISPLACEMENT_FEE = 25.0;
@@ -15,6 +16,7 @@ export class SettingsController {
     private readonly config: ConfigService,
     private readonly storage: StorageService,
     private readonly sms: SmsService,
+    private readonly emailService: EmailService,
   ) {}
 
   @Get('public')
@@ -37,8 +39,10 @@ export class SettingsController {
       imageUploadsEnabled: this.storage.configured,
       // A app só exige OTP quando a verificação está ligada E a Twilio configurada.
       smsConfigured: this.sms.configured,
-      // Diagnóstico: true se o SMTP (Resend) está configurado no backend.
-      emailConfigured: !!(this.config.get('SMTP_USER') && this.config.get('SMTP_PASS')),
+      // Diagnóstico: true se há forma de enviar email (Resend API ou SMTP) —
+      // delega no EmailService, que prefere a API da Resend, para não haver
+      // divergência entre este diagnóstico e o envio real.
+      emailConfigured: this.emailService.configured,
       // Diagnóstico: true se as credenciais Firebase (FCM) estão no ambiente.
       pushConfigured: !!(
         this.config.get('FIREBASE_PROJECT_ID') && this.config.get('FIREBASE_PRIVATE_KEY')

@@ -59,10 +59,11 @@ export class CreateServiceRequestUseCase {
     let subscriptionId: string | undefined;
 
     // Taxa de deslocação calculada por distância a partir das coordenadas da morada.
-    const { fee: baseFee } = this.displacementFee.computeFee(settings, {
-      latitude: address.latitude,
-      longitude: address.longitude,
-    });
+    const { fee: baseFee } = this.displacementFee.computeFee(
+      settings,
+      { latitude: address.latitude, longitude: address.longitude },
+      { addressId: address.id },
+    );
     let displacementFee = baseFee;
 
     if (dto.useFreeVisit && activeSubscription) {
@@ -95,6 +96,11 @@ export class CreateServiceRequestUseCase {
           description: dto.description,
           scheduledDate: dto.scheduledDate ? new Date(dto.scheduledDate) : undefined,
           displacementFee,
+          // Itens estruturados + total, quando o cliente os envia (frontend-web
+          // e app móvel atualizados em paralelo para respeitar este contrato).
+          // Persistidos para o pagamento confirmar o total no servidor.
+          items: dto.items?.length ? (dto.items as any) : undefined,
+          itemsTotal: dto.itemsTotal != null ? dto.itemsTotal : undefined,
           promoCode,
           promoDiscount: null,
           isPriority,

@@ -6,6 +6,7 @@ import {
   IsDateString,
   IsBoolean,
   IsArray,
+  IsNumber,
   ArrayMaxSize,
   Matches,
   MaxLength,
@@ -45,4 +46,15 @@ export class CreateServiceRequestDto {
   @IsString({ each: true })
   @Matches(SAFE_PHOTO_URL, { each: true, message: 'URL de foto inválida' })
   photoUrls?: string[];
+
+  // Itens escolhidos pelo cliente no catálogo (estruturados) — persistidos
+  // para que o pagamento confirme o total no servidor em vez de confiar no
+  // valor enviado pelo cliente em POST /pay (ver create-order-payment.use-case).
+  @IsOptional()
+  @IsArray()
+  items?: { categoryId: string; subcategoryId: string; itemId: string; name: string; qty: number; unitPrice: number }[];
+
+  @IsOptional()
+  @IsNumber()
+  itemsTotal?: number;
 }

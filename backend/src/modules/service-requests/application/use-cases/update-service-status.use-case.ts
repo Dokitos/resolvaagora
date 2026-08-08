@@ -4,7 +4,7 @@ import {
   ForbiddenException,
   BadRequestException,
 } from '@nestjs/common';
-import { ServiceStatus } from '@prisma/client';
+import { ServiceStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '@shared/infrastructure/database/prisma.service';
 import { RabbitMQService } from '@shared/infrastructure/messaging/rabbitmq.service';
 
@@ -60,23 +60,38 @@ export class UpdateServiceStatusUseCase {
       }
     }
 
-    const updated = await this.prisma.serviceRequest.update({
-      where: { id: serviceRequestId },
-      data: {
-        status: newStatus,
-        completedAt: newStatus === 'COMPLETED' ? new Date() : undefined,
-        statusHistory: {
-          create: {
-            oldStatus: sr.status,
-            newStatus,
-            changedByUserId: userId,
-            notes,
+    // A transição de status e a criação dos earnings (quando o serviço fica
+    // COMPLETED) têm de ser atómicas: se a criação dos earnings falhasse fora
+    // desta transação, o pedido ficava COMPLETED sem earnings e sem forma de
+    // tentar de novo (não há transição válida a partir de COMPLETED).
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const result = await tx.serviceRequest.update({
+        where: { id: serviceRequestId },
+        data: {
+          status: newStatus,
+          completedAt: newStatus === 'COMPLETED' ? new Date() : undefined,
+          statusHistory: {
+            create: {
+              oldStatus: sr.status,
+              newStatus,
+              changedByUserId: userId,
+              notes,
+            },
           },
         },
-      },
-      include: { client: true, technician: true, address: true },
+        include: { client: true, technician: true, address: true },
+      });
+
+      if (newStatus === 'COMPLETED') {
+        await this.createEarnings(tx, result);
+      }
+
+      return result;
     });
 
+    // Eventos só são publicados depois do commit da transação ter sucesso —
+    // nunca antes, para não notificar consumidores (distribuição, faturação,
+    // etc.) de um estado que ainda pode ser revertido por uma falha na BD.
     await this.rabbitmq.publish(
       this.rabbitmq.exchanges.serviceRequests,
       'service-request.status.updated',
@@ -90,14 +105,20 @@ export class UpdateServiceStatusUseCase {
     );
 
     if (newStatus === 'COMPLETED') {
-      await this.handleCompletion(updated);
+      // Nota: a visita grátis é descontada na CONFIRMAÇÃO do pagamento
+      // (create-order-payment), não aqui, para refletir logo na conta do cliente.
+      await this.rabbitmq.publish(
+        this.rabbitmq.exchanges.serviceRequests,
+        'service-request.completed',
+        { serviceRequestId: updated.id, clientId: updated.clientId, technicianId: updated.technicianId },
+      );
     }
 
     return updated;
   }
 
-  private async handleCompletion(sr: any) {
-    const quote = await this.prisma.quote.findUnique({
+  private async createEarnings(tx: Prisma.TransactionClient, sr: any) {
+    const quote = await tx.quote.findUnique({
       where: { serviceRequestId: sr.id },
     });
 
@@ -106,7 +127,7 @@ export class UpdateServiceStatusUseCase {
       const serviceAmount = Number(quote.totalCost) * (1 - commissionRate);
       const displacementAmount = Number(sr.displacementFee);
 
-      await this.prisma.earning.createMany({
+      await tx.earning.createMany({
         data: [
           {
             technicianId: sr.technicianId,
@@ -123,14 +144,5 @@ export class UpdateServiceStatusUseCase {
         ],
       });
     }
-
-    // Nota: a visita grátis é descontada na CONFIRMAÇÃO do pagamento
-    // (create-order-payment), não aqui, para refletir logo na conta do cliente.
-
-    await this.rabbitmq.publish(
-      this.rabbitmq.exchanges.serviceRequests,
-      'service-request.completed',
-      { serviceRequestId: sr.id, clientId: sr.clientId, technicianId: sr.technicianId },
-    );
   }
 }

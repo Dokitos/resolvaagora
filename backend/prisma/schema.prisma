@@ -273,6 +273,11 @@ model ServiceRequest {
   scheduledDate               DateTime?     @map("scheduled_date")
   confirmedDate               DateTime?     @map("confirmed_date")
   displacementFee             Decimal       @map("displacement_fee") @db.Decimal(10, 2)
+  // Itens escolhidos pelo cliente (estruturados) + total correspondente.
+  // Nullable: pedidos criados antes desta correção não têm estes campos
+  // preenchidos — ver create-order-payment.use-case.ts para o fallback.
+  items                       Json?         @map("items")
+  itemsTotal                  Decimal?      @map("items_total") @db.Decimal(10, 2)
   promoCode                   String?       @map("promo_code")
   promoDiscount               Decimal?      @map("promo_discount") @db.Decimal(10, 2)
   isDisplacementFeePaid       Boolean       @default(false) @map("is_displacement_fee_paid")
@@ -299,6 +304,8 @@ model ServiceRequest {
   review        Review?
   earnings      Earning[]
 
+  @@index([status])
+  @@index([status, updatedAt])
   @@map("service_requests")
 }
 
@@ -351,6 +358,8 @@ model Quote {
   serviceRequest ServiceRequest @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
   technician     Technician     @relation(fields: [technicianId], references: [id])
 
+  @@index([status])
+  @@index([status, updatedAt])
   @@map("quotes")
 }
 
@@ -365,11 +374,14 @@ model Payment {
   status                PaymentStatus @default(PENDING)
   stripePaymentIntentId String?       @unique @map("stripe_payment_intent_id")
   stripePaymentMethod   String?       @map("stripe_payment_method")
+  stripeEventId         String?       @unique @map("stripe_event_id")
   paidAt                DateTime?     @map("paid_at")
   createdAt             DateTime      @default(now()) @map("created_at")
 
   serviceRequest ServiceRequest @relation(fields: [serviceRequestId], references: [id])
 
+  @@index([status])
+  @@index([status, createdAt])
   @@map("payments")
 }
 
@@ -456,6 +468,7 @@ model Notification {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
   @@map("notifications")
 }
 
@@ -485,6 +498,8 @@ model SlaAlert {
 
   serviceRequest ServiceRequest @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
 
+  @@index([serviceRequestId])
+  @@index([resolvedAt])
   @@map("sla_alerts")
 }
 

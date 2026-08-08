@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '@shared/infrastructure/database/prisma.service';
 import { RabbitMQService } from '@shared/infrastructure/messaging/rabbitmq.service';
@@ -13,6 +13,8 @@ import { PromoService } from '../../../promotions/application/promo.service';
  */
 @Injectable()
 export class CreateOrderPaymentUseCase {
+  private readonly logger = new Logger(CreateOrderPaymentUseCase.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly stripe: StripeService,
@@ -37,9 +39,26 @@ export class CreateOrderPaymentUseCase {
       throw new BadRequestException('Service request not in draft status');
     }
 
+    // CRÍTICO: nunca confiar no total enviado pelo cliente em POST /pay — um
+    // pedido direto à API poderia pagar qualquer serviço por €0,01. O total
+    // dos itens é sempre lido do que ficou persistido em ServiceRequest.items
+    // (guardado na criação do pedido, ver create-service-request.use-case).
+    // Só cai para o valor do corpo do pedido (comportamento legado, inseguro)
+    // quando o pedido não tem itemsTotal persistido — pedidos antigos ou
+    // clientes desatualizados que ainda não enviam items/itemsTotal na criação.
+    const persistedItemsTotal = Number(sr.itemsTotal ?? NaN);
+    let items: number;
+    if (sr.itemsTotal != null && !Number.isNaN(persistedItemsTotal)) {
+      items = Math.max(0, persistedItemsTotal);
+    } else {
+      this.logger.warn(
+        `Pagamento sem itemsTotal persistido, a confiar no valor do pedido — sr.id=${sr.id}`,
+      );
+      items = Math.max(0, Number(itemsTotal) || 0);
+    }
+
     // Subtotal = itens + deslocação (a deslocação já traz o desconto de
     // subscrição aplicado na criação do pedido). Nunca negativo.
-    const items = Math.max(0, Number(itemsTotal) || 0);
     const displacement = Number(sr.displacementFee);
     const subtotal = Math.max(0, Number((items + displacement).toFixed(2)));
 
@@ -58,9 +77,14 @@ export class CreateOrderPaymentUseCase {
 
     // Código promocional: resgatado AGORA e aplicado ao TOTAL do pedido
     // (itens + deslocação) — é aqui que se conhece o total dos itens. Acontece
-    // uma única vez, pois o pedido sai de DRAFT logo a seguir.
+    // uma única vez, pois o pedido sai de DRAFT logo a seguir. Se um retry
+    // chegar aqui depois do pagamento ter falhado a meio (promo já resgatado
+    // mas Stripe/markPaid nunca confirmou), reutiliza o desconto já persistido
+    // em vez de resgatar (e descontar `usedCount`) outra vez.
     let promoDiscount = 0;
-    if (sr.promoCode && subtotal > 0) {
+    if (sr.promoDiscount != null) {
+      promoDiscount = Number(sr.promoDiscount);
+    } else if (sr.promoCode && subtotal > 0) {
       promoDiscount = await this.prisma.$transaction(async (tx) => {
         const redeemed = await this.promo.redeem(tx, sr.promoCode, subtotal);
         if (!redeemed) return 0;
