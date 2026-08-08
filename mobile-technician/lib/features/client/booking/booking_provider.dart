@@ -370,6 +370,7 @@ class BookingNotifier extends StateNotifier<BookingState> {
       }
     }
 
+    final selectedItems = state.selectedItems;
     return service.createServiceRequest(
       addressId: address.id,
       specialty: _specialtyFor(state.category),
@@ -378,6 +379,19 @@ class BookingNotifier extends StateNotifier<BookingState> {
       promoCode: state.promoCode.isNotEmpty ? state.promoCode : null,
       useFreeVisit: state.useFreeVisit,
       photoUrls: photoUrls.isNotEmpty ? photoUrls : null,
+      items: selectedItems.isNotEmpty
+          ? selectedItems
+              .map((bi) => {
+                    'categoryId': state.category?.id,
+                    'subcategoryId': state.subcategory?.id,
+                    'itemId': bi.item.id,
+                    'name': bi.item.name,
+                    'qty': bi.qty,
+                    'unitPrice': bi.item.price,
+                  })
+              .toList()
+          : null,
+      itemsTotal: state.total,
     );
   }
 }

@@ -18,15 +18,26 @@ class PaymentConfirmPage extends ConsumerStatefulWidget {
 
 class _PaymentConfirmPageState extends ConsumerState<PaymentConfirmPage> {
   bool _processing = false;
+  // ID do pedido já criado numa tentativa anterior (pagamento falhou depois
+  // da criação). Se estiver definido, o retry NÃO volta a criar o pedido —
+  // vai direto para o pagamento — para evitar um segundo pedido duplicado.
+  String? _pendingRequestId;
 
   Future<void> _confirm() async {
     setState(() => _processing = true);
     final itemsTotal = ref.read(bookingProvider).total; // só os itens
     try {
-      // 1) Cria o pedido.
-      final sr = await ref.read(bookingProvider.notifier).submit(ref.read(clientServiceProvider));
+      // 1) Cria o pedido (só se ainda não existir de uma tentativa anterior).
+      String requestId;
+      if (_pendingRequestId != null) {
+        requestId = _pendingRequestId!;
+      } else {
+        final sr = await ref.read(bookingProvider.notifier).submit(ref.read(clientServiceProvider));
+        requestId = sr.id;
+        _pendingRequestId = sr.id;
+      }
       // 2) Cobra o total (itens + deslocação).
-      final res = await ref.read(clientServiceProvider).payOrder(sr.id, itemsTotal);
+      final res = await ref.read(clientServiceProvider).payOrder(requestId, itemsTotal);
 
       // Modo de teste / visita grátis → já ficou pago no servidor.
       if (res['simulated'] == true) {

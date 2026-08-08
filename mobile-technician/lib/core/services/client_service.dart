@@ -129,6 +129,10 @@ class ClientService {
     String? promoCode,
     bool useFreeVisit = false,
     List<String>? photoUrls,
+    // Itens estruturados + total calculado no momento da criação — o backend
+    // persiste este total e deixa de confiar no valor enviado só no pagamento.
+    List<Map<String, dynamic>>? items,
+    double? itemsTotal,
   }) async {
     final r = await _dio.post('/service-requests', data: {
       'addressId': addressId,
@@ -138,6 +142,8 @@ class ClientService {
       if (promoCode != null && promoCode.isNotEmpty) 'promoCode': promoCode,
       if (useFreeVisit) 'useFreeVisit': true,
       if (photoUrls != null && photoUrls.isNotEmpty) 'photoUrls': photoUrls,
+      if (items != null && items.isNotEmpty) 'items': items,
+      if (itemsTotal != null) 'itemsTotal': itemsTotal,
     });
     return ServiceRequest.fromJson(r.data as Map<String, dynamic>);
   }

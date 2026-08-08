@@ -1,10 +1,6 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
-
-const String _apiUrl = String.fromEnvironment(
-  'API_URL',
-  defaultValue: 'http://localhost:3002/api/v1',
-);
+import '../network/api_client.dart';
 
 const _storage = FlutterSecureStorage();
 
@@ -14,10 +10,11 @@ const _storage = FlutterSecureStorage();
 class RealtimeConnection {
   io.Socket? _socket;
 
-  /// Origem do socket = base da API sem o sufixo `/api/v1`.
+  /// Origem do socket = base da API (partilhada com [apiBaseUrl]) sem o
+  /// sufixo `/api/v1`.
   static String get _origin {
-    final i = _apiUrl.indexOf('/api/');
-    return i >= 0 ? _apiUrl.substring(0, i) : _apiUrl;
+    final i = apiBaseUrl.indexOf('/api/');
+    return i >= 0 ? apiBaseUrl.substring(0, i) : apiBaseUrl;
   }
 
   Future<void> connect({

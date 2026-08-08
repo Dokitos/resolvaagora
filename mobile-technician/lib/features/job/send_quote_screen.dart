@@ -1,9 +1,22 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/services/technician_service.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/theme/app_theme.dart';
+
+/// Extrai uma mensagem amigável do erro, evitando expor detalhes técnicos
+/// diretamente ao utilizador — segue o mesmo padrão usado em
+/// `auth_service.dart`.
+String _friendlyError(Object e) {
+  if (e is DioException) {
+    final msg = e.response?.data is Map ? e.response?.data['message'] : null;
+    if (msg == null) return 'Erro de ligação, tenta novamente';
+    return msg is List ? msg.join(', ') : msg.toString();
+  }
+  return 'Ocorreu um erro, tenta novamente';
+}
 
 class SendQuoteScreen extends ConsumerStatefulWidget {
   final String jobId;
@@ -58,7 +71,7 @@ class _SendQuoteScreenState extends ConsumerState<SendQuoteScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: AppTheme.danger),
+          SnackBar(content: Text(_friendlyError(e)), backgroundColor: AppTheme.danger),
         );
       }
     } finally {

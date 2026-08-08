@@ -41,8 +41,21 @@ class ScheduleScreen extends ConsumerWidget {
                   value: isAvailable,
                   activeColor: AppTheme.success,
                   onChanged: (v) async {
+                    final previous = ref.read(availabilityProvider);
                     ref.read(availabilityProvider.notifier).state = v;
-                    await ref.read(technicianServiceProvider).setAvailability(v);
+                    try {
+                      await ref.read(technicianServiceProvider).setAvailability(v);
+                    } catch (_) {
+                      ref.read(availabilityProvider.notifier).state = previous;
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Não foi possível atualizar a disponibilidade.'),
+                            backgroundColor: AppTheme.danger,
+                          ),
+                        );
+                      }
+                    }
                   },
                 ),
               ],

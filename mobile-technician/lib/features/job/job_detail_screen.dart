@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +7,18 @@ import '../../core/services/technician_service.dart';
 import '../../core/models/service_request.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/theme/app_theme.dart';
+
+/// Extrai uma mensagem amigável do erro, evitando expor detalhes técnicos
+/// (stack traces, `DioException: ...`) diretamente ao utilizador — segue o
+/// mesmo padrão usado em `auth_service.dart`.
+String _friendlyError(Object e) {
+  if (e is DioException) {
+    final msg = e.response?.data is Map ? e.response?.data['message'] : null;
+    if (msg == null) return 'Erro de ligação, tenta novamente';
+    return msg is List ? msg.join(', ') : msg.toString();
+  }
+  return 'Ocorreu um erro, tenta novamente';
+}
 
 class JobDetailScreen extends ConsumerWidget {
   final String id;
@@ -22,7 +35,7 @@ class JobDetailScreen extends ConsumerWidget {
       ),
       body: jobAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text(e.toString())),
+        error: (e, _) => Center(child: Text(_friendlyError(e))),
         data: (job) => _JobDetailBody(job: job),
       ),
     );
@@ -70,7 +83,7 @@ class _JobDetailBodyState extends ConsumerState<_JobDetailBody> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: AppTheme.danger),
+          SnackBar(content: Text(_friendlyError(e)), backgroundColor: AppTheme.danger),
         );
       }
     } finally {

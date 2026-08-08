@@ -220,10 +220,29 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // ── Booking flow (outside shell — full screen) ────────────
       GoRoute(
         path: '/booking/category/:id',
+        // Guarda de existência: corre ANTES do builder, por isso um id
+        // inexistente nunca chega a invocar `CategoryDetailPage` (que exige
+        // uma categoria não-nula) — evita o crash do `firstWhere` sem
+        // `orElse` e manda o utilizador de volta para a home.
+        redirect: (_, state) {
+          final id = state.pathParameters['id'];
+          final exists = kServiceCategories.any((c) => c.id == id);
+          return exists ? null : '/client/home';
+        },
         builder: (_, state) {
-          final cat = kServiceCategories
-              .firstWhere((c) => c.id == state.pathParameters['id']!);
-          return CategoryDetailPage(category: cat);
+          final id = state.pathParameters['id'];
+          // Lookup manual (sem `firstWhere` nem depender do pacote
+          // `collection`, que não está declarado no pubspec.yaml). O
+          // `redirect` acima já garante que existe uma categoria com este
+          // id, por isso este `!` é seguro aqui.
+          ServiceCategory? cat;
+          for (final c in kServiceCategories) {
+            if (c.id == id) {
+              cat = c;
+              break;
+            }
+          }
+          return CategoryDetailPage(category: cat!);
         },
       ),
       GoRoute(path: '/booking/items',      builder: (_, __) => const ItemsPickerPage()),

@@ -20,6 +20,10 @@ class _OtpPageState extends ConsumerState<OtpPage> {
   final List<FocusNode> _focus = List.generate(6, (_) => FocusNode());
   bool _verifying = false;
   bool _otpSent = false;
+  // O envio automático (silencioso) do código no arranque do ecrã falhou —
+  // mostramos um aviso persistente no ecrã (não um SnackBar, que desaparece
+  // sozinho) para o utilizador saber que precisa de tocar em "Reenviar".
+  bool _autoSendFailed = false;
 
   @override
   void initState() {
@@ -38,13 +42,17 @@ class _OtpPageState extends ConsumerState<OtpPage> {
     try {
       await ref.read(clientServiceProvider).sendOtp(phone);
       _otpSent = true;
+      if (mounted) setState(() => _autoSendFailed = false);
       if (!silent && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(AppLocalizations.of(context).codeResent)),
         );
       }
     } catch (_) {
-      // silencioso
+      // O envio automático silencioso falha silenciosamente em relação a
+      // SnackBars (que desapareceriam sem o utilizador reparar), mas ainda
+      // assim precisa de ser visível — ver `_autoSendFailed` no build().
+      if (silent && mounted) setState(() => _autoSendFailed = true);
     }
   }
 
@@ -166,6 +174,13 @@ class _OtpPageState extends ConsumerState<OtpPage> {
                       _TextBtn(l.clientDidntReceiveSms, () {}),
                     ],
                   ),
+                  if (_autoSendFailed) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Não foi possível enviar o código automaticamente, toca em Reenviar.',
+                      style: TextStyle(color: Colors.red[700], fontSize: 12),
+                    ),
+                  ],
                   const SizedBox(height: 24),
                   if (!otpRequired)
                     Container(
