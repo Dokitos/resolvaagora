@@ -126,8 +126,17 @@ workflows:
           keyAlias=$CM_KEY_ALIAS
           keyPassword=$CM_KEY_PASSWORD
           EOF
+      - name: Calcular numero de build (Play Store + 1)
+        script: |
+          LATEST_BUILD_NUMBER=$(google-play get-latest-build-number \
+            --package-name "pt.resolvaagora.app" \
+            --credentials=@env:GOOGLE_PLAY_SERVICE_ACCOUNT_CREDENTIALS || echo "")
+          if [ -z "$LATEST_BUILD_NUMBER" ]; then
+            LATEST_BUILD_NUMBER=0
+          fi
+          echo "BUILD_NUMBER=$(($LATEST_BUILD_NUMBER + 1))" >> $CM_ENV
       - name: Build app bundle assinado
-        script: flutter build appbundle --release
+        script: flutter build appbundle --release --build-number=$BUILD_NUMBER
     artifacts:
       - build/app/outputs/bundle/release/*.aab
     publishing:
