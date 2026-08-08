@@ -51,32 +51,20 @@ export class EmailInboxService {
     });
   }
 
-  /** Envia um email manual (Resend) e guarda-o na pasta "Enviados". */
+  /**
+   * Envia um email manual a partir do painel. O registo em "Enviados" e o
+   * envio propriamente dito são feitos por EmailService.send(), que também
+   * é o caminho usado pelos emails automáticos (recibo, código, etc.) — é
+   * assim que todos os envios (manuais e automáticos) acabam na mesma pasta.
+   */
   async send(to: string, subject: string, html: string) {
-    let status = 'enviado';
-    try {
-      await this.email.send(to, subject, html);
-    } catch (e) {
-      status = 'falhou';
-      this.logger.error(`Falha ao enviar email para ${to}: ${e}`);
-    }
+    const { id, status } = await this.email.send(to, subject, html);
 
     await this.prisma.emailLog.create({
       data: { toEmail: to, subject, bodyHtml: html, templateType: 'manual', status },
     });
 
-    const sent = await this.prisma.email.create({
-      data: {
-        messageId: `sent-${randomUUID()}`,
-        subject,
-        fromName: 'ResolvaAgora',
-        fromEmail: 'geral@resolvaagora.pt',
-        toEmail: [to],
-        bodyHtml: html,
-        isRead: true,
-        folder: 'sent',
-      },
-    });
+    const sent = await this.prisma.email.findUnique({ where: { id } });
     return { ...sent, status };
   }
 

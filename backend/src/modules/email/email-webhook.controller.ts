@@ -52,7 +52,13 @@ export class EmailWebhookController {
       throw new BadRequestException('Corpo inválido');
     }
 
-    if (payload?.type === 'email.received' || payload?.data) {
+    // A Resend envia este webhook para VÁRIOS eventos (email.sent,
+    // email.delivered, email.bounced, email.opened, ...), todos com um
+    // objeto `data` — só `email.received` é correio realmente recebido.
+    // Tratar qualquer evento com `data` como recebido fazia com que as
+    // confirmações de entrega dos nossos próprios emails automáticos
+    // (recibo, código de recuperação, etc.) aparecessem na Entrada.
+    if (payload?.type === 'email.received') {
       try {
         await this.emails.ingestInbound(payload.data ?? payload);
       } catch (e) {
