@@ -62,6 +62,7 @@ workflows:
       - name: Build IPA assinado
         script: |
           flutter build ipa --release \
+            --dart-define=API_URL=https://api.resolvaagora.pt/api/v1 \
             --export-options-plist=/Users/builder/export_options.plist
     artifacts:
       - build/ios/ipa/*.ipa
@@ -136,7 +137,10 @@ workflows:
           fi
           echo "BUILD_NUMBER=$(($LATEST_BUILD_NUMBER + 1))" >> $CM_ENV
       - name: Build app bundle assinado
-        script: flutter build appbundle --release --build-number=$BUILD_NUMBER
+        script: |
+          flutter build appbundle --release \
+            --build-number=$BUILD_NUMBER \
+            --dart-define=API_URL=https://api.resolvaagora.pt/api/v1
     artifacts:
       - build/app/outputs/bundle/release/*.aab
     publishing:
