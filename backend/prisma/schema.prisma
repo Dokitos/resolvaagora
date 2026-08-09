@@ -422,17 +422,22 @@ model ReferralConfig {
 
 /// Banners/slides configuráveis da página inicial (geridos no admin).
 model HomeBanner {
-  id           String   @id @default(uuid())
-  imageUrl     String   @map("image_url")
+  id           String    @id @default(uuid())
+  imageUrl     String    @map("image_url")
   title        String?
   subtitle     String?
-  actionType   String?  @map("action_type") // 'category' | 'subscription' | 'url' | null
-  actionTarget String?  @map("action_target") // id da categoria, url, etc.
-  sortOrder    Int      @default(0) @map("sort_order")
-  isActive     Boolean  @default(true) @map("is_active")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  actionType   String?   @map("action_type") // 'category' | 'subscription' | 'url' | null
+  actionTarget String?   @map("action_target") // id da categoria, url, etc.
+  sortOrder    Int       @default(0) @map("sort_order")
+  isActive     Boolean   @default(true) @map("is_active")
+  // Janela de exibição opcional (ex.: "publicar por X dias"). Nulos = sem
+  // limite nesse lado — isActive continua a ser o interruptor manual.
+  startsAt     DateTime? @map("starts_at")
+  endsAt       DateTime? @map("ends_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
 
+  @@index([isActive, startsAt, endsAt])
   @@map("home_banners")
 }
 
@@ -675,6 +680,10 @@ model ServiceCategoryPrice {
   id         String   @id @default(uuid())
   categoryId String   @unique @map("category_id")
   basePrice  Decimal  @map("base_price") @db.Decimal(10, 2)
+  // Oculta a categoria inteira do site/app (não remove o registo — os itens
+  // já vendidos/históricos continuam a existir, só deixa de aparecer para
+  // novos clientes escolherem).
+  hidden     Boolean  @default(false)
   updatedAt  DateTime @updatedAt @map("updated_at")
 
   @@map("service_category_prices")
@@ -687,6 +696,10 @@ model ServiceItemPrice {
   subcategoryId String   @map("subcategory_id")
   itemId        String   @map("item_id")
   price         Decimal  @db.Decimal(10, 2)
+  hidden        Boolean  @default(false)
+  // Observação livre mostrada ao cliente junto ao item (ex.: "não inclui
+  // material", "sujeito a visita técnica").
+  notes         String?  @db.Text
   updatedAt     DateTime @updatedAt @map("updated_at")
 
   @@unique([categoryId, subcategoryId, itemId])
