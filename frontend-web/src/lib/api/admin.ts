@@ -1,6 +1,24 @@
 import { api } from './client'
 import type { DashboardMetrics, AnalyticsData, ServiceRequest, Technician, SlaAlert, Email, EmailTemplate, EmailFolder } from './types'
 
+export interface FinancialsResponse {
+  displacement: { total: number; count: number }
+  commissions: { total: number; count: number }
+  subscriptions: { total: number; count: number }
+  totalRevenue: number
+  breakdown: {
+    date: string
+    displacement: number
+    commissions: number
+    subscriptions: number
+    total: number
+  }[]
+  byTechnician: { technicianId: string; name: string; total: number; count: number }[]
+  byCategory: { specialty: string; total: number; count: number }[]
+  pending: { total: number; count: number }
+  payouts: { toTechnicians: number; platformCommission: number }
+}
+
 export const adminApi = {
   dashboard: () =>
     api.get<DashboardMetrics>('/admin/dashboard').then((r) => r.data),
@@ -57,7 +75,7 @@ export const adminApi = {
     api.patch(`/admin/sla-alerts/${id}/acknowledge`).then((r) => r.data),
 
   financials: (params?: { from?: string; to?: string }) =>
-    api.get('/admin/financials', { params }).then((r) => r.data),
+    api.get<FinancialsResponse>('/admin/financials', { params }).then((r) => r.data),
 
   subscriptions: (params?: { status?: string }) =>
     api.get('/admin/subscriptions', { params }).then((r) => r.data),
@@ -65,8 +83,14 @@ export const adminApi = {
   plans: () =>
     api.get('/admin/subscription-plans').then((r) => r.data),
 
+  createPlan: (data: any) =>
+    api.post('/admin/subscription-plans', data).then((r) => r.data),
+
   updatePlan: (id: string, data: any) =>
     api.patch(`/admin/subscription-plans/${id}`, data).then((r) => r.data),
+
+  deletePlan: (id: string) =>
+    api.delete(`/admin/subscription-plans/${id}`).then((r) => r.data),
 
   uploadImage: (file: File) => {
     const fd = new FormData()

@@ -446,7 +446,7 @@ export class AdminController {
     // O pagamento real do pedido é UM único Payment do tipo SERVICE, com
     // amount = itens + deslocação, ligado ao ServiceRequest (que guarda a
     // displacementFee). A comissão da plataforma é 15% dos itens.
-    const [orderPayments, subscriptions] = await Promise.all([
+    const [orderPayments, subscriptions, earnings, pendingRequests] = await Promise.all([
       this.prisma.payment.findMany({
         where: { type: 'SERVICE', status: 'COMPLETED', paidAt: dateFilter },
         include: { serviceRequest: true },
@@ -454,6 +454,14 @@ export class AdminController {
       this.prisma.subscription.findMany({
         where: { status: 'ACTIVE', startsAt: dateFilter },
         include: { plan: true },
+      }),
+      this.prisma.earning.findMany({
+        where: { earnedAt: dateFilter },
+        include: { technician: true },
+      }),
+      this.prisma.serviceRequest.findMany({
+        where: { status: 'AWAITING_PAYMENT', createdAt: dateFilter },
+        select: { id: true, displacementFee: true, itemsTotal: true },
       }),
     ]);
 
@@ -473,6 +481,8 @@ export class AdminController {
     let commissionsTotal = 0;
     let ordersTotal = 0;
 
+    const byCategory = new Map<string, { total: number; count: number }>();
+
     for (const p of orderPayments) {
       const amount = Number(p.amount);
       const disp = Number(p.serviceRequest?.displacementFee ?? 0);
@@ -486,6 +496,12 @@ export class AdminController {
       const b = bucket(dayKey(p.paidAt ?? p.createdAt));
       b.displacement += disp;
       b.commissions += commission;
+
+      const specialty = p.serviceRequest?.specialty ?? 'OUTRO';
+      const cat = byCategory.get(specialty) ?? { total: 0, count: 0 };
+      cat.total += amount;
+      cat.count += 1;
+      byCategory.set(specialty, cat);
     }
 
     let subscriptionsTotal = 0;
@@ -505,12 +521,50 @@ export class AdminController {
       }))
       .sort((a, b) => a.date.localeCompare(b.date));
 
+    // ─── Por técnico (ganhos no período) ──────────────────────────────────
+    const byTechnicianMap = new Map<string, { technicianId: string; name: string; total: number; count: number }>();
+    let payoutsToTechnicians = 0;
+    for (const e of earnings) {
+      const amount = Number(e.amount);
+      payoutsToTechnicians += amount;
+      const entry = byTechnicianMap.get(e.technicianId) ?? {
+        technicianId: e.technicianId,
+        name: e.technician ? `${e.technician.firstName} ${e.technician.lastName}` : 'Técnico desconhecido',
+        total: 0,
+        count: 0,
+      };
+      entry.total += amount;
+      entry.count += 1;
+      byTechnicianMap.set(e.technicianId, entry);
+    }
+    const byTechnician = Array.from(byTechnicianMap.values())
+      .map((t) => ({ ...t, total: round(t.total) }))
+      .sort((a, b) => b.total - a.total);
+
+    // ─── Por especialidade/categoria ──────────────────────────────────────
+    const byCategoryList = Array.from(byCategory.entries())
+      .map(([specialty, v]) => ({ specialty, total: round(v.total), count: v.count }))
+      .sort((a, b) => b.total - a.total);
+
+    // ─── Pagamentos pendentes (AWAITING_PAYMENT) ──────────────────────────
+    let pendingTotal = 0;
+    for (const r of pendingRequests) {
+      pendingTotal += Number(r.displacementFee ?? 0) + Number(r.itemsTotal ?? 0);
+    }
+
     return {
       displacement: { total: round(displacementTotal), count: orderPayments.length },
       commissions: { total: round(commissionsTotal), count: orderPayments.length },
       subscriptions: { total: round(subscriptionsTotal), count: subscriptions.length },
       totalRevenue: round(ordersTotal + subscriptionsTotal),
       breakdown,
+      byTechnician,
+      byCategory: byCategoryList,
+      pending: { total: round(pendingTotal), count: pendingRequests.length },
+      payouts: {
+        toTechnicians: round(payoutsToTechnicians),
+        platformCommission: round(commissionsTotal),
+      },
     };
   }
 
@@ -560,6 +614,19 @@ export class AdminController {
   @Patch('subscription-plans/:id')
   updatePlan(@Param('id') id: string, @Body() data: any) {
     return this.prisma.subscriptionPlan.update({ where: { id }, data: this.planFields(data) });
+  }
+
+  @Delete('subscription-plans/:id')
+  async deletePlan(@Param('id') id: string) {
+    const inUse = await this.prisma.subscription.count({ where: { planId: id } });
+    if (inUse > 0) {
+      // Tem subscrições associadas: apagar quebraria a FK / perderia histórico
+      // de clientes. Em vez disso, apenas oculta (soft-hide).
+      await this.prisma.subscriptionPlan.update({ where: { id }, data: { isActive: false } });
+      return { softDeleted: true };
+    }
+    await this.prisma.subscriptionPlan.delete({ where: { id } });
+    return { softDeleted: false };
   }
 
   /** Apenas os campos editáveis do plano (evita mass-assignment). */
@@ -623,6 +690,8 @@ export class AdminController {
     if (d.actionTarget !== undefined) out.actionTarget = d.actionTarget ? String(d.actionTarget) : null;
     if (d.sortOrder !== undefined) out.sortOrder = Math.trunc(Number(d.sortOrder) || 0);
     if (d.isActive !== undefined) out.isActive = !!d.isActive;
+    if (d.startsAt !== undefined) out.startsAt = d.startsAt ? new Date(d.startsAt) : null;
+    if (d.endsAt !== undefined) out.endsAt = d.endsAt ? new Date(d.endsAt) : null;
     return out;
   }
 
@@ -637,9 +706,14 @@ export class AdminController {
       this.prisma.serviceItemPrice.findMany(),
     ]);
     return {
-      categories: Object.fromEntries(categories.map((c) => [c.categoryId, Number(c.basePrice)])),
+      categories: Object.fromEntries(
+        categories.map((c) => [c.categoryId, { basePrice: Number(c.basePrice), hidden: c.hidden }]),
+      ),
       items: Object.fromEntries(
-        items.map((i) => [`${i.categoryId}:${i.subcategoryId}:${i.itemId}`, Number(i.price)]),
+        items.map((i) => [
+          `${i.categoryId}:${i.subcategoryId}:${i.itemId}`,
+          { price: Number(i.price), hidden: i.hidden, notes: i.notes ?? null },
+        ]),
       ),
     };
   }
@@ -648,8 +722,15 @@ export class AdminController {
   async saveServicePrices(
     @Body()
     body: {
-      categories?: { categoryId: string; basePrice: number }[];
-      items?: { categoryId: string; subcategoryId: string; itemId: string; price: number }[];
+      categories?: { categoryId: string; basePrice: number; hidden?: boolean }[];
+      items?: {
+        categoryId: string;
+        subcategoryId: string;
+        itemId: string;
+        price: number;
+        hidden?: boolean;
+        notes?: string | null;
+      }[];
     },
   ) {
     const categories = body.categories ?? [];
@@ -659,8 +740,8 @@ export class AdminController {
       ...categories.map((c) =>
         this.prisma.serviceCategoryPrice.upsert({
           where: { categoryId: c.categoryId },
-          create: { categoryId: c.categoryId, basePrice: c.basePrice },
-          update: { basePrice: c.basePrice },
+          create: { categoryId: c.categoryId, basePrice: c.basePrice, hidden: c.hidden ?? false },
+          update: { basePrice: c.basePrice, hidden: c.hidden ?? false },
         }),
       ),
       ...items.map((i) =>
@@ -672,8 +753,15 @@ export class AdminController {
               itemId: i.itemId,
             },
           },
-          create: { categoryId: i.categoryId, subcategoryId: i.subcategoryId, itemId: i.itemId, price: i.price },
-          update: { price: i.price },
+          create: {
+            categoryId: i.categoryId,
+            subcategoryId: i.subcategoryId,
+            itemId: i.itemId,
+            price: i.price,
+            hidden: i.hidden ?? false,
+            notes: i.notes ?? null,
+          },
+          update: { price: i.price, hidden: i.hidden ?? false, notes: i.notes ?? null },
         }),
       ),
     ]);
