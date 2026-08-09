@@ -9,13 +9,30 @@ export interface RabbitMQMessage<T = unknown> {
   correlationId?: string;
 }
 
+interface SubscriptionRegistration {
+  exchange: string;
+  queue: string;
+  routingKey: string;
+  handler: (msg: RabbitMQMessage) => Promise<void>;
+}
+
 @Injectable()
 export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(RabbitMQService.name);
   private connection?: amqplib.ChannelModel;
+  // Canal dedicado só para publish() — cada subscribe() tem o SEU PRÓPRIO
+  // canal (ver subscribeOnChannel), para que um erro numa fila de consumo
+  // nunca feche o canal partilhado de publicação nem o de outro consumidor.
   private channel?: amqplib.Channel;
   private readyResolve: () => void;
   private ready: Promise<void> = new Promise((res) => { this.readyResolve = res; });
+
+  // Todas as subscrições pedidas por outros módulos (via subscribe()) ficam
+  // registadas aqui, para serem "replay"-adas sempre que a ligação reconecta
+  // — onModuleInit() de cada consumidor só corre uma vez no arranque; sem
+  // isto, uma reconexão depois de uma queda deixava os consumidores
+  // permanentemente sem subscrição nenhuma (mesmo com a ligação recuperada).
+  private readonly registrations: SubscriptionRegistration[] = [];
 
   // Buffer em memória para mensagens que não puderam ser publicadas porque o
   // canal ainda não está ligado. Esvaziado assim que a ligação é restabelecida.
@@ -80,6 +97,7 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
       });
 
       await this.flushPendingMessages();
+      await this.replaySubscriptions();
     } catch (err) {
       this.logger.error('Failed to connect to RabbitMQ — retrying in 5s', err);
       this.readyResolve(); // unblock consumers so app can start
@@ -101,6 +119,13 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
     this.logger.warn(`RabbitMQ reconectado — reenviando ${toFlush.length} mensagem(ns) pendente(s)`);
     for (const msg of toFlush) {
       await this.publish(msg.exchange, msg.routingKey, msg.data);
+    }
+  }
+
+  /** Refaz todas as subscrições já pedidas por outros módulos (arranque e cada reconexão). */
+  private async replaySubscriptions(): Promise<void> {
+    for (const reg of this.registrations) {
+      await this.subscribeOnChannel(reg);
     }
   }
 
@@ -139,71 +164,102 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  /**
+   * Regista a subscrição (para sobreviver a reconexões) e liga-a já uma vez.
+   * Cada chamada corre de forma independente num canal próprio — ver
+   * subscribeOnChannel — por isso é seguro chamar isto em paralelo para
+   * várias filas sem que uma falha numa arraste as outras.
+   */
   async subscribe(
     exchange: string,
     queue: string,
     routingKey: string,
     handler: (msg: RabbitMQMessage) => Promise<void>,
   ): Promise<void> {
+    const reg: SubscriptionRegistration = { exchange, queue, routingKey, handler };
+    this.registrations.push(reg);
     await this.ready;
-    if (!this.channel) {
-      this.logger.warn(`RabbitMQ not connected — skipping subscribe ${queue}`);
+    if (!this.connection) {
+      this.logger.warn(`RabbitMQ not connected — skipping subscribe ${queue} (será tentado após reconectar)`);
       return;
     }
-    // Dead-letter exchange/fila: mensagens rejeitadas com nack(requeue=false)
-    // (erro no handler) deixam de desaparecer para sempre — o broker
-    // encaminha-as automaticamente para `${queue}.dlq`, onde ficam visíveis
-    // e podem ser inspecionadas/reprocessadas manualmente em vez de se perderem.
-    const dlxExchange = `${exchange}.dlx`;
-    const dlq = `${queue}.dlq`;
-    await this.channel.assertExchange(dlxExchange, 'fanout', { durable: true });
-    await this.channel.assertQueue(dlq, { durable: true });
-    await this.channel.bindQueue(dlq, dlxExchange, '');
+    await this.subscribeOnChannel(reg);
+  }
 
-    let dlxApplied = true;
-    try {
-      await this.channel.assertQueue(queue, {
-        durable: true,
-        arguments: { 'x-dead-letter-exchange': dlxExchange },
-      });
-    } catch (err) {
-      // A fila pode já existir (declarada antes desta correção) sem este
-      // argumento — o RabbitMQ recusa com PRECONDITION_FAILED e fecha o
-      // canal. Recria o canal (partilhado por todas as subscrições) e
-      // declara a fila sem DLX, em vez de deixar um mismatch numa fila
-      // derrubar toda a mensageria (distribuição, notificações, pagamentos).
-      dlxApplied = false;
-      this.logger.error(
-        `Fila ${queue} já existe com argumentos diferentes — a recriar canal e a subscrever sem DLX nesta fila`,
-        err,
-      );
-      this.channel = await this.connection!.createChannel();
-      await this.channel.assertQueue(queue, { durable: true });
+  /**
+   * Faz a ligação real da subscrição, num canal DEDICADO a esta fila (nunca
+   * o canal partilhado de publish, nem o de outra fila) — se algo correr mal
+   * só este canal fecha; as restantes subscrições não são afetadas.
+   *
+   * IMPORTANTE: todas as filas de produção/dev já existem, declaradas sem
+   * `x-dead-letter-exchange`. O AMQP não permite alterar os argumentos de
+   * uma fila durável já declarada — uma tentativa de reassert com um
+   * argumento novo é recusada com PRECONDITION_FAILED, e (confirmado em
+   * testes locais) isso não fecha só o canal, fecha a LIGAÇÃO inteira,
+   * disparando reconexão → nova tentativa → mesmo erro, num ciclo sem fim
+   * que deixa a app permanentemente sem consumidores. Por isso a fila
+   * principal é sempre declarada sem argumentos extra. A infraestrutura de
+   * dead-letter (exchange + fila `.dlq`) fica criada e pronta a usar, mas só
+   * fica realmente ligada a uma fila se essa fila for recriada de raiz numa
+   * limpeza de infraestrutura feita manualmente (fora do código da app).
+   */
+  private async subscribeOnChannel(reg: SubscriptionRegistration): Promise<void> {
+    const { exchange, queue, routingKey, handler } = reg;
+    if (!this.connection) {
+      this.logger.warn(`RabbitMQ sem ligação — subscrição de ${queue} adiada para a próxima reconexão`);
+      return;
     }
 
-    const channel = this.channel;
-    await channel.bindQueue(queue, exchange, routingKey);
-    await channel.prefetch(1);
+    let channel: amqplib.Channel;
+    try {
+      channel = await this.connection.createChannel();
+    } catch (err) {
+      this.logger.error(`Não foi possível criar canal para ${queue}`, err);
+      return;
+    }
 
-    channel.consume(queue, async (msg) => {
-      if (!msg) return;
-      try {
-        const payload: RabbitMQMessage = JSON.parse(msg.content.toString());
-        await handler(payload);
-        channel.ack(msg);
-      } catch (err) {
-        this.logger.error(
-          dlxApplied
-            ? `Error processing message from ${queue} — dead-lettering to ${dlq}`
-            : `Error processing message from ${queue} — DLQ not active on this pre-existing queue, message dropped`,
-          err,
-        );
-        channel.nack(msg, false, false);
-      }
-    });
+    const dlxExchange = `${exchange}.dlx`;
+    const dlq = `${queue}.dlq`;
+    const dlxApplied = false;
 
-    this.logger.log(
-      `Subscribed to ${exchange} -> ${queue} [${routingKey}] (DLQ: ${dlxApplied ? dlq : 'not applied — pre-existing queue'})`,
-    );
+    try {
+      // Infraestrutura de dead-letter: criada para existir e ficar pronta,
+      // mas não é passada como argumento da fila principal (ver nota acima).
+      await channel.assertExchange(dlxExchange, 'fanout', { durable: true });
+      await channel.assertQueue(dlq, { durable: true });
+      await channel.bindQueue(dlq, dlxExchange, '');
+      await channel.assertQueue(queue, { durable: true });
+    } catch (err) {
+      this.logger.error(`Falha ao declarar fila ${queue} — adiado para a próxima reconexão`, err);
+      return;
+    }
+
+    try {
+      await channel.bindQueue(queue, exchange, routingKey);
+      await channel.prefetch(1);
+
+      channel.consume(queue, async (msg) => {
+        if (!msg) return;
+        try {
+          const payload: RabbitMQMessage = JSON.parse(msg.content.toString());
+          await handler(payload);
+          channel.ack(msg);
+        } catch (err) {
+          this.logger.error(
+            dlxApplied
+              ? `Error processing message from ${queue} — dead-lettering to ${dlq}`
+              : `Error processing message from ${queue} — DLQ not active on this pre-existing queue, message dropped`,
+            err,
+          );
+          channel.nack(msg, false, false);
+        }
+      });
+
+      this.logger.log(
+        `Subscribed to ${exchange} -> ${queue} [${routingKey}] (DLQ: ${dlxApplied ? dlq : 'not applied — pre-existing queue'})`,
+      );
+    } catch (err) {
+      this.logger.error(`Falha ao vincular/consumir ${queue} — adiado para a próxima reconexão`, err);
+    }
   }
 }

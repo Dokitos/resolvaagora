@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '@shared/infrastructure/database/prisma.service';
+import { RabbitMQService } from '@shared/infrastructure/messaging/rabbitmq.service';
 import { StripeService } from '../../infrastructure/stripe.service';
 import { SettingsService } from '../../../settings/settings.service';
 
@@ -9,6 +10,7 @@ export class CreateDisplacementPaymentUseCase {
     private readonly prisma: PrismaService,
     private readonly stripe: StripeService,
     private readonly settings: SettingsService,
+    private readonly rabbitmq: RabbitMQService,
   ) {}
 
   async execute(userId: string, serviceRequestId: string) {
@@ -44,6 +46,14 @@ export class CreateDisplacementPaymentUseCase {
           },
         },
       });
+      // Dispara a distribuição ao técnico — sem isto, o pedido fica PAID mas
+      // nunca chega a nenhum técnico (bug real encontrado: nem este ramo nem
+      // o de pagamento simulado abaixo publicavam este evento).
+      await this.rabbitmq.publish(
+        this.rabbitmq.exchanges.payments,
+        'payment.displacement.confirmed',
+        { serviceRequestId },
+      );
       return { freeVisit: true };
     }
 
@@ -80,6 +90,11 @@ export class CreateDisplacementPaymentUseCase {
           },
         });
       });
+      await this.rabbitmq.publish(
+        this.rabbitmq.exchanges.payments,
+        'payment.displacement.confirmed',
+        { serviceRequestId },
+      );
       return { simulated: true, amount: Number(sr.displacementFee) };
     }
 
