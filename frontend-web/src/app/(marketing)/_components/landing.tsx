@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Search,
   ShieldCheck,
@@ -18,6 +18,9 @@ import {
   Zap,
 } from 'lucide-react'
 import { useCatalogStore } from '@/lib/store/catalog-store'
+import { bannersApi } from '@/lib/api/banners'
+import type { HomeBanner } from '@/lib/api/types'
+import { BannerCarousel } from '@/components/layout/banner-carousel'
 import { SiteHeader } from './site-header'
 import { SiteFooter } from './site-footer'
 
@@ -65,10 +68,26 @@ export function Landing() {
   const [query, setQuery] = useState('')
   const categories = useCatalogStore((s) => s.categories)
   const FEATURED = FEATURED_IDS.map((id) => categories.find((c) => c.id === id)!)
+  const [banners, setBanners] = useState<HomeBanner[]>([])
+
+  useEffect(() => {
+    // Banners de parceiros são conteúdo promocional secundário — uma falha
+    // aqui não deve afetar o resto da landing page, só fica registada.
+    bannersApi.list().then(setBanners).catch((err) => console.error('Erro ao carregar banners:', err))
+  }, [])
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault()
     router.push('/login?from=/booking/category')
+  }
+
+  function handleBannerClick(banner: HomeBanner) {
+    if (banner.actionType === 'category' && banner.actionTarget) router.push(`/servicos#${banner.actionTarget}`)
+    else if (banner.actionType === 'subscription') router.push('/login?from=/account/subscription')
+    else if (banner.actionType === 'url' && banner.actionTarget) {
+      if (banner.actionTarget.startsWith('/')) router.push(banner.actionTarget)
+      else window.open(banner.actionTarget, '_blank', 'noopener,noreferrer')
+    }
   }
 
   return (
@@ -133,6 +152,16 @@ export function Landing() {
           </div>
         </div>
       </section>
+
+      {/* DESTAQUES / BANNERS DE PARCEIROS */}
+      {banners.length > 0 && (
+        <section className="py-10 sm:py-14">
+          <div className="mx-auto max-w-7xl px-5 sm:px-8">
+            <h2 className="text-xl font-extrabold tracking-tight text-brand-700 sm:text-2xl">Destaques</h2>
+            <BannerCarousel banners={banners} onBannerClick={handleBannerClick} size="lg" className="mt-5 -mx-5 px-5 sm:-mx-8 sm:px-8" />
+          </div>
+        </section>
+      )}
 
       {/* EXPLORA SERVIÇOS */}
       <section className="py-16 sm:py-20">

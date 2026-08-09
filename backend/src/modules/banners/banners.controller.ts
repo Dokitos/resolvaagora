@@ -8,8 +8,15 @@ export class BannersController {
 
   @Get()
   list() {
+    const now = new Date();
     return this.prisma.homeBanner.findMany({
-      where: { isActive: true },
+      where: {
+        isActive: true,
+        AND: [
+          { OR: [{ startsAt: null }, { startsAt: { lte: now } }] },
+          { OR: [{ endsAt: null }, { endsAt: { gte: now } }] },
+        ],
+      },
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
     });
   }

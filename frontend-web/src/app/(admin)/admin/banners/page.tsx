@@ -8,6 +8,36 @@ import { Badge } from '@/components/ui/badge'
 
 const emptyBanner: Partial<HomeBanner> = {
   imageUrl: '', title: '', subtitle: '', actionType: '', actionTarget: '', sortOrder: 0, isActive: true,
+  startsAt: null, endsAt: null,
+}
+
+type ScheduleStatus = 'active' | 'scheduled' | 'expired'
+
+function getScheduleStatus(b: HomeBanner): ScheduleStatus {
+  const now = Date.now()
+  if (b.startsAt && new Date(b.startsAt).getTime() > now) return 'scheduled'
+  if (b.endsAt && new Date(b.endsAt).getTime() < now) return 'expired'
+  return 'active'
+}
+
+const SCHEDULE_LABEL: Record<ScheduleStatus, string> = {
+  active: 'Ativo agora',
+  scheduled: 'Agendado',
+  expired: 'Expirado',
+}
+
+const SCHEDULE_BADGE_VARIANT: Record<ScheduleStatus, 'success' | 'warning' | 'default'> = {
+  active: 'success',
+  scheduled: 'warning',
+  expired: 'default',
+}
+
+/** Formata uma data ISO para o formato aceite por <input type="datetime-local">. */
+function toDatetimeLocal(iso?: string | null) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
 export default function AdminBannersPage() {
@@ -54,12 +84,24 @@ export default function AdminBannersPage() {
               <CardContent className="py-4">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={b.imageUrl} alt={b.title ?? ''} className="w-full h-32 object-cover rounded-lg mb-3" />
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
                   <span className="font-semibold text-gray-900">{b.title || '(sem título)'}</span>
-                  <Badge variant={b.isActive ? 'success' : 'default'}>{b.isActive ? 'Ativo' : 'Inativo'}</Badge>
+                  <div className="flex items-center gap-1.5">
+                    <Badge variant={b.isActive ? 'success' : 'default'}>{b.isActive ? 'Ativo' : 'Inativo'}</Badge>
+                    {b.isActive && (
+                      <Badge variant={SCHEDULE_BADGE_VARIANT[getScheduleStatus(b)]}>{SCHEDULE_LABEL[getScheduleStatus(b)]}</Badge>
+                    )}
+                  </div>
                 </div>
                 {b.subtitle && <p className="text-xs text-gray-500 mt-1">{b.subtitle}</p>}
                 <p className="text-xs text-gray-400 mt-1">Ordem: {b.sortOrder}{b.actionType ? ` · ${b.actionType}` : ''}</p>
+                {(b.startsAt || b.endsAt) && (
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {b.startsAt ? `Desde ${new Date(b.startsAt).toLocaleDateString('pt-PT')}` : 'Sem início definido'}
+                    {' · '}
+                    {b.endsAt ? `Até ${new Date(b.endsAt).toLocaleDateString('pt-PT')}` : 'Sem fim definido'}
+                  </p>
+                )}
                 <div className="flex gap-2 mt-3">
                   <button onClick={() => setEditing(b)} className="flex-1 px-3 py-1.5 text-sm rounded-lg bg-gray-900 text-white hover:bg-gray-800">Editar</button>
                   <button onClick={() => remove(b.id)} className="px-3 py-1.5 text-sm rounded-lg border border-red-200 text-red-600 hover:bg-red-50">Remover</button>
@@ -85,6 +127,9 @@ function BannerEditor({ banner, onClose, onSaved }: { banner: Partial<HomeBanner
   const [actionTarget, setActionTarget] = useState(banner.actionTarget ?? '')
   const [sortOrder, setSortOrder] = useState(String(banner.sortOrder ?? 0))
   const [isActive, setIsActive] = useState(banner.isActive ?? true)
+  const [durationDays, setDurationDays] = useState('')
+  const [startsAt, setStartsAt] = useState(toDatetimeLocal(banner.startsAt))
+  const [endsAt, setEndsAt] = useState(toDatetimeLocal(banner.endsAt))
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
@@ -103,6 +148,18 @@ function BannerEditor({ banner, onClose, onSaved }: { banner: Partial<HomeBanner
   async function save() {
     if (!imageUrl) { setError('Adiciona uma imagem.'); return }
     setSaving(true); setError('')
+
+    // "Publicar por X dias" tem prioridade sobre as datas escolhidas manualmente:
+    // define o início agora (se ainda não houver um) e calcula o fim a partir daí.
+    let finalStartsAt = startsAt ? new Date(startsAt).toISOString() : null
+    let finalEndsAt = endsAt ? new Date(endsAt).toISOString() : null
+    const days = Number(durationDays)
+    if (durationDays.trim() && days > 0) {
+      const start = finalStartsAt ? new Date(finalStartsAt) : new Date()
+      finalStartsAt = start.toISOString()
+      finalEndsAt = new Date(start.getTime() + days * 24 * 60 * 60 * 1000).toISOString()
+    }
+
     const payload = {
       imageUrl,
       title: title.trim() || null,
@@ -111,6 +168,8 @@ function BannerEditor({ banner, onClose, onSaved }: { banner: Partial<HomeBanner
       actionTarget: actionTarget.trim() || null,
       sortOrder: Number(sortOrder) || 0,
       isActive,
+      startsAt: finalStartsAt,
+      endsAt: finalEndsAt,
     }
     try {
       if ((banner as HomeBanner).id) await adminApi.updateBanner((banner as HomeBanner).id, payload)
@@ -169,6 +228,26 @@ function BannerEditor({ banner, onClose, onSaved }: { banner: Partial<HomeBanner
               <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
               Ativo (visível na app)
             </label>
+          </div>
+
+          <div className="pt-2 border-t border-gray-100">
+            <label className={label}>Publicar por quantos dias (a partir de agora)</label>
+            <input className={field} type="number" min="1" value={durationDays}
+              onChange={(e) => setDurationDays(e.target.value)}
+              placeholder="ex: 7 — deixa em branco para escolher datas manualmente" />
+            <p className="text-xs text-gray-400 mt-1">
+              Se preenchido, substitui as datas abaixo: início agora e fim daqui a X dias.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={label}>Início (opcional)</label>
+              <input className={field} type="datetime-local" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} />
+            </div>
+            <div>
+              <label className={label}>Fim (opcional)</label>
+              <input className={field} type="datetime-local" value={endsAt} onChange={(e) => setEndsAt(e.target.value)} />
+            </div>
           </div>
         </div>
         {error && <p className="text-sm text-red-600 mt-3">{error}</p>}
