@@ -29,6 +29,17 @@ export class HandleStripeWebhookUseCase {
     // Idempotência por evento: a Stripe pode reentregar o mesmo evento (retries,
     // "Resend" manual no dashboard, etc.). Sem isto, um payment_intent.succeeded
     // reprocessado voltaria a criar earnings/disparar eventos duplicados.
+    // Guardar isto no Redis (não só no Payment) é o que cobre também o
+    // caminho de SUBSCRIPTION, que nunca cria/atualiza um Payment — sem isto,
+    // duas entregas quase simultâneas do mesmo evento de subscrição podiam
+    // ambas passar a verificação "já tem subscrição ativa" antes de qualquer
+    // uma comitar, criando duas subscrições ACTIVE para o mesmo cliente.
+    const eventRedisKey = `stripe_event:${event.id}`;
+    const alreadyMarked = await this.redis.get(eventRedisKey);
+    if (alreadyMarked) {
+      this.logger.log(`Evento Stripe ${event.id} já processado (Redis) — a ignorar (idempotente)`);
+      return;
+    }
     const alreadyProcessed = await this.prisma.payment.findFirst({
       where: { stripeEventId: event.id },
     });
@@ -36,6 +47,9 @@ export class HandleStripeWebhookUseCase {
       this.logger.log(`Evento Stripe ${event.id} já processado — a ignorar (idempotente)`);
       return;
     }
+    // TTL de 24h — só precisa de cobrir a janela realista de reentregas da
+    // Stripe, não guardar para sempre.
+    await this.redis.set(eventRedisKey, '1', 24 * 60 * 60);
 
     if (event.type === 'payment_intent.succeeded') {
       const paymentIntent = event.data.object as Stripe.PaymentIntent;

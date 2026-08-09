@@ -54,7 +54,11 @@ export class CreateServiceRequestDto {
   @IsArray()
   items?: { categoryId: string; subcategoryId: string; itemId: string; name: string; qty: number; unitPrice: number }[];
 
-  @IsOptional()
+  // Obrigatório (não @IsOptional): se ficasse opcional, um pedido direto à
+  // API sem este campo cairia no fallback inseguro do pagamento (confia no
+  // valor enviado em POST /pay) mesmo sendo um pedido NOVO — o próprio
+  // bypass que este campo existe para impedir. Fluxos sem itens (orçamento
+  // no local) enviam 0 explicitamente, nunca omitem o campo.
   @IsNumber()
-  itemsTotal?: number;
+  itemsTotal: number;
 }

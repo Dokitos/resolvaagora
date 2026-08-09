@@ -11,6 +11,13 @@ import { PromoService } from '../../../promotions/application/promo.service';
  * incluída no total). Em modo de teste (AppSetting.paymentsTestMode) simula o
  * pagamento; caso contrário cria um PaymentIntent real na Stripe para o total.
  */
+// Pedidos criados a partir desta data já passaram pelo DTO que exige
+// itemsTotal na criação (ver create-service-request.dto.ts) — só pedidos
+// anteriores a este corte podem cair no fallback legado (inseguro, confia no
+// valor enviado em POST /pay). Qualquer pedido novo sem itemsTotal persistido
+// é recusado, em vez de silenciosamente confiar no corpo do pedido.
+const ITEMS_TOTAL_REQUIRED_SINCE = new Date('2026-08-09T00:00:00Z');
+
 @Injectable()
 export class CreateOrderPaymentUseCase {
   private readonly logger = new Logger(CreateOrderPaymentUseCase.name);
@@ -50,11 +57,16 @@ export class CreateOrderPaymentUseCase {
     let items: number;
     if (sr.itemsTotal != null && !Number.isNaN(persistedItemsTotal)) {
       items = Math.max(0, persistedItemsTotal);
-    } else {
+    } else if (sr.createdAt < ITEMS_TOTAL_REQUIRED_SINCE) {
       this.logger.warn(
-        `Pagamento sem itemsTotal persistido, a confiar no valor do pedido — sr.id=${sr.id}`,
+        `Pagamento sem itemsTotal persistido (pedido anterior ao fix) — sr.id=${sr.id}`,
       );
       items = Math.max(0, Number(itemsTotal) || 0);
+    } else {
+      this.logger.error(
+        `Pagamento recusado: pedido criado apos o fix sem itemsTotal persistido — sr.id=${sr.id}`,
+      );
+      throw new BadRequestException('Pedido inválido: dados de itens em falta.');
     }
 
     // Subtotal = itens + deslocação (a deslocação já traz o desconto de

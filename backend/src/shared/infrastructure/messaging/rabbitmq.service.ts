@@ -150,24 +150,38 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
       this.logger.warn(`RabbitMQ not connected — skipping subscribe ${queue}`);
       return;
     }
-    const channel = this.channel;
-
     // Dead-letter exchange/fila: mensagens rejeitadas com nack(requeue=false)
     // (erro no handler) deixam de desaparecer para sempre — o broker
     // encaminha-as automaticamente para `${queue}.dlq`, onde ficam visíveis
     // e podem ser inspecionadas/reprocessadas manualmente em vez de se perderem.
     const dlxExchange = `${exchange}.dlx`;
     const dlq = `${queue}.dlq`;
-    await channel.assertExchange(dlxExchange, 'fanout', { durable: true });
-    await channel.assertQueue(dlq, { durable: true });
-    await channel.bindQueue(dlq, dlxExchange, '');
+    await this.channel.assertExchange(dlxExchange, 'fanout', { durable: true });
+    await this.channel.assertQueue(dlq, { durable: true });
+    await this.channel.bindQueue(dlq, dlxExchange, '');
 
-    await channel.assertQueue(queue, {
-      durable: true,
-      arguments: {
-        'x-dead-letter-exchange': dlxExchange,
-      },
-    });
+    let dlxApplied = true;
+    try {
+      await this.channel.assertQueue(queue, {
+        durable: true,
+        arguments: { 'x-dead-letter-exchange': dlxExchange },
+      });
+    } catch (err) {
+      // A fila pode já existir (declarada antes desta correção) sem este
+      // argumento — o RabbitMQ recusa com PRECONDITION_FAILED e fecha o
+      // canal. Recria o canal (partilhado por todas as subscrições) e
+      // declara a fila sem DLX, em vez de deixar um mismatch numa fila
+      // derrubar toda a mensageria (distribuição, notificações, pagamentos).
+      dlxApplied = false;
+      this.logger.error(
+        `Fila ${queue} já existe com argumentos diferentes — a recriar canal e a subscrever sem DLX nesta fila`,
+        err,
+      );
+      this.channel = await this.connection!.createChannel();
+      await this.channel.assertQueue(queue, { durable: true });
+    }
+
+    const channel = this.channel;
     await channel.bindQueue(queue, exchange, routingKey);
     await channel.prefetch(1);
 
@@ -178,11 +192,18 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
         await handler(payload);
         channel.ack(msg);
       } catch (err) {
-        this.logger.error(`Error processing message from ${queue} — dead-lettering to ${dlq}`, err);
+        this.logger.error(
+          dlxApplied
+            ? `Error processing message from ${queue} — dead-lettering to ${dlq}`
+            : `Error processing message from ${queue} — DLQ not active on this pre-existing queue, message dropped`,
+          err,
+        );
         channel.nack(msg, false, false);
       }
     });
 
-    this.logger.log(`Subscribed to ${exchange} -> ${queue} [${routingKey}] (DLQ: ${dlq})`);
+    this.logger.log(
+      `Subscribed to ${exchange} -> ${queue} [${routingKey}] (DLQ: ${dlxApplied ? dlq : 'not applied — pre-existing queue'})`,
+    );
   }
 }
