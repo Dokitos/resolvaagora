@@ -49,12 +49,14 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
     setActionLoading(true)
     try {
       const result = await serviceRequestsApi.payDisplacement(id)
-      if (result.freeVisit) {
-        toast.success('Visita grátis confirmada!')
+      if (result.freeVisit || result.simulated) {
+        toast.success(result.freeVisit ? 'Visita grátis confirmada!' : 'Pagamento confirmado!')
         await load()
         return
       }
-      setCheckout({ clientSecret: result.clientSecret, amount: result.amount })
+      if (result.clientSecret) {
+        setCheckout({ clientSecret: result.clientSecret, amount: result.amount })
+      }
     } catch (err: any) {
       toast.error(err.message)
     } finally {

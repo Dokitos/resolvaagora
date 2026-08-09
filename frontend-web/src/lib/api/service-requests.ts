@@ -27,7 +27,7 @@ export const serviceRequestsApi = {
     api.get<DisplacementQuote>('/service-requests/displacement-quote', { params: { addressId } }).then((r) => r.data),
 
   payDisplacement: (id: string) =>
-    api.post<{ clientSecret: string; amount: number; freeVisit?: boolean }>(`/service-requests/${id}/pay-displacement`).then((r) => r.data),
+    api.post<{ clientSecret?: string; amount: number; freeVisit?: boolean; simulated?: boolean }>(`/service-requests/${id}/pay-displacement`).then((r) => r.data),
 
   payFull: (id: string, itemsTotal: number) =>
     api.post<PayFullResult>(`/service-requests/${id}/pay`, { itemsTotal }).then((r) => r.data),

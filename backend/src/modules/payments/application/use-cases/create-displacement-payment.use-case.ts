@@ -1,12 +1,14 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '@shared/infrastructure/database/prisma.service';
 import { StripeService } from '../../infrastructure/stripe.service';
+import { SettingsService } from '../../../settings/settings.service';
 
 @Injectable()
 export class CreateDisplacementPaymentUseCase {
   constructor(
     private readonly prisma: PrismaService,
     private readonly stripe: StripeService,
+    private readonly settings: SettingsService,
   ) {}
 
   async execute(userId: string, serviceRequestId: string) {
@@ -43,6 +45,42 @@ export class CreateDisplacementPaymentUseCase {
         },
       });
       return { freeVisit: true };
+    }
+
+    // Modo de teste / Stripe ainda não configurada: simula o pagamento em vez
+    // de exigir um checkout Stripe real — sem isto, este era o único ponto de
+    // pagamento que ignorava AppSetting.paymentsTestMode (CreateOrderPaymentUseCase
+    // já respeitava), obrigando sempre a um cartão de teste válido mesmo com o
+    // resto da app em modo simulado.
+    const settings = await this.settings.get();
+    if (settings.paymentsTestMode || !this.stripe.configured) {
+      const note = settings.paymentsTestMode
+        ? 'Simulated payment (test mode)'
+        : 'Simulated payment (Stripe not configured)';
+      await this.prisma.$transaction(async (tx) => {
+        await tx.payment.create({
+          data: {
+            serviceRequestId,
+            type: 'DISPLACEMENT',
+            amount: sr.displacementFee,
+            currency: 'EUR',
+            status: 'COMPLETED',
+            paidAt: new Date(),
+            stripePaymentIntentId: `pi_sim_${Date.now()}`,
+          },
+        });
+        await tx.serviceRequest.update({
+          where: { id: serviceRequestId },
+          data: {
+            status: 'PAID',
+            isDisplacementFeePaid: true,
+            statusHistory: {
+              create: { oldStatus: 'DRAFT', newStatus: 'PAID', changedByUserId: userId, notes: note },
+            },
+          },
+        });
+      });
+      return { simulated: true, amount: Number(sr.displacementFee) };
     }
 
     const paymentIntent = await this.stripe.createPaymentIntent(
