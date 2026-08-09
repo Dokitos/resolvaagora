@@ -26,7 +26,7 @@ export default function CategoryPage() {
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          {categories.map((cat) => (
+          {categories.filter((cat) => !cat.hidden).map((cat) => (
             <button
               key={cat.id}
               onClick={() => setCategory(cat.id)}

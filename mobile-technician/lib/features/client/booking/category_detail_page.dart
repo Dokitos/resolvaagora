@@ -72,6 +72,7 @@ class _SubcategoryCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(catalogPricesLoadedProvider); // rebuild quando os preços do admin chegarem
     final locale = Localizations.localeOf(context);
+    final visibleItems = sub.items.where((i) => !i.hidden).toList();
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
       decoration: BoxDecoration(
@@ -99,12 +100,12 @@ class _SubcategoryCard extends ConsumerWidget {
               ],
             ),
           ),
-          if (sub.items.isNotEmpty)
+          if (visibleItems.isNotEmpty)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
               child: Text(
                 AppLocalizations.of(context).priceFrom(
-                    '€${sub.items.map((i) => i.price).reduce((a, b) => a < b ? a : b).toStringAsFixed(2)}'),
+                    '€${visibleItems.map((i) => i.price).reduce((a, b) => a < b ? a : b).toStringAsFixed(2)}'),
                 style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w600, fontSize: 13),
               ),
             ),

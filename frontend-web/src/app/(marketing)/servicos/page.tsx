@@ -26,7 +26,7 @@ async function getServiceCategories() {
 }
 
 export default async function ServicosPage() {
-  const SERVICE_CATEGORIES = await getServiceCategories()
+  const SERVICE_CATEGORIES = (await getServiceCategories()).filter((cat) => !cat.hidden)
 
   return (
     <div className="min-h-screen bg-white text-brand-700">
@@ -69,7 +69,9 @@ export default async function ServicosPage() {
                     {sub.hasCustomQuote ? (
                       <p className="mt-2 text-xs font-semibold text-accent-700">Orçamento feito no local</p>
                     ) : (
-                      <p className="mt-2 text-xs text-brand-400">{sub.items.length} itens disponíveis</p>
+                      <p className="mt-2 text-xs text-brand-400">
+                        {sub.items.filter((item) => !item.hidden).length} itens disponíveis
+                      </p>
                     )}
                   </Link>
                 ))}

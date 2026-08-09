@@ -159,6 +159,11 @@ class _ItemRow extends ConsumerWidget {
                 Text(item.localizedName(Localizations.localeOf(context)), style: const TextStyle(fontSize: 15)),
                 if (item.unit != null)
                   Text(AppLocalizations.of(context).perUnit(item.unit!), style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+                if (item.notes != null && item.notes!.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(item.notes!, style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+                  ),
               ],
             ),
           ),

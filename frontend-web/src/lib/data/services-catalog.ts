@@ -7,6 +7,8 @@ export interface ServiceItem {
   name: string
   price: number
   unit?: string // undefined = por unidade; 'metro' | 'litro' | 'm²' | 'hora' | 'kg'
+  hidden?: boolean
+  notes?: string
 }
 
 export interface ServiceSubcategory {
@@ -24,6 +26,7 @@ export interface ServiceCategory {
   description: string
   basePrice: number
   subcategories: ServiceSubcategory[]
+  hidden?: boolean
 }
 
 export const SERVICE_CATEGORIES: ServiceCategory[] = [
@@ -442,18 +445,33 @@ export function itemPriceKey(categoryId: string, subcategoryId: string, itemId: 
  * componentes de servidor (a página /servicos).
  */
 export function mergeServicePrices(
-  prices: { categories?: Record<string, number>; items?: Record<string, number> } | null | undefined,
+  prices:
+    | {
+        categories?: Record<string, { basePrice: number; hidden: boolean }>
+        items?: Record<string, { price: number; hidden: boolean; notes: string | null }>
+      }
+    | null
+    | undefined,
 ): ServiceCategory[] {
   if (!prices) return SERVICE_CATEGORIES
-  return SERVICE_CATEGORIES.map((cat) => ({
-    ...cat,
-    basePrice: prices.categories?.[cat.id] ?? cat.basePrice,
-    subcategories: cat.subcategories.map((sub) => ({
-      ...sub,
-      items: sub.items.map((item) => ({
-        ...item,
-        price: prices.items?.[itemPriceKey(cat.id, sub.id, item.id)] ?? item.price,
+  return SERVICE_CATEGORIES.map((cat) => {
+    const catOverride = prices.categories?.[cat.id]
+    return {
+      ...cat,
+      basePrice: catOverride?.basePrice ?? cat.basePrice,
+      hidden: catOverride?.hidden ?? cat.hidden ?? false,
+      subcategories: cat.subcategories.map((sub) => ({
+        ...sub,
+        items: sub.items.map((item) => {
+          const itemOverride = prices.items?.[itemPriceKey(cat.id, sub.id, item.id)]
+          return {
+            ...item,
+            price: itemOverride?.price ?? item.price,
+            hidden: itemOverride?.hidden ?? item.hidden ?? false,
+            notes: itemOverride ? (itemOverride.notes ?? undefined) : item.notes,
+          }
+        }),
       })),
-    })),
-  }))
+    }
+  })
 }

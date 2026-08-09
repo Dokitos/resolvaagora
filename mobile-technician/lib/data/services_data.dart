@@ -4,10 +4,13 @@
 class ServiceItem {
   final String id;
   final String name;
-  // Não é `final`: os preços editados no admin (GET /service-prices) são
-  // aplicados por cima destes valores por omissão, mutando os objetos deste
-  // catálogo diretamente — ver catalogPricesLoadedProvider em client_service.dart.
+  // Não são `final`: os preços/flags editados no admin (GET /service-prices)
+  // são aplicados por cima destes valores por omissão, mutando os objetos
+  // deste catálogo diretamente — ver catalogPricesLoadedProvider em
+  // client_service.dart.
   double price;
+  bool hidden;
+  String? notes;
   final String? unit; // null = per unit, 'metro', 'litro', 'm2', 'hora'
 
   ServiceItem({
@@ -15,6 +18,8 @@ class ServiceItem {
     required this.name,
     required this.price,
     this.unit,
+    this.hidden = false,
+    this.notes,
   });
 }
 
@@ -39,8 +44,9 @@ class ServiceCategory {
   final String name;
   final String emoji;
   final String description;
-  // Não é `final` — ver nota em ServiceItem.price.
+  // Não são `final` — ver nota em ServiceItem.price.
   double basePrice;
+  bool hidden;
   final List<ServiceSubcategory> subcategories;
 
   ServiceCategory({
@@ -50,6 +56,7 @@ class ServiceCategory {
     required this.description,
     required this.basePrice,
     required this.subcategories,
+    this.hidden = false,
   });
 }
 

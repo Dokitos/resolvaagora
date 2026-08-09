@@ -26,6 +26,8 @@ export default function ItemsPage() {
 
   if (!sub) return null
 
+  const visibleItems = sub.items.filter((item) => !item.hidden)
+
   return (
     <div className="space-y-4">
       <div>
@@ -34,7 +36,7 @@ export default function ItemsPage() {
       </div>
 
       <div className="divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white">
-        {sub.items.map((item) => {
+        {visibleItems.map((item) => {
           const qty = itemQuantities[item.id] ?? 0
           return (
             <div key={item.id} className="flex items-center justify-between gap-3 p-4">
@@ -43,6 +45,7 @@ export default function ItemsPage() {
                 <p className="text-xs text-gray-500">
                   {formatCurrency(item.price)}{item.unit ? ` / ${item.unit}` : ''}
                 </p>
+                {item.notes && <p className="text-xs text-gray-400 mt-0.5">{item.notes}</p>}
               </div>
               <div className="flex items-center gap-3">
                 <button
@@ -66,7 +69,7 @@ export default function ItemsPage() {
       </div>
 
       <PriceSummaryBar
-        lines={sub.items
+        lines={visibleItems
           .filter((item) => (itemQuantities[item.id] ?? 0) > 0)
           .map((item) => ({ label: `${itemQuantities[item.id]}x ${item.name}`, amount: item.price * itemQuantities[item.id] }))}
         total={itemsTotal}

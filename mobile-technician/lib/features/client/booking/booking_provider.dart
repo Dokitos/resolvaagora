@@ -173,8 +173,9 @@ class BookingNotifier extends StateNotifier<BookingState> {
       state = state.copyWith(selectedAddressId: id);
 
   void selectSubcategory(ServiceSubcategory sub) {
-    // Initialise items list with qty=0 for each item
-    final items = sub.items.map((i) => BookingItem(item: i, qty: 0)).toList();
+    // Initialise items list with qty=0 for each item visível (itens ocultos
+    // no admin não podem ser escolhidos pelo cliente).
+    final items = sub.items.where((i) => !i.hidden).map((i) => BookingItem(item: i, qty: 0)).toList();
     state = state.copyWith(subcategory: sub, items: items);
   }
 

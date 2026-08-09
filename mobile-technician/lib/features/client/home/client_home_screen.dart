@@ -435,6 +435,13 @@ class _FeaturedServices extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(catalogPricesLoadedProvider); // rebuild quando os preços do admin chegarem
     final l = AppLocalizations.of(context);
+    final visibleFeatured = _featured.where((f) {
+      final cat = kServiceCategories.firstWhere(
+        (c) => c.id == f.id,
+        orElse: () => kServiceCategories.first,
+      );
+      return !cat.hidden;
+    }).toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -450,10 +457,10 @@ class _FeaturedServices extends ConsumerWidget {
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            itemCount: _featured.length,
+            itemCount: visibleFeatured.length,
             separatorBuilder: (_, __) => const SizedBox(width: 12),
             itemBuilder: (context, i) {
-              final f = _featured[i];
+              final f = visibleFeatured[i];
               final cat = kServiceCategories.firstWhere(
                 (c) => c.id == f.id,
                 orElse: () => kServiceCategories.first,
@@ -517,22 +524,25 @@ class _CategoryGrid extends StatelessWidget {
               style: TextStyle(color: Colors.grey[600], fontSize: 13)),
         ),
         const SizedBox(height: 16),
-        GridView.builder(
-          physics: const NeverScrollableScrollPhysics(),
-          shrinkWrap: true,
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            childAspectRatio: 1.2,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-          ),
-          itemCount: kServiceCategories.length,
-          itemBuilder: (context, i) {
-            final cat = kServiceCategories[i];
-            return _CategoryCard(category: cat);
-          },
-        ),
+        Builder(builder: (context) {
+          final visibleCategories = kServiceCategories.where((c) => !c.hidden).toList();
+          return GridView.builder(
+            physics: const NeverScrollableScrollPhysics(),
+            shrinkWrap: true,
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              childAspectRatio: 1.2,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+            ),
+            itemCount: visibleCategories.length,
+            itemBuilder: (context, i) {
+              final cat = visibleCategories[i];
+              return _CategoryCard(category: cat);
+            },
+          );
+        }),
       ],
     );
   }

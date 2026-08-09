@@ -1,14 +1,21 @@
 import { api } from './client'
 
 export interface ServicePricesMap {
-  categories: Record<string, number>
+  categories: Record<string, { basePrice: number; hidden: boolean }>
   /** chave: `${categoryId}:${subcategoryId}:${itemId}` */
-  items: Record<string, number>
+  items: Record<string, { price: number; hidden: boolean; notes: string | null }>
 }
 
 export interface ServicePricesPayload {
-  categories: { categoryId: string; basePrice: number }[]
-  items: { categoryId: string; subcategoryId: string; itemId: string; price: number }[]
+  categories: { categoryId: string; basePrice: number; hidden?: boolean }[]
+  items: {
+    categoryId: string
+    subcategoryId: string
+    itemId: string
+    price: number
+    hidden?: boolean
+    notes?: string | null
+  }[]
 }
 
 export const servicePricesApi = {

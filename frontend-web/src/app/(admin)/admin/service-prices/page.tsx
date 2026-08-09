@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
-import { Tag, Save } from 'lucide-react'
+import { Tag, Save, EyeOff } from 'lucide-react'
 import { servicePricesApi } from '@/lib/api/service-prices'
 import { SERVICE_CATEGORIES, mergeServicePrices, type ServiceCategory } from '@/lib/data/services-catalog'
 import { Card, CardContent } from '@/components/ui/card'
@@ -25,6 +25,10 @@ export default function AdminServicePricesPage() {
     setCategories((prev) => prev.map((c) => (c.id === categoryId ? { ...c, basePrice: value } : c)))
   }
 
+  function updateCategoryHidden(categoryId: string, hidden: boolean) {
+    setCategories((prev) => prev.map((c) => (c.id === categoryId ? { ...c, hidden } : c)))
+  }
+
   function updateItemPrice(categoryId: string, subcategoryId: string, itemId: string, value: number) {
     setCategories((prev) =>
       prev.map((c) =>
@@ -42,14 +46,55 @@ export default function AdminServicePricesPage() {
     )
   }
 
+  function updateItemHidden(categoryId: string, subcategoryId: string, itemId: string, hidden: boolean) {
+    setCategories((prev) =>
+      prev.map((c) =>
+        c.id !== categoryId
+          ? c
+          : {
+              ...c,
+              subcategories: c.subcategories.map((s) =>
+                s.id !== subcategoryId
+                  ? s
+                  : { ...s, items: s.items.map((i) => (i.id !== itemId ? i : { ...i, hidden })) },
+              ),
+            },
+      ),
+    )
+  }
+
+  function updateItemNotes(categoryId: string, subcategoryId: string, itemId: string, notes: string) {
+    setCategories((prev) =>
+      prev.map((c) =>
+        c.id !== categoryId
+          ? c
+          : {
+              ...c,
+              subcategories: c.subcategories.map((s) =>
+                s.id !== subcategoryId
+                  ? s
+                  : { ...s, items: s.items.map((i) => (i.id !== itemId ? i : { ...i, notes })) },
+              ),
+            },
+      ),
+    )
+  }
+
   async function handleSave() {
     setSaving(true)
     try {
       await servicePricesApi.save({
-        categories: categories.map((c) => ({ categoryId: c.id, basePrice: c.basePrice })),
+        categories: categories.map((c) => ({ categoryId: c.id, basePrice: c.basePrice, hidden: !!c.hidden })),
         items: categories.flatMap((c) =>
           c.subcategories.flatMap((s) =>
-            s.items.map((i) => ({ categoryId: c.id, subcategoryId: s.id, itemId: i.id, price: i.price })),
+            s.items.map((i) => ({
+              categoryId: c.id,
+              subcategoryId: s.id,
+              itemId: i.id,
+              price: i.price,
+              hidden: !!i.hidden,
+              notes: i.notes?.trim() ? i.notes.trim() : null,
+            })),
           ),
         ),
       })
@@ -91,8 +136,26 @@ export default function AdminServicePricesPage() {
                 <span className="flex items-center gap-2 font-semibold text-gray-900">
                   <span className="text-lg">{cat.emoji}</span>
                   {cat.name}
+                  {cat.hidden && (
+                    <span className="flex items-center gap-1 text-xs font-normal text-amber-600 bg-amber-50 rounded-full px-2 py-0.5">
+                      <EyeOff className="h-3 w-3" />
+                      Oculta
+                    </span>
+                  )}
                 </span>
-                <span className="flex items-center gap-2 text-sm">
+                <span className="flex items-center gap-3 text-sm">
+                  <label
+                    className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={!!cat.hidden}
+                      onChange={(e) => updateCategoryHidden(cat.id, e.target.checked)}
+                      className="rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                    />
+                    Ocultar categoria
+                  </label>
                   <span className="text-gray-400">a partir de</span>
                   <div className="flex items-center gap-1">
                     <input
@@ -118,22 +181,48 @@ export default function AdminServicePricesPage() {
                     ) : (
                       <div className="divide-y divide-gray-50">
                         {sub.items.map((item) => (
-                          <div key={item.id} className="flex items-center justify-between py-2 gap-3">
-                            <span className="text-sm text-gray-700">
-                              {item.name}
-                              {item.unit && <span className="text-gray-400"> / {item.unit}</span>}
-                            </span>
-                            <div className="flex items-center gap-1 flex-shrink-0">
-                              <input
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                value={item.price}
-                                onChange={(e) => updateItemPrice(cat.id, sub.id, item.id, Number(e.target.value))}
-                                className="w-24 rounded-lg border border-gray-300 px-2 py-1 text-right text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-                              />
-                              <span className="text-gray-500 text-sm">€</span>
+                          <div key={item.id} className="py-2 space-y-1.5">
+                            <div className="flex items-center justify-between gap-3">
+                              <span className="text-sm text-gray-700">
+                                {item.name}
+                                {item.unit && <span className="text-gray-400"> / {item.unit}</span>}
+                                {item.hidden && (
+                                  <span className="ml-2 inline-flex items-center gap-1 text-xs font-normal text-amber-600 bg-amber-50 rounded-full px-2 py-0.5">
+                                    <EyeOff className="h-3 w-3" />
+                                    Oculto
+                                  </span>
+                                )}
+                              </span>
+                              <div className="flex items-center gap-3 flex-shrink-0">
+                                <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={!!item.hidden}
+                                    onChange={(e) => updateItemHidden(cat.id, sub.id, item.id, e.target.checked)}
+                                    className="rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                                  />
+                                  Ocultar
+                                </label>
+                                <div className="flex items-center gap-1">
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    value={item.price}
+                                    onChange={(e) => updateItemPrice(cat.id, sub.id, item.id, Number(e.target.value))}
+                                    className="w-24 rounded-lg border border-gray-300 px-2 py-1 text-right text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                                  />
+                                  <span className="text-gray-500 text-sm">€</span>
+                                </div>
+                              </div>
                             </div>
+                            <textarea
+                              value={item.notes ?? ''}
+                              onChange={(e) => updateItemNotes(cat.id, sub.id, item.id, e.target.value)}
+                              placeholder="Observação (opcional) — visível ao cliente junto ao item"
+                              rows={1}
+                              className="w-full rounded-lg border border-gray-200 px-2 py-1 text-xs text-gray-600 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none"
+                            />
                           </div>
                         ))}
                       </div>

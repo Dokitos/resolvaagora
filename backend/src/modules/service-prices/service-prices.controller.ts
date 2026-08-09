@@ -18,9 +18,14 @@ export class ServicePricesController {
     ]);
 
     return {
-      categories: Object.fromEntries(categories.map((c) => [c.categoryId, Number(c.basePrice)])),
+      categories: Object.fromEntries(
+        categories.map((c) => [c.categoryId, { basePrice: Number(c.basePrice), hidden: c.hidden }]),
+      ),
       items: Object.fromEntries(
-        items.map((i) => [`${i.categoryId}:${i.subcategoryId}:${i.itemId}`, Number(i.price)]),
+        items.map((i) => [
+          `${i.categoryId}:${i.subcategoryId}:${i.itemId}`,
+          { price: Number(i.price), hidden: i.hidden, notes: i.notes ?? null },
+        ]),
       ),
     };
   }

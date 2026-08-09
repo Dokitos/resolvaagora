@@ -382,12 +382,24 @@ final catalogPricesLoadedProvider = FutureProvider<bool>((ref) async {
     final itemPrices = Map<String, dynamic>.from(data['items'] as Map? ?? {});
 
     for (final cat in kServiceCategories) {
-      final catPrice = categoryPrices[cat.id];
-      if (catPrice is num) cat.basePrice = catPrice.toDouble();
+      final catOverride = categoryPrices[cat.id];
+      if (catOverride is Map) {
+        final basePrice = catOverride['basePrice'];
+        if (basePrice is num) cat.basePrice = basePrice.toDouble();
+        final hidden = catOverride['hidden'];
+        if (hidden is bool) cat.hidden = hidden;
+      }
       for (final sub in cat.subcategories) {
         for (final item in sub.items) {
-          final itemPrice = itemPrices['${cat.id}:${sub.id}:${item.id}'];
-          if (itemPrice is num) item.price = itemPrice.toDouble();
+          final itemOverride = itemPrices['${cat.id}:${sub.id}:${item.id}'];
+          if (itemOverride is Map) {
+            final price = itemOverride['price'];
+            if (price is num) item.price = price.toDouble();
+            final hidden = itemOverride['hidden'];
+            if (hidden is bool) item.hidden = hidden;
+            final notes = itemOverride['notes'];
+            item.notes = notes is String && notes.isNotEmpty ? notes : null;
+          }
         }
       }
     }
