@@ -153,6 +153,7 @@ export interface SubscriptionPlan {
   freeVisitsCount: number
   quoteExpiryDays?: number | null
   priorityScheduling: boolean
+  isActive: boolean
 }
 
 export interface HomeBanner {
