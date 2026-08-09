@@ -217,6 +217,28 @@ export interface AnalyticsData {
   averageRating: number
   quoteAcceptanceRate: number
   completionRate: number
+  totals: { clients: number; technicians: number; serviceRequests: number; completedRequests: number }
+  growth: { date: string; newClients: number; newRequests: number }[]
+  funnel: { draft: number; inProgress: number; completed: number; cancelled: number }
+  operational: {
+    avgAssignmentMinutes: number | null
+    avgArrivalMinutes: number | null
+    avgExecutionMinutes: number | null
+    avgTotalMinutes: number | null
+  }
+  ratingDistribution: { stars: number; count: number }[]
+  recentReviews: {
+    id: string
+    clientName: string
+    technicianName: string
+    rating: number
+    comment: string | null
+    createdAt: string
+  }[]
+  topTechnicians: { technicianId: string; name: string; completedCount: number; avgRating: number | null }[]
+  clientRetention: { totalClients: number; repeatClients: number; repeatRate: number }
+  byDistrict: { district: string; count: number }[]
+  referrals: { total: number; completed: number }
 }
 
 export interface PromoValidation {

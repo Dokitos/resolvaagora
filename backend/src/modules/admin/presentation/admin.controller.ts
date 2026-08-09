@@ -577,6 +577,16 @@ export class AdminController {
       avgRating,
       quoteAcceptanceRate,
       completionRate,
+      totals,
+      growth,
+      funnel,
+      operational,
+      ratingDistribution,
+      recentReviews,
+      topTechnicians,
+      clientRetention,
+      byDistrict,
+      referrals,
     ] = await Promise.all([
       this.prisma.serviceRequest.groupBy({
         by: ['specialty'],
@@ -585,6 +595,16 @@ export class AdminController {
       this.prisma.review.aggregate({ _avg: { rating: true } }),
       this.getQuoteAcceptanceRate(),
       this.getCompletionRate(),
+      this.getAnalyticsTotals(),
+      this.getGrowth(30),
+      this.getFunnel(),
+      this.getOperationalTimings(),
+      this.getRatingDistribution(),
+      this.getRecentReviews(),
+      this.getTopTechnicians(),
+      this.getClientRetention(),
+      this.getRequestsByDistrict(),
+      this.getReferralsSummary(),
     ]);
 
     return {
@@ -595,7 +615,217 @@ export class AdminController {
       averageRating: Number(avgRating._avg.rating?.toFixed(2) ?? 0),
       quoteAcceptanceRate,
       completionRate,
+      totals,
+      growth,
+      funnel,
+      operational,
+      ratingDistribution,
+      recentReviews,
+      topTechnicians,
+      clientRetention,
+      byDistrict,
+      referrals,
     };
+  }
+
+  private async getAnalyticsTotals() {
+    const [clients, technicians, serviceRequests, completedRequests] = await Promise.all([
+      this.prisma.client.count(),
+      this.prisma.technician.count(),
+      this.prisma.serviceRequest.count(),
+      this.prisma.serviceRequest.count({ where: { status: 'COMPLETED' } }),
+    ]);
+    return { clients, technicians, serviceRequests, completedRequests };
+  }
+
+  /** Novos clientes e novos pedidos por dia, últimos `days` dias. */
+  private async getGrowth(days: number) {
+    // Tudo em UTC (getUTC*/Date.UTC) de propósito — misturar aritmética de
+    // data local com chaves toISOString() (sempre UTC) desalinha os buckets
+    // consoante o fuso horário do servidor e alguns registos "caem fora" do
+    // mapa pré-preenchido.
+    const now = new Date();
+    const todayUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+    const sinceUtc = todayUtc - days * 86400000;
+    const since = new Date(sinceUtc);
+
+    const [clients, requests] = await Promise.all([
+      this.prisma.client.findMany({ where: { createdAt: { gte: since } }, select: { createdAt: true } }),
+      this.prisma.serviceRequest.findMany({ where: { createdAt: { gte: since } }, select: { createdAt: true } }),
+    ]);
+
+    const dayKey = (d: Date) => d.toISOString().slice(0, 10);
+    const byDay = new Map<string, { newClients: number; newRequests: number }>();
+    for (let i = 0; i <= days; i++) {
+      byDay.set(dayKey(new Date(sinceUtc + i * 86400000)), { newClients: 0, newRequests: 0 });
+    }
+    // .get()! seguido de fallback: nunca deve faltar um bucket dado o range
+    // acima, mas não vale a pena um 500 por um registo à borda do intervalo.
+    const bump = (d: Date, field: 'newClients' | 'newRequests') => {
+      const bucket = byDay.get(dayKey(d));
+      if (bucket) bucket[field]++;
+    };
+    for (const c of clients) bump(c.createdAt, 'newClients');
+    for (const r of requests) bump(r.createdAt, 'newRequests');
+
+    return Array.from(byDay.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, v]) => ({ date, ...v }));
+  }
+
+  /** Agrupa os estados do pedido em 4 fases do funil de conversão. */
+  private async getFunnel() {
+    const draftStatuses = ['DRAFT', 'AWAITING_PAYMENT'] as const;
+    const inProgressStatuses = [
+      'PAID', 'IN_DISTRIBUTION', 'ASSIGNED', 'IN_TRANSIT', 'ARRIVED',
+      'IN_DIAGNOSIS', 'QUOTE_SENT', 'QUOTE_APPROVED', 'IN_EXECUTION',
+    ] as const;
+    const cancelledStatuses = ['CANCELLED', 'QUOTE_REJECTED', 'EXPIRED'] as const;
+
+    const [draft, inProgress, completed, cancelled] = await Promise.all([
+      this.prisma.serviceRequest.count({ where: { status: { in: [...draftStatuses] } } }),
+      this.prisma.serviceRequest.count({ where: { status: { in: [...inProgressStatuses] } } }),
+      this.prisma.serviceRequest.count({ where: { status: 'COMPLETED' } }),
+      this.prisma.serviceRequest.count({ where: { status: { in: [...cancelledStatuses] } } }),
+    ]);
+    return { draft, inProgress, completed, cancelled };
+  }
+
+  /**
+   * Tempo médio (minutos) entre transições de estado chave, últimos 90 dias.
+   * Calculado a partir do histórico real (service_status_history), não de
+   * estimativas — dá visibilidade direta a onde o processo é mais lento.
+   */
+  private async getOperationalTimings() {
+    const since = new Date();
+    since.setDate(since.getDate() - 90);
+
+    const history = await this.prisma.serviceStatusHistory.findMany({
+      where: { createdAt: { gte: since }, newStatus: { in: ['PAID', 'ASSIGNED', 'ARRIVED', 'IN_EXECUTION', 'COMPLETED'] } },
+      select: { serviceRequestId: true, newStatus: true, createdAt: true },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    const byRequest = new Map<string, Partial<Record<string, Date>>>();
+    for (const h of history) {
+      const bucket = byRequest.get(h.serviceRequestId) ?? {};
+      if (!bucket[h.newStatus]) bucket[h.newStatus] = h.createdAt; // primeira ocorrência
+      byRequest.set(h.serviceRequestId, bucket);
+    }
+
+    const diffsMinutes = (from: string, to: string): number[] => {
+      const out: number[] = [];
+      for (const bucket of byRequest.values()) {
+        const a = bucket[from];
+        const b = bucket[to];
+        if (a && b && b > a) out.push((b.getTime() - a.getTime()) / 60000);
+      }
+      return out;
+    };
+
+    const avg = (nums: number[]) => (nums.length > 0 ? Math.round(nums.reduce((s, n) => s + n, 0) / nums.length) : null);
+
+    return {
+      avgAssignmentMinutes: avg(diffsMinutes('PAID', 'ASSIGNED')),
+      avgArrivalMinutes: avg(diffsMinutes('ASSIGNED', 'ARRIVED')),
+      avgExecutionMinutes: avg(diffsMinutes('IN_EXECUTION', 'COMPLETED')),
+      avgTotalMinutes: avg(diffsMinutes('PAID', 'COMPLETED')),
+    };
+  }
+
+  private async getRatingDistribution() {
+    const rows = await this.prisma.review.groupBy({ by: ['rating'], _count: true });
+    const byRating = new Map(rows.map((r) => [r.rating, r._count]));
+    return [5, 4, 3, 2, 1].map((stars) => ({ stars, count: byRating.get(stars) ?? 0 }));
+  }
+
+  private async getRecentReviews() {
+    const reviews = await this.prisma.review.findMany({
+      take: 8,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        client: { select: { firstName: true, lastName: true } },
+        technician: { select: { firstName: true, lastName: true } },
+      },
+    });
+    return reviews.map((r) => ({
+      id: r.id,
+      clientName: `${r.client.firstName} ${r.client.lastName}`,
+      technicianName: `${r.technician.firstName} ${r.technician.lastName}`,
+      rating: r.rating,
+      comment: r.comment,
+      createdAt: r.createdAt,
+    }));
+  }
+
+  /** Top 8 técnicos por serviços concluídos, com a avaliação média de cada um. */
+  private async getTopTechnicians() {
+    const [completedByTech, ratingByTech] = await Promise.all([
+      this.prisma.serviceRequest.groupBy({
+        by: ['technicianId'],
+        where: { status: 'COMPLETED', technicianId: { not: null } },
+        _count: true,
+      }),
+      this.prisma.review.groupBy({ by: ['technicianId'], _avg: { rating: true } }),
+    ]);
+
+    const ranked = completedByTech
+      .sort((a, b) => b._count - a._count)
+      .slice(0, 8);
+    if (ranked.length === 0) return [];
+
+    const ids = ranked.map((r) => r.technicianId!).filter(Boolean);
+    const technicians = await this.prisma.technician.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, firstName: true, lastName: true },
+    });
+    const nameById = new Map(technicians.map((t) => [t.id, `${t.firstName} ${t.lastName}`]));
+    const ratingById = new Map(ratingByTech.map((r) => [r.technicianId, r._avg.rating]));
+
+    return ranked.map((r) => ({
+      technicianId: r.technicianId,
+      name: nameById.get(r.technicianId!) ?? '—',
+      completedCount: r._count,
+      avgRating: ratingById.get(r.technicianId!) ? Number(ratingById.get(r.technicianId!)!.toFixed(2)) : null,
+    }));
+  }
+
+  /** % de clientes com mais de um pedido — proxy simples de retenção. */
+  private async getClientRetention() {
+    const [totalClients, byClient] = await Promise.all([
+      this.prisma.client.count(),
+      this.prisma.serviceRequest.groupBy({ by: ['clientId'], _count: true }),
+    ]);
+    const repeatClients = byClient.filter((c) => c._count > 1).length;
+    return {
+      totalClients,
+      repeatClients,
+      repeatRate: totalClients > 0 ? Math.round((repeatClients / totalClients) * 100) : 0,
+    };
+  }
+
+  /** Pedidos por distrito (via morada do serviço) — os 8 maiores. */
+  private async getRequestsByDistrict() {
+    const requests = await this.prisma.serviceRequest.findMany({
+      select: { address: { select: { district: true } } },
+    });
+    const byDistrict = new Map<string, number>();
+    for (const r of requests) {
+      const d = r.address?.district || 'Desconhecido';
+      byDistrict.set(d, (byDistrict.get(d) ?? 0) + 1);
+    }
+    return Array.from(byDistrict.entries())
+      .map(([district, count]) => ({ district, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 8);
+  }
+
+  private async getReferralsSummary() {
+    const [total, completed] = await Promise.all([
+      this.prisma.referral.count(),
+      this.prisma.referral.count({ where: { status: 'COMPLETED' } }),
+    ]);
+    return { total, completed };
   }
 
   // ─── SUBSCRIPTION PLANS ───────────────────────────────────────────────────
