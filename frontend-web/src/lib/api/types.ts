@@ -165,6 +165,8 @@ export interface HomeBanner {
   actionTarget?: string | null
   sortOrder: number
   isActive: boolean
+  startsAt?: string | null
+  endsAt?: string | null
 }
 
 export interface SlaAlert {
