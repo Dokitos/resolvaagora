@@ -47,7 +47,7 @@ export class UsersController {
 
   /** Enviar/atualizar a foto de perfil do cliente (R2). */
   @Post('me/photo')
-  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 8 * 1024 * 1024 } }))
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 8 * 1024 * 1024, fields: 10, fieldNameSize: 100 } }))
   async uploadPhoto(
     @CurrentUser() user: AuthenticatedUser,
     @UploadedFile() file: Express.Multer.File,
