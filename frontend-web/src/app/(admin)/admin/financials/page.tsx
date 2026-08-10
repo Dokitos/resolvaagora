@@ -17,11 +17,12 @@ import {
   CartesianGrid,
   Legend,
 } from 'recharts'
-import { adminApi, type FinancialsResponse } from '@/lib/api/admin'
+import { adminApi, type FinancialsResponse, type Transaction } from '@/lib/api/admin'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { StatCard } from '@/components/ui/stat-card'
 import { Button } from '@/components/ui/button'
-import { formatCurrency, formatDateShort, SPECIALTY_LABELS } from '@/lib/utils'
+import { Pagination } from '@/components/ui/pagination'
+import { formatCurrency, formatDate, formatDateShort, SPECIALTY_LABELS } from '@/lib/utils'
 import type { Specialty } from '@/lib/api/types'
 import {
   DollarSign,
@@ -33,7 +34,25 @@ import {
   Download,
   FileText,
   Award,
+  Receipt,
 } from 'lucide-react'
+
+const TRANSACTION_TYPE_LABELS: Record<Transaction['type'], string> = {
+  DISPLACEMENT: 'Deslocação',
+  SERVICE: 'Serviço',
+  QUOTE: 'Orçamento',
+  SUBSCRIPTION: 'Assinatura',
+}
+
+const TRANSACTION_STATUS_STYLES: Record<string, string> = {
+  COMPLETED: 'bg-green-100 text-green-700',
+  ACTIVE: 'bg-green-100 text-green-700',
+  PENDING: 'bg-yellow-100 text-yellow-700',
+  FAILED: 'bg-red-100 text-red-700',
+  REFUNDED: 'bg-gray-100 text-gray-600',
+  EXPIRED: 'bg-gray-100 text-gray-600',
+  CANCELLED: 'bg-gray-100 text-gray-600',
+}
 
 const CHART_COLORS = ['#161616', '#F5B301', '#F59E0B', '#10B981', '#9333EA', '#06B6D4', '#EC4899', '#64748B', '#22C55E', '#EF4444', '#0EA5E9']
 
@@ -90,6 +109,11 @@ export default function AdminFinancialsPage() {
   const [to, setTo] = useState(() => toISODate(new Date()))
   const [activeQuickRange, setActiveQuickRange] = useState<QuickRange | null>('month')
 
+  const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [transactionsTotal, setTransactionsTotal] = useState(0)
+  const [transactionsLoading, setTransactionsLoading] = useState(true)
+  const [transactionsPage, setTransactionsPage] = useState(1)
+
   async function load(f = from, t = to) {
     setLoading(true)
     try {
@@ -103,6 +127,27 @@ export default function AdminFinancialsPage() {
   }
 
   useEffect(() => { load() }, [from, to])
+
+  useEffect(() => { setTransactionsPage(1) }, [from, to])
+
+  useEffect(() => {
+    let cancelled = false
+    setTransactionsLoading(true)
+    adminApi.transactions({ from, to, page: transactionsPage })
+      .then((res) => {
+        if (cancelled) return
+        setTransactions(res.items)
+        setTransactionsTotal(res.total)
+      })
+      .catch((err: any) => {
+        if (cancelled) return
+        toast.error(err?.message ?? 'Erro ao carregar transações')
+      })
+      .finally(() => {
+        if (!cancelled) setTransactionsLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [from, to, transactionsPage])
 
   function applyQuickRange(key: QuickRange) {
     const { from: f, to: t } = rangeFor(key)
@@ -174,7 +219,7 @@ export default function AdminFinancialsPage() {
       const summaryLines = [
         `Receita total: ${formatCurrency(data.totalRevenue)}`,
         `Taxas de deslocação: ${formatCurrency(data.displacement.total)} (${data.displacement.count} serviços)`,
-        `Comissões (15%): ${formatCurrency(data.commissions.total)} (${data.commissions.count} serviços)`,
+        `Comissões (${(data.commissionRate * 100).toFixed(0)}%): ${formatCurrency(data.commissions.total)} (${data.commissions.count} serviços)`,
         `Assinaturas: ${formatCurrency(data.subscriptions.total)} (${data.subscriptions.count} assinaturas)`,
         `Pagamentos pendentes: ${formatCurrency(data.pending.total)} (${data.pending.count} pedidos)`,
         `Pago a técnicos: ${formatCurrency(data.payouts.toTechnicians)}`,
@@ -296,7 +341,7 @@ export default function AdminFinancialsPage() {
               color="green"
             />
             <StatCard
-              title="Comissões (15%)"
+              title={`Comissões (${(data.commissionRate * 100).toFixed(0)}%)`}
               value={formatCurrency(data.commissions.total)}
               subtitle={`${data.commissions.count} serviços concluídos`}
               icon={TrendingUp}
@@ -494,6 +539,72 @@ export default function AdminFinancialsPage() {
                   </tbody>
                 </table>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Receipt className="h-4 w-4" />
+                Todas as Transações
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-100 bg-gray-50">
+                      <th className="text-left px-6 py-3 font-medium text-gray-500">Data</th>
+                      <th className="text-left px-6 py-3 font-medium text-gray-500">Tipo</th>
+                      <th className="text-left px-6 py-3 font-medium text-gray-500">Cliente</th>
+                      <th className="text-left px-6 py-3 font-medium text-gray-500">Técnico</th>
+                      <th className="text-right px-6 py-3 font-medium text-gray-500">Valor</th>
+                      <th className="text-left px-6 py-3 font-medium text-gray-500">Estado</th>
+                      <th className="text-left px-6 py-3 font-medium text-gray-500">Referência</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {transactions.map((tx) => (
+                      <tr key={tx.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-3 text-gray-600 whitespace-nowrap">{formatDate(tx.date)}</td>
+                        <td className="px-6 py-3 text-gray-900">{TRANSACTION_TYPE_LABELS[tx.type]}</td>
+                        <td className="px-6 py-3 text-gray-900">{tx.clientName}</td>
+                        <td className="px-6 py-3 text-gray-600">{tx.technicianName ?? '—'}</td>
+                        <td className="px-6 py-3 text-right font-medium text-gray-900">{formatCurrency(tx.amount)}</td>
+                        <td className="px-6 py-3">
+                          <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${TRANSACTION_STATUS_STYLES[tx.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                            {tx.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-3 text-gray-400 text-xs font-mono">{tx.reference ?? '—'}</td>
+                      </tr>
+                    ))}
+                    {!transactionsLoading && transactions.length === 0 && (
+                      <tr>
+                        <td colSpan={7} className="px-6 py-8 text-center text-gray-400">
+                          Sem transações para o período selecionado
+                        </td>
+                      </tr>
+                    )}
+                    {transactionsLoading && (
+                      <tr>
+                        <td colSpan={7} className="px-6 py-8 text-center text-gray-400">
+                          A carregar...
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              {transactionsTotal > 30 && (
+                <div className="px-6 py-4 border-t border-gray-100">
+                  <Pagination
+                    page={transactionsPage}
+                    totalPages={Math.ceil(transactionsTotal / 30)}
+                    onPageChange={setTransactionsPage}
+                  />
+                </div>
+              )}
             </CardContent>
           </Card>
         </>

@@ -13,9 +13,22 @@ import { ArrowLeft, MapPin, Wrench, Clock, CheckCircle, XCircle, AlertTriangle, 
 import Link from 'next/link'
 import { differenceInHours, formatDistanceToNow, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { Modal } from '@/components/ui/modal'
+import { Modal, Dialog } from '@/components/ui/modal'
 import { StripeCheckout } from '@/components/payment/stripe-checkout'
 import { useNotificationsSocket } from '@/lib/hooks/use-notifications-socket'
+
+type CancelTier = 'FREE' | 'FEE_KEPT' | 'BLOCKED' | null
+
+const FREE_TIER_STATUSES = ['DRAFT', 'AWAITING_PAYMENT', 'PAID', 'IN_DISTRIBUTION', 'ASSIGNED']
+const FEE_KEPT_TIER_STATUSES = ['IN_TRANSIT', 'ARRIVED', 'IN_DIAGNOSIS', 'QUOTE_SENT', 'QUOTE_APPROVED']
+const BLOCKED_STATUSES = ['IN_EXECUTION']
+
+function cancelTier(status: string): CancelTier {
+  if (FREE_TIER_STATUSES.includes(status)) return 'FREE'
+  if (FEE_KEPT_TIER_STATUSES.includes(status)) return 'FEE_KEPT'
+  if (BLOCKED_STATUSES.includes(status)) return 'BLOCKED'
+  return null
+}
 
 export default function ServiceDetailPage({ params }: { params: { id: string } }) {
   const { id } = params
@@ -25,7 +38,8 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
   const [actionLoading, setActionLoading] = useState(false)
   const [rejectModal, setRejectModal] = useState(false)
   const [cancelModal, setCancelModal] = useState(false)
-  const [checkout, setCheckout] = useState<{ clientSecret: string; amount: number } | null>(null)
+  const [paymentMethodModal, setPaymentMethodModal] = useState(false)
+  const [checkout, setCheckout] = useState<{ clientSecret: string; amount: number; forQuote?: boolean } | null>(null)
 
   async function load() {
     try {
@@ -43,6 +57,7 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
   useNotificationsSocket({
     onServiceStatusUpdated: (data) => { if (data.serviceRequestId === id) load() },
     onQuoteReceived: (data) => { if (data.serviceRequestId === id) load() },
+    onQuotePaymentConfirmed: (data) => { if (data.serviceRequestId === id) load() },
   })
 
   async function handlePayDisplacement() {
@@ -70,11 +85,37 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
     await load()
   }
 
-  async function handleApproveQuote() {
+  async function handleChoosePaymentMethod(method: 'ONLINE' | 'CASH') {
+    setPaymentMethodModal(false)
     setActionLoading(true)
     try {
-      await serviceRequestsApi.approveQuote(id)
-      toast.success('Orçamento aprovado! O técnico irá iniciar o trabalho.')
+      const result = await serviceRequestsApi.approveQuote(id, method)
+      if (result.clientSecret) {
+        setCheckout({ clientSecret: result.clientSecret, amount: result.amount ?? 0, forQuote: true })
+        return
+      }
+      toast.success(
+        method === 'ONLINE'
+          ? 'Orçamento aprovado e pagamento confirmado!'
+          : 'Orçamento aprovado! Pague em dinheiro quando o serviço terminar.',
+      )
+      await load()
+    } catch (err: any) {
+      toast.error(err.message)
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  async function handleRetryQuotePayment() {
+    setActionLoading(true)
+    try {
+      const result = await serviceRequestsApi.payQuote(id)
+      if (result.clientSecret) {
+        setCheckout({ clientSecret: result.clientSecret, amount: result.amount, forQuote: true })
+        return
+      }
+      toast.success('Pagamento confirmado!')
       await load()
     } catch (err: any) {
       toast.error(err.message)
@@ -113,8 +154,12 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
     setCancelModal(false)
     setActionLoading(true)
     try {
-      await serviceRequestsApi.cancel(id)
-      toast.success('Pedido cancelado.')
+      const result = await serviceRequestsApi.cancel(id)
+      if (result.refunded > 0) {
+        toast.success(`Pedido cancelado. ${formatCurrency(result.refunded)} foi reembolsado.`)
+      } else {
+        toast('Pedido cancelado.', { icon: 'ℹ️' })
+      }
       await load()
     } catch (err: any) {
       toast.error(err.message)
@@ -189,7 +234,7 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
               </div>
             </div>
           </CardContent>
-          {checkout ? (
+          {checkout && !checkout.forQuote ? (
             <CardFooter className="flex-col items-stretch">
               <StripeCheckout
                 clientSecret={checkout.clientSecret}
@@ -201,6 +246,39 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
             <CardFooter>
               <Button onClick={handlePayDisplacement} loading={actionLoading} className="w-full">
                 Pagar {formatCurrency(Number(sr.displacementFee))} e confirmar
+              </Button>
+            </CardFooter>
+          )}
+        </Card>
+      )}
+
+      {/* Pagamento do orçamento pendente de confirmação (online) */}
+      {sr.status === 'QUOTE_APPROVED' && sr.quote?.paymentMethod === 'ONLINE'
+        && !sr.payments?.some((p) => p.type === 'QUOTE' && p.status === 'COMPLETED') && (
+        <Card className="border-amber-200 bg-amber-50">
+          <CardContent className="pt-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="font-medium text-amber-900">A aguardar confirmação do pagamento</p>
+                <p className="text-sm text-amber-700 mt-0.5">
+                  O técnico só pode iniciar o trabalho depois do pagamento de {formatCurrency(Number(sr.quote.totalCost))} ser confirmado.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+          {checkout && checkout.forQuote ? (
+            <CardFooter className="flex-col items-stretch">
+              <StripeCheckout
+                clientSecret={checkout.clientSecret}
+                ctaLabel={`Pagar ${formatCurrency(checkout.amount)}`}
+                onSuccess={handlePaymentSuccess}
+              />
+            </CardFooter>
+          ) : (
+            <CardFooter>
+              <Button onClick={handleRetryQuotePayment} loading={actionLoading} className="w-full">
+                Tentar pagamento novamente
               </Button>
             </CardFooter>
           )}
@@ -248,7 +326,7 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
               <XCircle className="h-4 w-4" />
               Rejeitar
             </Button>
-            <Button onClick={handleApproveQuote} loading={actionLoading} className="flex-1">
+            <Button onClick={() => setPaymentMethodModal(true)} loading={actionLoading} className="flex-1">
               <CheckCircle className="h-4 w-4" />
               Aprovar orçamento
             </Button>
@@ -376,7 +454,7 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
             Enviar recibo por email
           </Button>
         )}
-        {(sr.status === 'DRAFT' || sr.status === 'AWAITING_PAYMENT') && (
+        {(cancelTier(sr.status) === 'FREE' || cancelTier(sr.status) === 'FEE_KEPT') && (
           <Button variant="outline" className="border-red-200 text-red-600 hover:bg-red-50" onClick={() => setCancelModal(true)}>
             <Ban className="h-4 w-4" />
             Cancelar pedido
@@ -392,7 +470,11 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
       open={cancelModal}
       onClose={() => setCancelModal(false)}
       title="Cancelar pedido"
-      description="Tem a certeza que quer cancelar este pedido?"
+      description={
+        cancelTier(sr.status) === 'FREE'
+          ? 'Tem a certeza que quer cancelar este pedido? Qualquer pagamento já feito será reembolsado na totalidade.'
+          : 'Tem a certeza que quer cancelar este pedido? O técnico já se deslocou — a taxa de deslocação não é reembolsada, o restante sim.'
+      }
       confirmLabel="Cancelar pedido"
       cancelLabel="Voltar"
       variant="danger"
@@ -411,6 +493,30 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
       onConfirm={handleRejectQuote}
       loading={actionLoading}
     />
+
+    <Dialog open={paymentMethodModal} onClose={() => setPaymentMethodModal(false)} title="Como quer pagar o orçamento?">
+      <div className="space-y-3">
+        <p className="text-sm text-gray-600">
+          Total do orçamento: <span className="font-semibold text-gray-900">{sr.quote ? formatCurrency(Number(sr.quote.totalCost)) : ''}</span>
+        </p>
+        <button
+          onClick={() => handleChoosePaymentMethod('ONLINE')}
+          disabled={actionLoading}
+          className="w-full text-left p-4 rounded-xl border-2 border-accent-200 hover:border-accent-400 hover:bg-accent-50 transition-colors"
+        >
+          <p className="font-medium text-gray-900">Pagar agora online</p>
+          <p className="text-xs text-gray-500 mt-0.5">Cartão, MB Way ou Multibanco. O técnico só pode iniciar o trabalho depois da confirmação.</p>
+        </button>
+        <button
+          onClick={() => handleChoosePaymentMethod('CASH')}
+          disabled={actionLoading}
+          className="w-full text-left p-4 rounded-xl border-2 border-gray-200 hover:border-gray-400 hover:bg-gray-50 transition-colors"
+        >
+          <p className="font-medium text-gray-900">Pagar em dinheiro</p>
+          <p className="text-xs text-gray-500 mt-0.5">Paga diretamente ao técnico quando o serviço terminar.</p>
+        </button>
+      </div>
+    </Dialog>
     </>
   )
 }

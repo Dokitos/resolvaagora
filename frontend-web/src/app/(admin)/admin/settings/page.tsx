@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
-import { Settings, Megaphone, Wrench, Gift, MapPin } from 'lucide-react'
+import { Settings, Megaphone, Wrench, Gift, MapPin, Percent } from 'lucide-react'
 
 type AppSettings = {
   maintenanceMode: boolean
@@ -20,6 +20,7 @@ type AppSettings = {
   displacementPerKm?: number | null
   displacementBaseFee?: number | null
   displacementMinFee?: number | null
+  commissionRate?: number
 }
 
 type DisplacementForm = {
@@ -44,6 +45,8 @@ export default function AdminSettingsPage() {
   const [savingRc, setSavingRc] = useState(false)
   const [disp, setDisp] = useState<DisplacementForm | null>(null)
   const [savingDisp, setSavingDisp] = useState(false)
+  const [commission, setCommission] = useState('')
+  const [savingCommission, setSavingCommission] = useState(false)
 
   useEffect(() => {
     adminApi.settings().then((data: AppSettings) => {
@@ -55,9 +58,21 @@ export default function AdminSettingsPage() {
         displacementBaseFee: data.displacementBaseFee != null ? String(data.displacementBaseFee) : '',
         displacementMinFee: data.displacementMinFee != null ? String(data.displacementMinFee) : '',
       })
+      setCommission(data.commissionRate != null ? String(Math.round(data.commissionRate * 1000) / 10) : '')
     })
     adminApi.referralConfig().then(setRc)
   }, [])
+
+  async function saveCommission() {
+    const pct = Number(commission)
+    if (!Number.isFinite(pct) || pct < 0 || pct > 100) return toast.error('Percentagem inválida')
+    setSavingCommission(true)
+    try {
+      const updated = await adminApi.updateSettings({ commissionRate: pct / 100 })
+      setS(updated)
+      toast.success('Comissão atualizada')
+    } catch (err: any) { toast.error(err.message) } finally { setSavingCommission(false) }
+  }
 
   async function saveDisplacement() {
     if (!disp) return
@@ -126,6 +141,20 @@ export default function AdminSettingsPage() {
               <Toggle label="Pagamentos em modo de teste" desc="Simula os pagamentos sem cobrar." value={s.paymentsTestMode} onChange={(v) => patch({ paymentsTestMode: v })} />
             </>
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle className="flex items-center gap-2"><Percent className="h-4 w-4" />Comissão da plataforma</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-xs text-gray-400">
+            Percentagem retida pela plataforma sobre o valor de cada orçamento aceite. O restante é o ganho do técnico.
+          </p>
+          <div className="max-w-xs">
+            <label className="block text-xs font-medium text-gray-500 mb-1">Comissão (%)</label>
+            <Input type="number" step="0.1" min="0" max="100" placeholder="Ex: 15" value={commission} onChange={(e) => setCommission(e.target.value)} />
+          </div>
+          <Button onClick={saveCommission} loading={savingCommission} className="bg-brand-600 hover:bg-brand-700">Guardar</Button>
         </CardContent>
       </Card>
 

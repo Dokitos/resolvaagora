@@ -26,24 +26,126 @@ function formatMinutes(min: number | null): string {
   return m > 0 ? `${h}h ${m}min` : `${h}h`
 }
 
+type QuickRange = 'today' | '7d' | 'month' | 'lastMonth' | 'year'
+
+function toISODate(d: Date) {
+  return d.toISOString().slice(0, 10)
+}
+
+function rangeFor(range: QuickRange): { from: string; to: string } {
+  const now = new Date()
+  switch (range) {
+    case 'today':
+      return { from: toISODate(now), to: toISODate(now) }
+    case '7d': {
+      const start = new Date(now)
+      start.setDate(start.getDate() - 6)
+      return { from: toISODate(start), to: toISODate(now) }
+    }
+    case 'month': {
+      const start = new Date(now.getFullYear(), now.getMonth(), 1)
+      return { from: toISODate(start), to: toISODate(now) }
+    }
+    case 'lastMonth': {
+      const start = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+      const end = new Date(now.getFullYear(), now.getMonth(), 0)
+      return { from: toISODate(start), to: toISODate(end) }
+    }
+    case 'year': {
+      const start = new Date(now.getFullYear(), 0, 1)
+      return { from: toISODate(start), to: toISODate(now) }
+    }
+  }
+}
+
+const QUICK_RANGES: { key: QuickRange; label: string }[] = [
+  { key: 'today', label: 'Hoje' },
+  { key: '7d', label: 'Últimos 7 dias' },
+  { key: 'month', label: 'Este mês' },
+  { key: 'lastMonth', label: 'Mês passado' },
+  { key: 'year', label: 'Este ano' },
+]
+
 export default function AdminAnalyticsPage() {
   const [data, setData] = useState<AnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [from, setFrom] = useState(() => {
+    const d = new Date()
+    d.setDate(d.getDate() - 29)
+    return toISODate(d)
+  })
+  const [to, setTo] = useState(() => toISODate(new Date()))
+  const [activeQuickRange, setActiveQuickRange] = useState<QuickRange | null>(null)
 
   useEffect(() => {
-    adminApi.analytics()
+    setLoading(true)
+    adminApi.analytics({ from, to })
       .then(setData)
       .catch((err: any) => toast.error(err?.message ?? 'Erro ao carregar análises'))
       .finally(() => setLoading(false))
-  }, [])
+  }, [from, to])
 
-  if (loading) return (
-    <div className="flex justify-center py-12">
-      <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+  function applyQuickRange(key: QuickRange) {
+    const { from: f, to: t } = rangeFor(key)
+    setActiveQuickRange(key)
+    setFrom(f)
+    setTo(t)
+  }
+
+  const filterBar = (
+    <div className="flex items-center justify-between flex-wrap gap-3">
+      <div className="flex flex-wrap gap-2">
+        {QUICK_RANGES.map((r) => (
+          <button
+            key={r.key}
+            onClick={() => applyQuickRange(r.key)}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
+              activeQuickRange === r.key
+                ? 'bg-gray-900 text-white border-gray-900'
+                : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            {r.label}
+          </button>
+        ))}
+      </div>
+      <div className="flex items-center gap-2">
+        <input
+          type="date"
+          value={from}
+          max={to}
+          onChange={(e) => { setActiveQuickRange(null); setFrom(e.target.value) }}
+          className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+        />
+        <span className="text-gray-400 text-sm">até</span>
+        <input
+          type="date"
+          value={to}
+          min={from}
+          max={toISODate(new Date())}
+          onChange={(e) => { setActiveQuickRange(null); setTo(e.target.value) }}
+          className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+        />
+      </div>
     </div>
   )
 
-  if (!data) return <p className="text-center text-gray-400 py-12">Não foi possível carregar as análises.</p>
+  if (loading || !data) return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Análises</h1>
+        <p className="text-sm text-gray-500 mt-0.5">Crescimento, operação e qualidade da plataforma</p>
+      </div>
+      {filterBar}
+      {loading ? (
+        <div className="flex justify-center py-12">
+          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : (
+        <p className="text-center text-gray-400 py-12">Não foi possível carregar as análises.</p>
+      )}
+    </div>
+  )
 
   const specialtyChartData = data.requestsBySpecialty.map((item) => ({
     name: SPECIALTY_LABELS[item.specialty],
@@ -74,6 +176,8 @@ export default function AdminAnalyticsPage() {
         <h1 className="text-2xl font-bold text-gray-900">Análises</h1>
         <p className="text-sm text-gray-500 mt-0.5">Crescimento, operação e qualidade da plataforma</p>
       </div>
+
+      {filterBar}
 
       {/* Totais gerais */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">

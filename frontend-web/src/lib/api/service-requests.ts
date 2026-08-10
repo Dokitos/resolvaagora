@@ -21,7 +21,7 @@ export const serviceRequestsApi = {
   }) => api.post<ServiceRequest>('/service-requests', data).then((r) => r.data),
 
   cancel: (id: string) =>
-    api.delete(`/service-requests/${id}`),
+    api.delete<{ refunded: number; kept: number }>(`/service-requests/${id}`).then((r) => r.data),
 
   getDisplacementQuote: (addressId: string) =>
     api.get<DisplacementQuote>('/service-requests/displacement-quote', { params: { addressId } }).then((r) => r.data),
@@ -32,8 +32,16 @@ export const serviceRequestsApi = {
   payFull: (id: string, itemsTotal: number) =>
     api.post<PayFullResult>(`/service-requests/${id}/pay`, { itemsTotal }).then((r) => r.data),
 
-  approveQuote: (id: string) =>
-    api.post(`/service-requests/${id}/quote/approve`).then((r) => r.data),
+  approveQuote: (id: string, paymentMethod: 'ONLINE' | 'CASH') =>
+    api.post<{ success: boolean; paymentMethod: string; clientSecret?: string; publishableKey?: string; simulated?: boolean; amount?: number }>(
+      `/service-requests/${id}/quote/approve`,
+      { paymentMethod },
+    ).then((r) => r.data),
+
+  payQuote: (id: string) =>
+    api.post<{ clientSecret?: string; publishableKey?: string; simulated?: boolean; alreadyPaid?: boolean; amount: number }>(
+      `/service-requests/${id}/quote/pay`,
+    ).then((r) => r.data),
 
   rejectQuote: (id: string, reason?: string) =>
     api.post(`/service-requests/${id}/quote/reject`, { reason }).then((r) => r.data),

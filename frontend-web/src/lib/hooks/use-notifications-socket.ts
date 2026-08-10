@@ -15,6 +15,16 @@ export interface QuoteReceivedPayload {
   serviceRequestId: string
 }
 
+export interface QuotePaymentConfirmedPayload {
+  serviceRequestId: string
+}
+
+export interface SlaAlertPayload {
+  serviceRequestId: string
+  metric: string
+  level: string
+}
+
 export interface SupportMessagePayload {
   id: string
   body: string
@@ -31,6 +41,8 @@ export interface NotificationPayload {
 interface NotificationsSocketHandlers {
   onServiceStatusUpdated?: (data: ServiceStatusUpdatedPayload) => void
   onQuoteReceived?: (data: QuoteReceivedPayload) => void
+  onQuotePaymentConfirmed?: (data: QuotePaymentConfirmedPayload) => void
+  onSlaAlert?: (data: SlaAlertPayload) => void
   onSupportMessage?: (data: SupportMessagePayload) => void
   onNotification?: (data: NotificationPayload) => void
 }
@@ -58,6 +70,8 @@ export function useNotificationsSocket(handlers: NotificationsSocketHandlers) {
 
     socket.on('service-status-updated', (data: ServiceStatusUpdatedPayload) => handlersRef.current.onServiceStatusUpdated?.(data))
     socket.on('quote-received', (data: QuoteReceivedPayload) => handlersRef.current.onQuoteReceived?.(data))
+    socket.on('quote-payment-confirmed', (data: QuotePaymentConfirmedPayload) => handlersRef.current.onQuotePaymentConfirmed?.(data))
+    socket.on('sla-alert', (data: SlaAlertPayload) => handlersRef.current.onSlaAlert?.(data))
     socket.on('support-message', (data: SupportMessagePayload) => handlersRef.current.onSupportMessage?.(data))
     socket.on('notification', (data: NotificationPayload) => handlersRef.current.onNotification?.(data))
 

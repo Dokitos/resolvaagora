@@ -2,6 +2,7 @@ import { api } from './client'
 import type { DashboardMetrics, AnalyticsData, ServiceRequest, Technician, SlaAlert, Email, EmailTemplate, EmailFolder } from './types'
 
 export interface FinancialsResponse {
+  commissionRate: number
   displacement: { total: number; count: number }
   commissions: { total: number; count: number }
   subscriptions: { total: number; count: number }
@@ -19,12 +20,36 @@ export interface FinancialsResponse {
   payouts: { toTechnicians: number; platformCommission: number }
 }
 
+export interface Transaction {
+  id: string
+  type: 'DISPLACEMENT' | 'SERVICE' | 'QUOTE' | 'SUBSCRIPTION'
+  amount: number
+  currency: string
+  status: string
+  clientName: string
+  technicianName: string | null
+  specialty: string | null
+  description: string | null
+  date: string
+  reference: string | null
+}
+
+export interface TransactionsResponse {
+  items: Transaction[]
+  total: number
+  page: number
+  pageSize: number
+}
+
 export const adminApi = {
   dashboard: () =>
     api.get<DashboardMetrics>('/admin/dashboard').then((r) => r.data),
 
-  analytics: () =>
-    api.get<AnalyticsData>('/admin/analytics').then((r) => r.data),
+  analytics: (params?: { from?: string; to?: string }) =>
+    api.get<AnalyticsData>('/admin/analytics', { params }).then((r) => r.data),
+
+  transactions: (params?: { from?: string; to?: string; page?: number }) =>
+    api.get<TransactionsResponse>('/admin/transactions', { params }).then((r) => r.data),
 
   serviceRequests: (params?: { status?: string; page?: number; limit?: number }) =>
     api.get<ServiceRequest[]>('/admin/service-requests', { params }).then((r) => r.data),
@@ -38,8 +63,8 @@ export const adminApi = {
   editServiceRequest: (id: string, data: { status?: string; scheduledDate?: string | null; description?: string; displacementFee?: number }) =>
     api.patch(`/admin/service-requests/${id}`, data).then((r) => r.data),
 
-  cancelServiceRequest: (id: string, reason?: string) =>
-    api.post(`/admin/service-requests/${id}/cancel`, { reason }).then((r) => r.data),
+  cancelServiceRequest: (id: string, reason?: string, force?: boolean, refundAmount?: number) =>
+    api.post<{ refunded: number; kept: number }>(`/admin/service-requests/${id}/cancel`, { reason, force, refundAmount }).then((r) => r.data),
 
   deleteServiceRequest: (id: string) =>
     api.delete(`/admin/service-requests/${id}`),
@@ -68,8 +93,11 @@ export const adminApi = {
   disableTechnician: (id: string) =>
     api.delete(`/admin/technicians/${id}`),
 
-  slaAlerts: () =>
-    api.get<SlaAlert[]>('/admin/sla-alerts').then((r) => r.data),
+  slaAlerts: (resolved?: boolean) =>
+    api.get<SlaAlert[]>('/admin/sla-alerts', { params: resolved ? { resolved: 'true' } : undefined }).then((r) => r.data),
+
+  slaAlertsSummary: () =>
+    api.get<{ metric: string; warning: number; critical: number }[]>('/admin/sla-alerts/summary').then((r) => r.data),
 
   acknowledgeAlert: (id: string) =>
     api.patch(`/admin/sla-alerts/${id}/acknowledge`).then((r) => r.data),

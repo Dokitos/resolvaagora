@@ -10,6 +10,8 @@ import { Button } from '@/components/ui/button'
 import { Select } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Modal } from '@/components/ui/modal'
+import { Input } from '@/components/ui/input'
 import { formatDate, formatCurrency, SPECIALTY_LABELS, SLA_METRIC_LABELS } from '@/lib/utils'
 import { ArrowLeft, RefreshCw, AlertTriangle, Phone, Mail, MessageCircle, Send, Trash2, XCircle } from 'lucide-react'
 import Link from 'next/link'
@@ -33,6 +35,9 @@ export default function AdminServiceRequestDetailPage({ params }: { params: { id
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [lightbox, setLightbox] = useState<string | null>(null)
+  const [forceCancelModal, setForceCancelModal] = useState(false)
+  const [forceReason, setForceReason] = useState('')
+  const [forceRefundAmount, setForceRefundAmount] = useState('')
 
   // chat
   const [messages, setMessages] = useState<any[]>([])
@@ -79,12 +84,39 @@ export default function AdminServiceRequestDetailPage({ params }: { params: { id
     catch (err: any) { toast.error(err.message) } finally { setBusy(false) }
   }
 
+  function cancelToast(result: { refunded: number; kept: number }) {
+    if (result.refunded > 0) {
+      toast.success(`Pedido cancelado. ${formatCurrency(result.refunded)} reembolsado(s)${result.kept > 0 ? `, ${formatCurrency(result.kept)} retido(s)` : ''}.`)
+    } else if (result.kept > 0) {
+      toast(`Pedido cancelado. ${formatCurrency(result.kept)} ficaram retidos.`, { icon: 'ℹ️' })
+    } else {
+      toast.success('Pedido cancelado.')
+    }
+  }
+
   async function handleCancel() {
+    if (sr?.status === 'IN_EXECUTION') {
+      setForceReason('')
+      setForceRefundAmount('')
+      setForceCancelModal(true)
+      return
+    }
     const reason = window.prompt('Motivo do cancelamento:', 'Cancelado pelo administrador')
     if (reason === null) return
     setBusy(true)
-    try { await adminApi.cancelServiceRequest(id, reason); toast.success('Pedido cancelado'); await load() }
+    try { const result = await adminApi.cancelServiceRequest(id, reason); cancelToast(result); await load() }
     catch (err: any) { toast.error(err.message) } finally { setBusy(false) }
+  }
+
+  async function handleForceCancel() {
+    if (!forceReason.trim()) { toast.error('Motivo obrigatório para cancelar um serviço em execução'); return }
+    setBusy(true)
+    try {
+      const result = await adminApi.cancelServiceRequest(id, forceReason, true, forceRefundAmount.trim() === '' ? undefined : Number(forceRefundAmount))
+      setForceCancelModal(false)
+      cancelToast(result)
+      await load()
+    } catch (err: any) { toast.error(err.message) } finally { setBusy(false) }
   }
 
   async function handleDelete() {
@@ -136,7 +168,9 @@ export default function AdminServiceRequestDetailPage({ params }: { params: { id
               <Button onClick={handleStatus} loading={busy} disabled={newStatus === sr.status} className="bg-brand-600 hover:bg-brand-700">Guardar</Button>
             </div>
           </div>
-          <Button onClick={handleCancel} loading={busy} variant="outline" className="text-amber-700 border-amber-300"><XCircle className="h-4 w-4 mr-1" />Cancelar</Button>
+          {!['COMPLETED', 'CANCELLED', 'QUOTE_REJECTED', 'EXPIRED'].includes(sr.status) && (
+            <Button onClick={handleCancel} loading={busy} variant="outline" className="text-amber-700 border-amber-300"><XCircle className="h-4 w-4 mr-1" />Cancelar</Button>
+          )}
           <Button onClick={handleDelete} loading={busy} variant="outline" className="text-brand-700 border-brand-300"><Trash2 className="h-4 w-4 mr-1" />Eliminar</Button>
         </CardContent>
       </Card>
@@ -293,6 +327,35 @@ export default function AdminServiceRequestDetailPage({ params }: { params: { id
           <img src={lightbox} alt="" className="max-h-[90vh] max-w-[90vw] rounded-lg" />
         </div>
       )}
+
+      <Modal
+        open={forceCancelModal}
+        onClose={() => setForceCancelModal(false)}
+        title="Cancelar serviço já em execução"
+        variant="danger"
+        confirmLabel="Cancelar mesmo assim"
+        cancelLabel="Voltar"
+        onConfirm={handleForceCancel}
+        loading={busy}
+      >
+        <div className="space-y-3">
+          <div className="flex items-start gap-2 bg-brand-50 border border-brand-200 rounded-lg p-3">
+            <AlertTriangle className="h-4 w-4 text-brand-600 shrink-0 mt-0.5" />
+            <p className="text-xs text-brand-700">
+              O técnico já iniciou o trabalho. Isto é uma ação de suporte excecional — não há reembolso automático,
+              defina manualmente o valor a devolver ao cliente (total pago: {formatCurrency(paidTotal)}).
+            </p>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Motivo (obrigatório)</label>
+            <Input value={forceReason} onChange={(e) => setForceReason(e.target.value)} placeholder="Ex: pedido do cliente por escalada de suporte" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Valor a reembolsar (€) — opcional, deixe em branco para não reembolsar</label>
+            <Input type="number" step="0.01" min="0" max={paidTotal} value={forceRefundAmount} onChange={(e) => setForceRefundAmount(e.target.value)} placeholder="0.00" />
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

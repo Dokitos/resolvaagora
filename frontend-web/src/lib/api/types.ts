@@ -96,6 +96,7 @@ export interface ServiceRequest {
   technician?: Technician
   address?: Address
   quote?: Quote
+  payments?: Payment[]
   photos?: ServicePhoto[]
   slaAlerts?: SlaAlert[]
   review?: Review
@@ -112,9 +113,20 @@ export interface Quote {
   vatRate: number
   totalCost: number
   status: QuoteStatus
+  paymentMethod?: 'ONLINE' | 'CASH' | null
   expiresAt: string
   respondedAt?: string
   rejectionReason?: string
+  createdAt: string
+}
+
+export interface Payment {
+  id: string
+  type: 'DISPLACEMENT' | 'SERVICE' | 'QUOTE'
+  amount: number
+  currency: string
+  status: 'PENDING' | 'COMPLETED' | 'FAILED' | 'REFUNDED'
+  paidAt?: string | null
   createdAt: string
 }
 
