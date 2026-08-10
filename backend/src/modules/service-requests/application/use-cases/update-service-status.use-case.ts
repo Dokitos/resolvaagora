@@ -7,6 +7,7 @@ import {
 import { ServiceStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '@shared/infrastructure/database/prisma.service';
 import { RabbitMQService } from '@shared/infrastructure/messaging/rabbitmq.service';
+import { SettingsService } from '../../../settings/settings.service';
 
 // Valid transitions per role
 const TECHNICIAN_TRANSITIONS: Partial<Record<ServiceStatus, ServiceStatus[]>> = {
@@ -23,6 +24,7 @@ export class UpdateServiceStatusUseCase {
   constructor(
     private readonly prisma: PrismaService,
     private readonly rabbitmq: RabbitMQService,
+    private readonly settings: SettingsService,
   ) {}
 
   async execute(
@@ -57,6 +59,20 @@ export class UpdateServiceStatusUseCase {
       });
       if (proofPhotos < 2) {
         throw new BadRequestException('At least 2 proof photos required');
+      }
+    }
+
+    if (newStatus === 'IN_EXECUTION') {
+      const quote = await this.prisma.quote.findUnique({ where: { serviceRequestId } });
+      if (quote?.paymentMethod === 'ONLINE') {
+        const paid = await this.prisma.payment.findFirst({
+          where: { serviceRequestId, type: 'QUOTE', status: 'COMPLETED' },
+        });
+        if (!paid) {
+          throw new BadRequestException(
+            'O cliente ainda não confirmou o pagamento online do orçamento. Aguarda a confirmação antes de iniciar o trabalho.',
+          );
+        }
       }
     }
 
@@ -123,7 +139,17 @@ export class UpdateServiceStatusUseCase {
     });
 
     if (quote) {
-      const commissionRate = 0.15; // 15% — configurável
+      // Pagamento em dinheiro do orçamento fica PENDING desde a aprovação
+      // (para aparecer no financeiro como "a receber") e só é dado como
+      // COMPLETED aqui, quando o técnico confirma que o serviço terminou.
+      if (quote.paymentMethod === 'CASH') {
+        await tx.payment.updateMany({
+          where: { serviceRequestId: sr.id, type: 'QUOTE', status: 'PENDING' },
+          data: { status: 'COMPLETED', paidAt: new Date() },
+        });
+      }
+
+      const { commissionRate } = await this.settings.get();
       const serviceAmount = Number(quote.totalCost) * (1 - commissionRate);
       const displacementAmount = Number(sr.displacementFee);
 

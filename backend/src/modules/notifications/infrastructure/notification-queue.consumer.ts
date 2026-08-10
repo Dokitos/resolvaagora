@@ -74,6 +74,18 @@ export class NotificationQueueConsumer implements OnModuleInit {
         const { serviceRequestId } = msg.data as any;
         await this.notifyAdminsNewRequest(serviceRequestId);
       });
+
+    sub(this.rabbitmq.exchanges.payments, 'notifications.quote-payment-confirmed', 'payment.quote.confirmed',
+      async (msg) => {
+        const { serviceRequestId } = msg.data as any;
+        await this.notifyQuotePaymentConfirmed(serviceRequestId);
+      });
+
+    sub(this.rabbitmq.exchanges.serviceRequests, 'notifications.service-cancelled', 'service-request.cancelled',
+      async (msg) => {
+        const { serviceRequestId } = msg.data as any;
+        await this.notifyCancellation(serviceRequestId);
+      });
   }
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -161,6 +173,12 @@ export class NotificationQueueConsumer implements OnModuleInit {
     const body = `${sr.specialty} — ${clientName}`;
 
     for (const admin of admins) {
+      try {
+        const tokens = await this.getUserTokens(admin.id);
+        if (tokens.length) await this.fcm.sendToMultiple(tokens, title, body, { serviceRequestId });
+      } catch (e) {
+        this.logger.error(`Falha no push (novo pedido) para ${admin.id}: ${e}`);
+      }
       await this.saveNotification(admin.id, 'NEW_SERVICE_REQUEST', title, body, { serviceRequestId });
       this.gateway.emitToUser(admin.id, 'new-service-request', {
         serviceRequestId,
@@ -169,6 +187,61 @@ export class NotificationQueueConsumer implements OnModuleInit {
         city: sr.address?.city ?? null,
       });
     }
+  }
+
+  /** Pagamento online do orçamento confirmado → avisa CLIENTE e TÉCNICO que o trabalho já pode começar. */
+  private async notifyQuotePaymentConfirmed(serviceRequestId: string) {
+    const sr = await this.prisma.serviceRequest.findUnique({
+      where: { id: serviceRequestId },
+      include: { technician: { include: { user: true } }, client: { include: { user: true } } },
+    });
+    if (!sr) return;
+
+    if (sr.client?.user) {
+      await this.deliver(
+        sr.client.user.id,
+        sr.client.emailNotifications ? sr.client.user.email : null,
+        'PAYMENT_CONFIRMED',
+        'Pagamento confirmado',
+        'O pagamento do orçamento foi confirmado. O técnico vai iniciar o trabalho.',
+        serviceRequestId,
+        'quote-payment-confirmed',
+        { serviceRequestId },
+      );
+    }
+
+    if (sr.technician?.user) {
+      await this.deliver(
+        sr.technician.user.id,
+        sr.technician.user.email,
+        'PAYMENT_CONFIRMED',
+        'Pagamento confirmado',
+        'O cliente confirmou o pagamento do orçamento. Já pode iniciar a execução.',
+        serviceRequestId,
+        'quote-payment-confirmed',
+        { serviceRequestId },
+      );
+    }
+  }
+
+  /** Cliente cancelou o pedido → avisa o TÉCNICO já atribuído, se existir. */
+  private async notifyCancellation(serviceRequestId: string) {
+    const sr = await this.prisma.serviceRequest.findUnique({
+      where: { id: serviceRequestId },
+      include: { technician: { include: { user: true } } },
+    });
+    if (!sr?.technician?.user) return;
+
+    await this.deliver(
+      sr.technician.user.id,
+      sr.technician.user.email,
+      'ANNOUNCEMENT',
+      'Pedido cancelado',
+      'O cliente cancelou este pedido de serviço.',
+      serviceRequestId,
+      'service-status-updated',
+      { serviceRequestId, newStatus: 'CANCELLED' },
+    );
   }
 
   /** Novo serviço atribuído → notifica TÉCNICO (push+email) e CLIENTE (push+email). */

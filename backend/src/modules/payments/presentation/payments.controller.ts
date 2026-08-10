@@ -19,6 +19,7 @@ import { AuthenticatedUser } from '../../auth/infrastructure/jwt.strategy';
 import { CreateDisplacementPaymentUseCase } from '../application/use-cases/create-displacement-payment.use-case';
 import { CreateOrderPaymentUseCase } from '../application/use-cases/create-order-payment.use-case';
 import { HandleStripeWebhookUseCase } from '../application/use-cases/handle-stripe-webhook.use-case';
+import { PayQuoteUseCase } from '../application/use-cases/pay-quote.use-case';
 
 @Controller()
 export class PaymentsController {
@@ -26,6 +27,7 @@ export class PaymentsController {
     private readonly createPayment: CreateDisplacementPaymentUseCase,
     private readonly createOrderPayment: CreateOrderPaymentUseCase,
     private readonly handleWebhook: HandleStripeWebhookUseCase,
+    private readonly payQuote: PayQuoteUseCase,
   ) {}
 
   @Post('service-requests/:id/pay-displacement')
@@ -50,6 +52,18 @@ export class PaymentsController {
     @Body('itemsTotal') itemsTotal: number,
   ) {
     return this.createOrderPayment.execute(user.id, id, Number(itemsTotal) || 0);
+  }
+
+  /** Pagamento online do orçamento aprovado (ou retry se o Payment Sheet foi fechado). */
+  @Post('service-requests/:id/quote/pay')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('CLIENT')
+  payQuoteOnline(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ) {
+    return this.payQuote.execute(user.id, id);
   }
 
   @Post('webhooks/stripe')

@@ -48,6 +48,21 @@ export class StripeService {
     return this.stripe.paymentIntents.retrieve(paymentIntentId);
   }
 
+  /** amount em euros (não cêntimos); omitido = reembolso total do PaymentIntent. */
+  async createRefund(paymentIntentId: string, amount?: number) {
+    if (this.isStub || paymentIntentId.startsWith('pi_sim_') || paymentIntentId.startsWith('pi_stub_')) {
+      return {
+        id: `re_stub_${Date.now()}`,
+        status: 'succeeded',
+        payment_intent: paymentIntentId,
+      } as unknown as Stripe.Refund;
+    }
+    return this.stripe.refunds.create({
+      payment_intent: paymentIntentId,
+      ...(amount != null ? { amount: Math.round(amount * 100) } : {}),
+    });
+  }
+
   constructWebhookEvent(payload: Buffer, signature: string): Stripe.Event {
     const secret = this.config.get<string>('STRIPE_WEBHOOK_SECRET')!;
     return this.stripe.webhooks.constructEvent(payload, signature, secret);

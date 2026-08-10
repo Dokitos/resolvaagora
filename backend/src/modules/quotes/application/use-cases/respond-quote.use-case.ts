@@ -6,16 +6,21 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '@shared/infrastructure/database/prisma.service';
 import { RabbitMQService } from '@shared/infrastructure/messaging/rabbitmq.service';
+import { PayQuoteUseCase } from '../../../payments/application/use-cases/pay-quote.use-case';
 
 @Injectable()
 export class RespondQuoteUseCase {
   constructor(
     private readonly prisma: PrismaService,
     private readonly rabbitmq: RabbitMQService,
+    private readonly payQuote: PayQuoteUseCase,
   ) {}
 
-  async approve(userId: string, serviceRequestId: string) {
-    return this.respond(userId, serviceRequestId, 'APPROVED');
+  async approve(userId: string, serviceRequestId: string, paymentMethod: 'ONLINE' | 'CASH') {
+    if (paymentMethod !== 'ONLINE' && paymentMethod !== 'CASH') {
+      throw new BadRequestException('paymentMethod deve ser ONLINE ou CASH');
+    }
+    return this.respond(userId, serviceRequestId, 'APPROVED', undefined, paymentMethod);
   }
 
   async reject(userId: string, serviceRequestId: string, reason?: string) {
@@ -27,6 +32,7 @@ export class RespondQuoteUseCase {
     serviceRequestId: string,
     action: 'APPROVED' | 'REJECTED',
     reason?: string,
+    paymentMethod?: 'ONLINE' | 'CASH',
   ) {
     const clientUser = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -58,6 +64,7 @@ export class RespondQuoteUseCase {
           status: action,
           respondedAt: new Date(),
           rejectionReason: reason,
+          paymentMethod: action === 'APPROVED' ? paymentMethod : undefined,
         },
       });
 
@@ -74,6 +81,18 @@ export class RespondQuoteUseCase {
           },
         },
       });
+
+      if (action === 'APPROVED' && paymentMethod === 'CASH') {
+        await tx.payment.create({
+          data: {
+            serviceRequestId,
+            type: 'QUOTE',
+            amount: sr.quote!.totalCost,
+            currency: 'EUR',
+            status: 'PENDING',
+          },
+        });
+      }
     });
 
     const event = action === 'APPROVED' ? 'quote.approved' : 'quote.rejected';
@@ -84,6 +103,11 @@ export class RespondQuoteUseCase {
       technicianId: sr.technicianId,
     });
 
-    return { success: true, action };
+    if (action === 'APPROVED' && paymentMethod === 'ONLINE') {
+      const payment = await this.payQuote.execute(userId, serviceRequestId);
+      return { success: true, action, paymentMethod, ...payment };
+    }
+
+    return { success: true, action, paymentMethod };
   }
 }

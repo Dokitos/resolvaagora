@@ -96,13 +96,23 @@ export class HandleStripeWebhookUseCase {
           },
         });
       }
+      // QUOTE não muda o status do pedido — o técnico já está em
+      // QUOTE_APPROVED; o gate de IN_EXECUTION verifica diretamente o Payment.
     });
 
-    await this.rabbitmq.publish(
-      this.rabbitmq.exchanges.payments,
-      'payment.displacement.confirmed',
-      { serviceRequestId, paymentIntentId: pi.id },
-    );
+    if (type === 'QUOTE') {
+      await this.rabbitmq.publish(
+        this.rabbitmq.exchanges.payments,
+        'payment.quote.confirmed',
+        { serviceRequestId, paymentIntentId: pi.id },
+      );
+    } else {
+      await this.rabbitmq.publish(
+        this.rabbitmq.exchanges.payments,
+        'payment.displacement.confirmed',
+        { serviceRequestId, paymentIntentId: pi.id },
+      );
+    }
 
     this.logger.log(`Payment confirmed for SR ${serviceRequestId}`);
   }

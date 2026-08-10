@@ -63,12 +63,16 @@ export class QuotesController {
     return quote;
   }
 
-  // Cliente aprova
+  // Cliente aprova, escolhendo pagar online ou em dinheiro
   @Post('service-requests/:id/quote/approve')
   @HttpCode(HttpStatus.OK)
   @Roles('CLIENT')
-  approve(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
-    return this.respondQuote.approve(user.id, id);
+  approve(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body('paymentMethod') paymentMethod: 'ONLINE' | 'CASH',
+  ) {
+    return this.respondQuote.approve(user.id, id, paymentMethod);
   }
 
   // Cliente rejeita

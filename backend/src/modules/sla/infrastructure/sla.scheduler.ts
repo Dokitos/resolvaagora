@@ -4,6 +4,14 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '@shared/infrastructure/database/prisma.service';
 import { RabbitMQService } from '@shared/infrastructure/messaging/rabbitmq.service';
 import { NotificationsGateway } from '../../notifications/presentation/notifications.gateway';
+import { FcmService } from '../../notifications/infrastructure/fcm.service';
+
+const METRIC_LABELS: Record<string, string> = {
+  FIRST_RESPONSE: 'Primeira resposta',
+  ARRIVAL: 'Chegada do técnico',
+  RESOLUTION: 'Resolução do pedido',
+  QUOTE_EXPIRY: 'Expiração de orçamento',
+};
 
 @Injectable()
 export class SlaScheduler {
@@ -13,6 +21,7 @@ export class SlaScheduler {
     private readonly prisma: PrismaService,
     private readonly rabbitmq: RabbitMQService,
     private readonly gateway: NotificationsGateway,
+    private readonly fcm: FcmService,
     private readonly config: ConfigService,
   ) {}
 
@@ -121,6 +130,26 @@ export class SlaScheduler {
 
     // Push WebSocket para admins
     this.gateway.emitToAll('sla-alert', { serviceRequestId, metric, level });
+
+    // Notificação in-app + push para todos os admins — antes disto, o alerta
+    // só era visível para quem estivesse com a página SLA aberta no browser.
+    const admins = await this.prisma.user.findMany({ where: { role: 'ADMIN' }, select: { id: true } });
+    const label = METRIC_LABELS[metric] ?? metric;
+    const title = `Alerta SLA (${level === 'CRITICAL' ? 'crítico' : 'aviso'})`;
+    const body = `${label} — pedido ${serviceRequestId.slice(0, 8)} ultrapassou o limite.`;
+    for (const admin of admins) {
+      await this.prisma.notification.create({
+        data: { userId: admin.id, type: 'SLA_ALERT', title, body, data: { serviceRequestId, metric, level } },
+      });
+      try {
+        const tokens = await this.prisma.fcmToken.findMany({ where: { userId: admin.id } });
+        if (tokens.length) {
+          await this.fcm.sendToMultiple(tokens.map((t) => t.token), title, body, { serviceRequestId });
+        }
+      } catch (e) {
+        this.logger.error(`Falha no push (SLA) para ${admin.id}: ${e}`);
+      }
+    }
 
     this.logger.warn(`SLA ${level} alert: ${metric} for SR ${serviceRequestId}`);
   }

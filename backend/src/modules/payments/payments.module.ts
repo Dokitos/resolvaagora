@@ -4,6 +4,7 @@ import { StripeService } from './infrastructure/stripe.service';
 import { CreateDisplacementPaymentUseCase } from './application/use-cases/create-displacement-payment.use-case';
 import { CreateOrderPaymentUseCase } from './application/use-cases/create-order-payment.use-case';
 import { HandleStripeWebhookUseCase } from './application/use-cases/handle-stripe-webhook.use-case';
+import { PayQuoteUseCase } from './application/use-cases/pay-quote.use-case';
 import { SettingsModule } from '../settings/settings.module';
 import { PromotionsModule } from '../promotions/promotions.module';
 
@@ -15,7 +16,8 @@ import { PromotionsModule } from '../promotions/promotions.module';
     CreateDisplacementPaymentUseCase,
     CreateOrderPaymentUseCase,
     HandleStripeWebhookUseCase,
+    PayQuoteUseCase,
   ],
-  exports: [StripeService],
+  exports: [StripeService, PayQuoteUseCase],
 })
 export class PaymentsModule {}

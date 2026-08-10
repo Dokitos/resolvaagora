@@ -73,6 +73,7 @@ enum QuoteStatus {
 enum PaymentType {
   DISPLACEMENT
   SERVICE
+  QUOTE
 }
 
 enum PaymentStatus {
@@ -80,6 +81,11 @@ enum PaymentStatus {
   COMPLETED
   FAILED
   REFUNDED
+}
+
+enum PaymentMethod {
+  ONLINE
+  CASH
 }
 
 enum SubscriptionStatus {
@@ -145,7 +151,7 @@ model User {
   fcmTokens       FcmToken[]
   notifications   Notification[]
   statusChanges   ServiceStatusHistory[]
-  supportMessages SupportMessage[]      @relation("ClientSupportMessages")
+  supportMessages SupportMessage[]       @relation("ClientSupportMessages")
 
   @@map("users")
 }
@@ -153,17 +159,17 @@ model User {
 // ─── CLIENT ──────────────────────────────────────────────────────────────────
 
 model Client {
-  id           String   @id @default(uuid())
-  userId       String   @unique @map("user_id")
-  firstName    String   @map("first_name")
-  lastName     String   @map("last_name")
-  phone        String?
-  nif          String?
-  photoUrl     String?  @map("photo_url")
-  emailNotifications Boolean @default(true) @map("email_notifications")
-  referralCode String?  @unique @map("referral_code")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id                 String   @id @default(uuid())
+  userId             String   @unique @map("user_id")
+  firstName          String   @map("first_name")
+  lastName           String   @map("last_name")
+  phone              String?
+  nif                String?
+  photoUrl           String?  @map("photo_url")
+  emailNotifications Boolean  @default(true) @map("email_notifications")
+  referralCode       String?  @unique @map("referral_code")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
 
   user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   addresses       Address[]
@@ -212,7 +218,7 @@ model Technician {
   createdAt         DateTime         @default(now()) @map("created_at")
   updatedAt         DateTime         @updatedAt @map("updated_at")
 
-  user              User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
   specialties       TechnicianSpecialty[]
   coverageDistricts TechnicianDistrict[]
   serviceRequests   ServiceRequest[]
@@ -323,13 +329,13 @@ model ServicePhoto {
 }
 
 model ServiceStatusHistory {
-  id               String        @id @default(uuid())
-  serviceRequestId String        @map("service_request_id")
+  id               String         @id @default(uuid())
+  serviceRequestId String         @map("service_request_id")
   oldStatus        ServiceStatus? @map("old_status")
-  newStatus        ServiceStatus @map("new_status")
-  changedByUserId  String?       @map("changed_by_user_id")
-  notes            String?       @db.Text
-  createdAt        DateTime      @default(now()) @map("created_at")
+  newStatus        ServiceStatus  @map("new_status")
+  changedByUserId  String?        @map("changed_by_user_id")
+  notes            String?        @db.Text
+  createdAt        DateTime       @default(now()) @map("created_at")
 
   serviceRequest ServiceRequest @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
   changedBy      User?          @relation(fields: [changedByUserId], references: [id])
@@ -340,20 +346,21 @@ model ServiceStatusHistory {
 // ─── QUOTE ────────────────────────────────────────────────────────────────────
 
 model Quote {
-  id               String      @id @default(uuid())
-  serviceRequestId String      @unique @map("service_request_id")
-  technicianId     String      @map("technician_id")
-  description      String      @db.Text
-  laborCost        Decimal     @map("labor_cost") @db.Decimal(10, 2)
-  materialsCost    Decimal     @default(0) @map("materials_cost") @db.Decimal(10, 2)
-  vatRate          Decimal     @default(0.23) @map("vat_rate") @db.Decimal(4, 2)
-  totalCost        Decimal     @map("total_cost") @db.Decimal(10, 2)
-  status           QuoteStatus @default(PENDING)
-  expiresAt        DateTime    @map("expires_at")
-  respondedAt      DateTime?   @map("responded_at")
-  rejectionReason  String?     @map("rejection_reason") @db.Text
-  createdAt        DateTime    @default(now()) @map("created_at")
-  updatedAt        DateTime    @updatedAt @map("updated_at")
+  id               String         @id @default(uuid())
+  serviceRequestId String         @unique @map("service_request_id")
+  technicianId     String         @map("technician_id")
+  description      String         @db.Text
+  laborCost        Decimal        @map("labor_cost") @db.Decimal(10, 2)
+  materialsCost    Decimal        @default(0) @map("materials_cost") @db.Decimal(10, 2)
+  vatRate          Decimal        @default(0.23) @map("vat_rate") @db.Decimal(4, 2)
+  totalCost        Decimal        @map("total_cost") @db.Decimal(10, 2)
+  status           QuoteStatus    @default(PENDING)
+  paymentMethod    PaymentMethod? @map("payment_method")
+  expiresAt        DateTime       @map("expires_at")
+  respondedAt      DateTime?      @map("responded_at")
+  rejectionReason  String?        @map("rejection_reason") @db.Text
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
 
   serviceRequest ServiceRequest @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
   technician     Technician     @relation(fields: [technicianId], references: [id])
@@ -375,6 +382,7 @@ model Payment {
   stripePaymentIntentId String?       @unique @map("stripe_payment_intent_id")
   stripePaymentMethod   String?       @map("stripe_payment_method")
   stripeEventId         String?       @map("stripe_event_id")
+  refundedAmount        Decimal?      @map("refunded_amount") @db.Decimal(10, 2)
   paidAt                DateTime?     @map("paid_at")
   createdAt             DateTime      @default(now()) @map("created_at")
 
@@ -602,20 +610,22 @@ model Referral {
 // ─── APP SETTINGS (feature flags / maintenance) ───────────────────────────────
 
 model AppSetting {
-  id                  String   @id @default("app")
-  maintenanceMode     Boolean  @default(false) @map("maintenance_mode")
-  maintenanceMessage  String?  @map("maintenance_message")
-  registrationEnabled Boolean  @default(true)  @map("registration_enabled")
-  paymentsEnabled     Boolean  @default(true)  @map("payments_enabled")
-  paymentsTestMode    Boolean  @default(true)  @map("payments_test_mode")
-  smsVerificationEnabled Boolean @default(false) @map("sms_verification_enabled")
+  id                     String   @id @default("app")
+  maintenanceMode        Boolean  @default(false) @map("maintenance_mode")
+  maintenanceMessage     String?  @map("maintenance_message")
+  registrationEnabled    Boolean  @default(true) @map("registration_enabled")
+  paymentsEnabled        Boolean  @default(true) @map("payments_enabled")
+  paymentsTestMode       Boolean  @default(true) @map("payments_test_mode")
+  smsVerificationEnabled Boolean  @default(false) @map("sms_verification_enabled")
   // Origem e parâmetros do cálculo da taxa de deslocação por distância.
-  displacementOriginLat Float?  @default(38.7169) @map("displacement_origin_lat")
-  displacementOriginLng Float?  @default(-9.1395) @map("displacement_origin_lng")
-  displacementPerKm     Float   @default(1.10)    @map("displacement_per_km")
-  displacementBaseFee   Float   @default(0)       @map("displacement_base_fee")
-  displacementMinFee    Float   @default(0)       @map("displacement_min_fee")
-  updatedAt           DateTime @updatedAt @map("updated_at")
+  displacementOriginLat  Float?   @default(38.7169) @map("displacement_origin_lat")
+  displacementOriginLng  Float?   @default(-9.1395) @map("displacement_origin_lng")
+  displacementPerKm      Float    @default(1.10) @map("displacement_per_km")
+  displacementBaseFee    Float    @default(0) @map("displacement_base_fee")
+  displacementMinFee     Float    @default(0) @map("displacement_min_fee")
+  // Percentagem retida pela plataforma sobre o valor do orçamento (0-1).
+  commissionRate         Float    @default(0.15) @map("commission_rate")
+  updatedAt              DateTime @updatedAt @map("updated_at")
 
   @@map("app_settings")
 }

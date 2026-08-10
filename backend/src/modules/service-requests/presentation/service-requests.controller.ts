@@ -18,6 +18,7 @@ import { RolesGuard } from '../../auth/presentation/guards/roles.guard';
 import { CurrentUser } from '../../auth/presentation/decorators/current-user.decorator';
 import { AuthenticatedUser } from '../../auth/infrastructure/jwt.strategy';
 import { CreateServiceRequestUseCase } from '../application/use-cases/create-service-request.use-case';
+import { CancelServiceRequestUseCase } from '../application/use-cases/cancel-service-request.use-case';
 import { DisplacementFeeService } from '../application/displacement-fee.service';
 import { CreateServiceRequestDto } from '../application/dto/create-service-request.dto';
 import { CreateReviewDto } from '../application/dto/create-review.dto';
@@ -31,6 +32,7 @@ import { RabbitMQService } from '@shared/infrastructure/messaging/rabbitmq.servi
 export class ServiceRequestsController {
   constructor(
     private readonly createServiceRequest: CreateServiceRequestUseCase,
+    private readonly cancelServiceRequest: CancelServiceRequestUseCase,
     private readonly displacementFee: DisplacementFeeService,
     private readonly prisma: PrismaService,
     private readonly rabbitmq: RabbitMQService,
@@ -221,26 +223,12 @@ export class ServiceRequestsController {
   }
 
   @Delete(':id')
-  @HttpCode(HttpStatus.NO_CONTENT)
+  @HttpCode(HttpStatus.OK)
   async cancel(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
-    const clientUser = await this.prisma.user.findUnique({
-      where: { id: user.id },
-      include: { client: true },
+    return this.cancelServiceRequest.execute({
+      serviceRequestId: id,
+      actorUserId: user.id,
+      actorRole: 'CLIENT',
     });
-
-    await this.prisma.serviceRequest.updateMany({
-      where: {
-        id,
-        clientId: clientUser!.client!.id,
-        status: { in: ['DRAFT', 'AWAITING_PAYMENT'] },
-      },
-      data: { status: 'CANCELLED' },
-    });
-
-    await this.rabbitmq.publish(
-      this.rabbitmq.exchanges.serviceRequests,
-      'service-request.cancelled',
-      { serviceRequestId: id },
-    );
   }
 }

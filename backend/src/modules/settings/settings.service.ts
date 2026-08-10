@@ -24,6 +24,7 @@ export class SettingsService {
     displacementPerKm?: number;
     displacementBaseFee?: number;
     displacementMinFee?: number;
+    commissionRate?: number;
   }) {
     return this.prisma.appSetting.upsert({
       where: { id: 'app' },

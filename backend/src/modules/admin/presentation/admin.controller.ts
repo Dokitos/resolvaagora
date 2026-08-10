@@ -25,6 +25,7 @@ import { AuthenticatedUser } from '../../auth/infrastructure/jwt.strategy';
 import { NotificationsGateway } from '../../notifications/presentation/notifications.gateway';
 import { FcmService } from '../../notifications/infrastructure/fcm.service';
 import { SettingsService } from '../../settings/settings.service';
+import { CancelServiceRequestUseCase } from '../../service-requests/application/use-cases/cancel-service-request.use-case';
 
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -37,6 +38,7 @@ export class AdminController {
     private readonly gateway: NotificationsGateway,
     private readonly fcm: FcmService,
     private readonly settings: SettingsService,
+    private readonly cancelServiceRequestUseCase: CancelServiceRequestUseCase,
   ) {}
 
   // ─── DASHBOARD ────────────────────────────────────────────────────────────
@@ -211,35 +213,27 @@ export class AdminController {
   async cancelServiceRequest(
     @Param('id') id: string,
     @Body('reason') reason: string | undefined,
+    @Body('force') force: boolean | undefined,
+    @Body('refundAmount') refundAmount: number | undefined,
     @CurrentUser() admin: AuthenticatedUser,
   ) {
-    const sr = await this.prisma.serviceRequest.findUnique({
-      where: { id },
-      include: { client: true },
-    });
-    if (!sr) throw new NotFoundException('Pedido não encontrado');
-
-    const updated = await this.prisma.serviceRequest.update({
-      where: { id },
-      data: {
-        status: 'CANCELLED',
-        cancellationReason: reason ?? 'Cancelado pelo administrador',
-        statusHistory: {
-          create: {
-            oldStatus: sr.status,
-            newStatus: 'CANCELLED',
-            changedByUserId: admin.id,
-            notes: reason ?? 'Cancelado pelo administrador',
-          },
-        },
-      },
-    });
-
-    this.gateway.emitToUser(sr.client.userId, 'service-status-updated', {
+    const result = await this.cancelServiceRequestUseCase.execute({
       serviceRequestId: id,
-      newStatus: 'CANCELLED',
+      actorUserId: admin.id,
+      actorRole: 'ADMIN',
+      reason,
+      forceOverride: force === true,
+      refundAmount: refundAmount != null ? Number(refundAmount) : undefined,
     });
-    return updated;
+
+    const sr = await this.prisma.serviceRequest.findUnique({ where: { id }, include: { client: true } });
+    if (sr) {
+      this.gateway.emitToUser(sr.client.userId, 'service-status-updated', {
+        serviceRequestId: id,
+        newStatus: 'CANCELLED',
+      });
+    }
+    return result;
   }
 
   @Delete('service-requests/:id')
@@ -402,14 +396,32 @@ export class AdminController {
   // ─── SLA ALERTS ───────────────────────────────────────────────────────────
 
   @Get('sla-alerts')
-  getSlaAlerts() {
+  getSlaAlerts(@Query('resolved') resolved?: string) {
+    const showResolved = resolved === 'true';
     return this.prisma.slaAlert.findMany({
-      where: { resolvedAt: null },
+      where: showResolved ? { resolvedAt: { not: null } } : { resolvedAt: null },
       include: {
         serviceRequest: { include: { client: true, technician: true, address: true } },
       },
-      orderBy: [{ level: 'desc' }, { triggeredAt: 'asc' }],
+      orderBy: showResolved ? [{ resolvedAt: 'desc' }] : [{ level: 'desc' }, { triggeredAt: 'asc' }],
+      take: showResolved ? 100 : undefined,
     });
+  }
+
+  @Get('sla-alerts/summary')
+  async getSlaAlertsSummary() {
+    const active = await this.prisma.slaAlert.findMany({
+      where: { resolvedAt: null },
+      select: { metric: true, level: true },
+    });
+    const byMetric = new Map<string, { warning: number; critical: number }>();
+    for (const a of active) {
+      const b = byMetric.get(a.metric) ?? { warning: 0, critical: 0 };
+      if (a.level === 'CRITICAL') b.critical += 1;
+      else b.warning += 1;
+      byMetric.set(a.metric, b);
+    }
+    return Array.from(byMetric.entries()).map(([metric, counts]) => ({ metric, ...counts }));
   }
 
   @Patch('sla-alerts/:id/acknowledge')
@@ -445,7 +457,8 @@ export class AdminController {
 
     // O pagamento real do pedido é UM único Payment do tipo SERVICE, com
     // amount = itens + deslocação, ligado ao ServiceRequest (que guarda a
-    // displacementFee). A comissão da plataforma é 15% dos itens.
+    // displacementFee). A comissão da plataforma é definida em Definições.
+    const { commissionRate } = await this.settings.get();
     const [orderPayments, subscriptions, earnings, pendingRequests] = await Promise.all([
       this.prisma.payment.findMany({
         where: { type: 'SERVICE', status: 'COMPLETED', paidAt: dateFilter },
@@ -487,7 +500,7 @@ export class AdminController {
       const amount = Number(p.amount);
       const disp = Number(p.serviceRequest?.displacementFee ?? 0);
       const items = amount - disp;
-      const commission = items * 0.15;
+      const commission = items * commissionRate;
 
       displacementTotal += disp;
       commissionsTotal += commission;
@@ -553,6 +566,7 @@ export class AdminController {
     }
 
     return {
+      commissionRate,
       displacement: { total: round(displacementTotal), count: orderPayments.length },
       commissions: { total: round(commissionsTotal), count: orderPayments.length },
       subscriptions: { total: round(subscriptionsTotal), count: subscriptions.length },
@@ -568,10 +582,105 @@ export class AdminController {
     };
   }
 
+  /**
+   * Lista unificada de todas as transações (pagamentos de pedidos +
+   * subscrições), paginada e ordenada da mais recente para a mais antiga.
+   * As subscrições não têm registo próprio na tabela Payment (são geridas
+   * via Stripe Billing + cache Redis), por isso são combinadas aqui a partir
+   * do modelo Subscription para dar uma vista realmente completa.
+   */
+  @Get('transactions')
+  async listTransactions(
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('page') pageQ?: string,
+  ) {
+    const dateFilter = {
+      ...(from && { gte: new Date(`${from}T00:00:00`) }),
+      ...(to && { lte: new Date(`${to}T23:59:59.999`) }),
+    };
+    const page = Math.max(1, Number(pageQ) || 1);
+    const pageSize = 30;
+
+    const [payments, subscriptions] = await Promise.all([
+      this.prisma.payment.findMany({
+        where: { createdAt: dateFilter },
+        include: {
+          serviceRequest: {
+            include: { client: true, technician: true },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.subscription.findMany({
+        where: { startsAt: dateFilter },
+        include: { client: true, plan: true },
+        orderBy: { startsAt: 'desc' },
+      }),
+    ]);
+
+    type Transaction = {
+      id: string;
+      type: 'DISPLACEMENT' | 'SERVICE' | 'QUOTE' | 'SUBSCRIPTION';
+      amount: number;
+      currency: string;
+      status: string;
+      clientName: string;
+      technicianName: string | null;
+      specialty: string | null;
+      description: string | null;
+      date: Date;
+      reference: string | null;
+    };
+
+    const items: Transaction[] = [
+      ...payments.map((p): Transaction => ({
+        id: p.id,
+        type: p.type,
+        amount: Number(p.amount),
+        currency: p.currency,
+        status: p.status,
+        clientName: p.serviceRequest?.client
+          ? `${p.serviceRequest.client.firstName} ${p.serviceRequest.client.lastName}`
+          : 'Cliente desconhecido',
+        technicianName: p.serviceRequest?.technician
+          ? `${p.serviceRequest.technician.firstName} ${p.serviceRequest.technician.lastName}`
+          : null,
+        specialty: p.serviceRequest?.specialty ?? null,
+        description: null,
+        date: p.paidAt ?? p.createdAt,
+        reference: p.stripePaymentIntentId,
+      })),
+      ...subscriptions.map((s): Transaction => ({
+        id: s.id,
+        type: 'SUBSCRIPTION',
+        amount: Number(s.plan.yearlyPrice),
+        currency: 'EUR',
+        status: s.status,
+        clientName: `${s.client.firstName} ${s.client.lastName}`,
+        technicianName: null,
+        specialty: null,
+        description: s.plan.name,
+        date: s.startsAt,
+        reference: s.stripeSubscriptionId,
+      })),
+    ].sort((a, b) => b.date.getTime() - a.date.getTime());
+
+    const total = items.length;
+    const start = (page - 1) * pageSize;
+    return { items: items.slice(start, start + pageSize), total, page, pageSize };
+  }
+
   // ─── ANALYTICS ────────────────────────────────────────────────────────────
 
   @Get('analytics')
-  async analytics() {
+  async analytics(@Query('from') fromQ?: string, @Query('to') toQ?: string) {
+    // Sem parâmetros: últimos 30 dias por omissão (mesmo período que já era
+    // usado antes de existir seletor). `to` inclui o dia inteiro (23:59:59).
+    const to = toQ ? new Date(`${toQ}T23:59:59.999`) : new Date();
+    const from = fromQ ? new Date(`${fromQ}T00:00:00`) : new Date(to.getTime() - 30 * 86400000);
+    const range = { from, to };
+
     const [
       requestsBySpecialty,
       avgRating,
@@ -590,21 +699,22 @@ export class AdminController {
     ] = await Promise.all([
       this.prisma.serviceRequest.groupBy({
         by: ['specialty'],
+        where: { createdAt: { gte: from, lte: to } },
         _count: { specialty: true },
       }),
-      this.prisma.review.aggregate({ _avg: { rating: true } }),
-      this.getQuoteAcceptanceRate(),
-      this.getCompletionRate(),
-      this.getAnalyticsTotals(),
-      this.getGrowth(30),
-      this.getFunnel(),
-      this.getOperationalTimings(),
-      this.getRatingDistribution(),
-      this.getRecentReviews(),
-      this.getTopTechnicians(),
-      this.getClientRetention(),
-      this.getRequestsByDistrict(),
-      this.getReferralsSummary(),
+      this.prisma.review.aggregate({ where: { createdAt: { gte: from, lte: to } }, _avg: { rating: true } }),
+      this.getQuoteAcceptanceRate(range),
+      this.getCompletionRate(range),
+      this.getAnalyticsTotals(range),
+      this.getGrowth(range),
+      this.getFunnel(range),
+      this.getOperationalTimings(range),
+      this.getRatingDistribution(range),
+      this.getRecentReviews(range),
+      this.getTopTechnicians(range),
+      this.getClientRetention(range),
+      this.getRequestsByDistrict(range),
+      this.getReferralsSummary(range),
     ]);
 
     return {
@@ -628,30 +738,31 @@ export class AdminController {
     };
   }
 
-  private async getAnalyticsTotals() {
+  /** clients/technicians ficam sempre ao total atual (contagem, não um fluxo
+   * "no período") — serviceRequests/completedRequests já refletem o período. */
+  private async getAnalyticsTotals({ from, to }: { from: Date; to: Date }) {
     const [clients, technicians, serviceRequests, completedRequests] = await Promise.all([
       this.prisma.client.count(),
       this.prisma.technician.count(),
-      this.prisma.serviceRequest.count(),
-      this.prisma.serviceRequest.count({ where: { status: 'COMPLETED' } }),
+      this.prisma.serviceRequest.count({ where: { createdAt: { gte: from, lte: to } } }),
+      this.prisma.serviceRequest.count({ where: { status: 'COMPLETED', createdAt: { gte: from, lte: to } } }),
     ]);
     return { clients, technicians, serviceRequests, completedRequests };
   }
 
-  /** Novos clientes e novos pedidos por dia, últimos `days` dias. */
-  private async getGrowth(days: number) {
+  /** Novos clientes e novos pedidos por dia, dentro do período selecionado. */
+  private async getGrowth({ from, to }: { from: Date; to: Date }) {
     // Tudo em UTC (getUTC*/Date.UTC) de propósito — misturar aritmética de
     // data local com chaves toISOString() (sempre UTC) desalinha os buckets
     // consoante o fuso horário do servidor e alguns registos "caem fora" do
     // mapa pré-preenchido.
-    const now = new Date();
-    const todayUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
-    const sinceUtc = todayUtc - days * 86400000;
-    const since = new Date(sinceUtc);
+    const sinceUtc = Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), from.getUTCDate());
+    const untilUtc = Date.UTC(to.getUTCFullYear(), to.getUTCMonth(), to.getUTCDate());
+    const days = Math.max(0, Math.round((untilUtc - sinceUtc) / 86400000));
 
     const [clients, requests] = await Promise.all([
-      this.prisma.client.findMany({ where: { createdAt: { gte: since } }, select: { createdAt: true } }),
-      this.prisma.serviceRequest.findMany({ where: { createdAt: { gte: since } }, select: { createdAt: true } }),
+      this.prisma.client.findMany({ where: { createdAt: { gte: from, lte: to } }, select: { createdAt: true } }),
+      this.prisma.serviceRequest.findMany({ where: { createdAt: { gte: from, lte: to } }, select: { createdAt: true } }),
     ]);
 
     const dayKey = (d: Date) => d.toISOString().slice(0, 10);
@@ -673,35 +784,33 @@ export class AdminController {
       .map(([date, v]) => ({ date, ...v }));
   }
 
-  /** Agrupa os estados do pedido em 4 fases do funil de conversão. */
-  private async getFunnel() {
+  /** Agrupa os estados do pedido (criados no período) em 4 fases do funil. */
+  private async getFunnel({ from, to }: { from: Date; to: Date }) {
     const draftStatuses = ['DRAFT', 'AWAITING_PAYMENT'] as const;
     const inProgressStatuses = [
       'PAID', 'IN_DISTRIBUTION', 'ASSIGNED', 'IN_TRANSIT', 'ARRIVED',
       'IN_DIAGNOSIS', 'QUOTE_SENT', 'QUOTE_APPROVED', 'IN_EXECUTION',
     ] as const;
     const cancelledStatuses = ['CANCELLED', 'QUOTE_REJECTED', 'EXPIRED'] as const;
+    const createdAt = { gte: from, lte: to };
 
     const [draft, inProgress, completed, cancelled] = await Promise.all([
-      this.prisma.serviceRequest.count({ where: { status: { in: [...draftStatuses] } } }),
-      this.prisma.serviceRequest.count({ where: { status: { in: [...inProgressStatuses] } } }),
-      this.prisma.serviceRequest.count({ where: { status: 'COMPLETED' } }),
-      this.prisma.serviceRequest.count({ where: { status: { in: [...cancelledStatuses] } } }),
+      this.prisma.serviceRequest.count({ where: { status: { in: [...draftStatuses] }, createdAt } }),
+      this.prisma.serviceRequest.count({ where: { status: { in: [...inProgressStatuses] }, createdAt } }),
+      this.prisma.serviceRequest.count({ where: { status: 'COMPLETED', createdAt } }),
+      this.prisma.serviceRequest.count({ where: { status: { in: [...cancelledStatuses] }, createdAt } }),
     ]);
     return { draft, inProgress, completed, cancelled };
   }
 
   /**
-   * Tempo médio (minutos) entre transições de estado chave, últimos 90 dias.
-   * Calculado a partir do histórico real (service_status_history), não de
-   * estimativas — dá visibilidade direta a onde o processo é mais lento.
+   * Tempo médio (minutos) entre transições de estado chave, no período
+   * selecionado. Calculado a partir do histórico real (service_status_history),
+   * não de estimativas — dá visibilidade direta a onde o processo é mais lento.
    */
-  private async getOperationalTimings() {
-    const since = new Date();
-    since.setDate(since.getDate() - 90);
-
+  private async getOperationalTimings({ from, to }: { from: Date; to: Date }) {
     const history = await this.prisma.serviceStatusHistory.findMany({
-      where: { createdAt: { gte: since }, newStatus: { in: ['PAID', 'ASSIGNED', 'ARRIVED', 'IN_EXECUTION', 'COMPLETED'] } },
+      where: { createdAt: { gte: from, lte: to }, newStatus: { in: ['PAID', 'ASSIGNED', 'ARRIVED', 'IN_EXECUTION', 'COMPLETED'] } },
       select: { serviceRequestId: true, newStatus: true, createdAt: true },
       orderBy: { createdAt: 'asc' },
     });
@@ -733,14 +842,15 @@ export class AdminController {
     };
   }
 
-  private async getRatingDistribution() {
-    const rows = await this.prisma.review.groupBy({ by: ['rating'], _count: true });
+  private async getRatingDistribution({ from, to }: { from: Date; to: Date }) {
+    const rows = await this.prisma.review.groupBy({ by: ['rating'], where: { createdAt: { gte: from, lte: to } }, _count: true });
     const byRating = new Map(rows.map((r) => [r.rating, r._count]));
     return [5, 4, 3, 2, 1].map((stars) => ({ stars, count: byRating.get(stars) ?? 0 }));
   }
 
-  private async getRecentReviews() {
+  private async getRecentReviews({ from, to }: { from: Date; to: Date }) {
     const reviews = await this.prisma.review.findMany({
+      where: { createdAt: { gte: from, lte: to } },
       take: 8,
       orderBy: { createdAt: 'desc' },
       include: {
@@ -758,12 +868,12 @@ export class AdminController {
     }));
   }
 
-  /** Top 8 técnicos por serviços concluídos, com a avaliação média de cada um. */
-  private async getTopTechnicians() {
+  /** Top 8 técnicos por serviços concluídos no período, com a avaliação média (geral, não só do período). */
+  private async getTopTechnicians({ from, to }: { from: Date; to: Date }) {
     const [completedByTech, ratingByTech] = await Promise.all([
       this.prisma.serviceRequest.groupBy({
         by: ['technicianId'],
-        where: { status: 'COMPLETED', technicianId: { not: null } },
+        where: { status: 'COMPLETED', technicianId: { not: null }, createdAt: { gte: from, lte: to } },
         _count: true,
       }),
       this.prisma.review.groupBy({ by: ['technicianId'], _avg: { rating: true } }),
@@ -790,11 +900,11 @@ export class AdminController {
     }));
   }
 
-  /** % de clientes com mais de um pedido — proxy simples de retenção. */
-  private async getClientRetention() {
+  /** % de clientes com mais de um pedido no período — proxy simples de retenção. */
+  private async getClientRetention({ from, to }: { from: Date; to: Date }) {
     const [totalClients, byClient] = await Promise.all([
       this.prisma.client.count(),
-      this.prisma.serviceRequest.groupBy({ by: ['clientId'], _count: true }),
+      this.prisma.serviceRequest.groupBy({ by: ['clientId'], where: { createdAt: { gte: from, lte: to } }, _count: true }),
     ]);
     const repeatClients = byClient.filter((c) => c._count > 1).length;
     return {
@@ -804,9 +914,10 @@ export class AdminController {
     };
   }
 
-  /** Pedidos por distrito (via morada do serviço) — os 8 maiores. */
-  private async getRequestsByDistrict() {
+  /** Pedidos por distrito no período (via morada do serviço) — os 8 maiores. */
+  private async getRequestsByDistrict({ from, to }: { from: Date; to: Date }) {
     const requests = await this.prisma.serviceRequest.findMany({
+      where: { createdAt: { gte: from, lte: to } },
       select: { address: { select: { district: true } } },
     });
     const byDistrict = new Map<string, number>();
@@ -820,10 +931,10 @@ export class AdminController {
       .slice(0, 8);
   }
 
-  private async getReferralsSummary() {
+  private async getReferralsSummary({ from, to }: { from: Date; to: Date }) {
     const [total, completed] = await Promise.all([
-      this.prisma.referral.count(),
-      this.prisma.referral.count({ where: { status: 'COMPLETED' } }),
+      this.prisma.referral.count({ where: { createdAt: { gte: from, lte: to } } }),
+      this.prisma.referral.count({ where: { status: 'COMPLETED', createdAt: { gte: from, lte: to } } }),
     ]);
     return { total, completed };
   }
@@ -1098,6 +1209,7 @@ export class AdminController {
       displacementPerKm: num(data.displacementPerKm),
       displacementBaseFee: num(data.displacementBaseFee),
       displacementMinFee: num(data.displacementMinFee),
+      commissionRate: num(data.commissionRate),
     });
   }
 
@@ -1177,18 +1289,20 @@ export class AdminController {
     return d;
   }
 
-  private async getQuoteAcceptanceRate(): Promise<number> {
+  private async getQuoteAcceptanceRate({ from, to }: { from: Date; to: Date }): Promise<number> {
+    const createdAt = { gte: from, lte: to };
     const [total, approved] = await Promise.all([
-      this.prisma.quote.count({ where: { status: { not: 'PENDING' } } }),
-      this.prisma.quote.count({ where: { status: 'APPROVED' } }),
+      this.prisma.quote.count({ where: { status: { not: 'PENDING' }, createdAt } }),
+      this.prisma.quote.count({ where: { status: 'APPROVED', createdAt } }),
     ]);
     return total > 0 ? Math.round((approved / total) * 100) : 0;
   }
 
-  private async getCompletionRate(): Promise<number> {
+  private async getCompletionRate({ from, to }: { from: Date; to: Date }): Promise<number> {
+    const createdAt = { gte: from, lte: to };
     const [total, completed] = await Promise.all([
-      this.prisma.serviceRequest.count({ where: { status: { notIn: ['DRAFT', 'AWAITING_PAYMENT'] } } }),
-      this.prisma.serviceRequest.count({ where: { status: 'COMPLETED' } }),
+      this.prisma.serviceRequest.count({ where: { status: { notIn: ['DRAFT', 'AWAITING_PAYMENT'] }, createdAt } }),
+      this.prisma.serviceRequest.count({ where: { status: 'COMPLETED', createdAt } }),
     ]);
     return total > 0 ? Math.round((completed / total) * 100) : 0;
   }
