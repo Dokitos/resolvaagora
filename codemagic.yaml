@@ -1,6 +1,8 @@
 workflows:
-  # Corre em cada push — só compila (sem assinatura) para confirmar que o
-  # projeto iOS continua válido. Não precisa de conta Apple Developer.
+  # Corre em cada push a main que altere algo dentro de mobile-technician/ —
+  # só compila (sem assinatura) para confirmar que o projeto iOS continua
+  # válido. Não precisa de conta Apple Developer. Alterações só no backend/
+  # ou frontend-web/ não disparam este build (ver "when: changeset" abaixo).
   ios-build-verify:
     name: iOS - Build de verificação (sem assinatura)
     max_build_duration: 30
@@ -16,6 +18,10 @@ workflows:
       branch_patterns:
         - pattern: main
           include: true
+    when:
+      changeset:
+        includes:
+          - 'mobile-technician/'
     scripts:
       - name: Get Flutter packages
         script: flutter pub get
@@ -93,8 +99,10 @@ workflows:
   #      ficheiro JSON da conta de serviço (marcar "Secret").
   #   4. A app tem de já ter sido submetida manualmente à Play Console pelo
   #      menos uma vez (a API não cria a ficha da app, só publica versões).
-  # Depois disso, cada push a "main" gera um app bundle assinado e publica-o
-  # automaticamente na faixa de testes interna da Play Store.
+  # Depois disso, cada push a "main" que altere algo dentro de
+  # mobile-technician/ gera um app bundle assinado e publica-o automaticamente
+  # na faixa de testes interna da Play Store. Alterações só no backend/ ou
+  # frontend-web/ não disparam este build (ver "when: changeset" abaixo).
   android-release:
     name: Android - Build assinado + Play Store (testes internos)
     max_build_duration: 60
@@ -112,6 +120,10 @@ workflows:
       branch_patterns:
         - pattern: main
           include: true
+    when:
+      changeset:
+        includes:
+          - 'mobile-technician/'
     scripts:
       - name: Get Flutter packages
         script: flutter pub get
