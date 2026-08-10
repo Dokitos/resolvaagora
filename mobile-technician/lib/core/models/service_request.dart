@@ -91,6 +91,7 @@ class Quote {
   final String status;
   final DateTime expiresAt;
   final DateTime createdAt;
+  final String? paymentMethod; // 'ONLINE' | 'CASH' | null (antes de aprovado)
 
   const Quote({
     required this.id,
@@ -102,6 +103,7 @@ class Quote {
     required this.status,
     required this.expiresAt,
     required this.createdAt,
+    this.paymentMethod,
   });
 
   factory Quote.fromJson(Map<String, dynamic> j) => Quote(
@@ -113,6 +115,38 @@ class Quote {
     totalCost: _toDouble(j['totalCost']),
     status: j['status'] as String,
     expiresAt: DateTime.parse(j['expiresAt'] as String),
+    createdAt: DateTime.parse(j['createdAt'] as String),
+    paymentMethod: j['paymentMethod'] as String?,
+  );
+}
+
+/// Pagamento associado a um pedido (deslocação, serviço ou orçamento).
+class PaymentInfo {
+  final String id;
+  final String type; // 'DISPLACEMENT' | 'SERVICE' | 'QUOTE'
+  final double amount;
+  final String currency;
+  final String status; // 'PENDING' | 'COMPLETED' | 'FAILED' | 'REFUNDED'
+  final DateTime? paidAt;
+  final DateTime createdAt;
+
+  const PaymentInfo({
+    required this.id,
+    required this.type,
+    required this.amount,
+    required this.currency,
+    required this.status,
+    this.paidAt,
+    required this.createdAt,
+  });
+
+  factory PaymentInfo.fromJson(Map<String, dynamic> j) => PaymentInfo(
+    id: j['id'] as String,
+    type: j['type'] as String,
+    amount: _toDouble(j['amount']),
+    currency: j['currency'] as String? ?? 'EUR',
+    status: j['status'] as String,
+    paidAt: j['paidAt'] != null ? DateTime.parse(j['paidAt'] as String) : null,
     createdAt: DateTime.parse(j['createdAt'] as String),
   );
 }
@@ -194,6 +228,7 @@ class ServiceRequest {
   final String? technicianName;
   final List<StatusHistoryEntry> statusHistory;
   final ReviewInfo? review;
+  final List<PaymentInfo> payments;
 
   const ServiceRequest({
     required this.id,
@@ -213,6 +248,7 @@ class ServiceRequest {
     this.technicianName,
     this.statusHistory = const [],
     this.review,
+    this.payments = const [],
   });
 
   List<ServicePhoto> get proofPhotos =>
@@ -257,5 +293,9 @@ class ServiceRequest {
             .toList() ??
         const [],
     review: j['review'] != null ? ReviewInfo.fromJson(j['review'] as Map<String, dynamic>) : null,
+    payments: (j['payments'] as List<dynamic>?)
+            ?.map((e) => PaymentInfo.fromJson(e as Map<String, dynamic>))
+            .toList() ??
+        const [],
   );
 }

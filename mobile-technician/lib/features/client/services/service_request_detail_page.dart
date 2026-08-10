@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/models/service_request.dart';
 import '../../../core/services/client_service.dart';
+import '../../../core/services/settings_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/shimmer.dart';
@@ -199,7 +201,42 @@ class _Detail extends ConsumerWidget {
             ],
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 12),
+
+        // Pagamento online do orçamento ainda não confirmado — o técnico não
+        // pode iniciar o trabalho enquanto isto não for resolvido.
+        if (_needsQuotePaymentRetry) ...[
+          _Card(
+            title: 'Pagamento pendente',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'O pagamento online do orçamento ainda não foi confirmado. '
+                  'O técnico só pode iniciar o trabalho depois de confirmares o pagamento.',
+                  style: TextStyle(fontSize: 13.5, height: 1.4),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => _retryQuotePayment(context, ref),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.brandBlue,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                    ),
+                    icon: const Icon(Icons.payment_outlined),
+                    label: const Text('Tentar pagamento novamente', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
 
         // Responder ao orçamento — aceitar/recusar dentro do prazo definido.
         if (request.status == ServiceStatus.QUOTE_SENT && request.quote != null) ...[
@@ -229,7 +266,8 @@ class _Detail extends ConsumerWidget {
           const SizedBox(height: 12),
         ],
 
-        // Cancel
+        // Cancel — a cópia do diálogo de confirmação varia consoante o nível
+        // (grátis / mantém taxa de deslocação), calculado em [_confirmCancel].
         if (ServiceStatusUi.cancellable(request.status))
           OutlinedButton.icon(
             onPressed: () => _confirmCancel(context, ref),
@@ -275,11 +313,19 @@ class _Detail extends ConsumerWidget {
   }
 
   Future<void> _confirmCancel(BuildContext context, WidgetRef ref) async {
+    final tier = ServiceStatusUi.cancelTier(request.status);
+    if (tier == CancelTier.none || tier == CancelTier.blocked) return;
+    final isFree = tier == CancelTier.free;
+
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Cancelar pedido?'),
-        content: const Text('Tens a certeza que queres cancelar este pedido? Esta ação não pode ser revertida.'),
+        content: Text(
+          isFree
+              ? 'Tens a certeza que queres cancelar este pedido? Nesta fase o cancelamento é gratuito — qualquer valor já pago é totalmente reembolsado.'
+              : 'Tens a certeza que queres cancelar este pedido? A taxa de deslocação já não é reembolsável nesta fase, mas o restante valor pago é devolvido.',
+        ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Não')),
           TextButton(
@@ -291,13 +337,23 @@ class _Detail extends ConsumerWidget {
     );
     if (ok != true) return;
     try {
-      await ref.read(clientServiceProvider).cancelServiceRequest(request.id);
+      final result = await ref.read(clientServiceProvider).cancelServiceRequest(request.id);
       ref.invalidate(clientServiceRequestsProvider);
       ref.invalidate(serviceRequestDetailProvider(request.id));
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Pedido cancelado')),
-        );
+        final fmt = NumberFormat.currency(locale: 'pt_PT', symbol: '€');
+        final refunded = (result['refunded'] as num?)?.toDouble() ?? 0;
+        final kept = (result['kept'] as num?)?.toDouble() ?? 0;
+        final String msg;
+        if (refunded > 0 && kept > 0) {
+          msg = 'Pedido cancelado. ${fmt.format(refunded)} foi reembolsado '
+              '(${fmt.format(kept)} da taxa de deslocação foi retido).';
+        } else if (refunded > 0) {
+          msg = 'Pedido cancelado. ${fmt.format(refunded)} foi reembolsado.';
+        } else {
+          msg = 'Pedido cancelado.';
+        }
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
       }
     } catch (_) {
       if (context.mounted) {
@@ -308,25 +364,49 @@ class _Detail extends ConsumerWidget {
     }
   }
 
+  /// Se o cliente escolheu pagar online mas o pagamento do orçamento ainda
+  /// não está confirmado, o técnico fica bloqueado de iniciar o trabalho —
+  /// mostra o banner com o botão de retry enquanto isso não for resolvido.
+  bool get _needsQuotePaymentRetry {
+    final quote = request.quote;
+    if (quote == null || quote.paymentMethod != 'ONLINE') return false;
+    final alreadyPaid = request.payments.any((p) => p.type == 'QUOTE' && p.status == 'COMPLETED');
+    if (alreadyPaid) return false;
+    const inactiveStatuses = {
+      ServiceStatus.CANCELLED,
+      ServiceStatus.QUOTE_REJECTED,
+      ServiceStatus.EXPIRED,
+      ServiceStatus.COMPLETED,
+    };
+    return !inactiveStatuses.contains(request.status);
+  }
+
   Future<void> _respondQuote(BuildContext context, WidgetRef ref, {required bool approve}) async {
     String? reason;
     if (approve) {
-      final ok = await showDialog<bool>(
+      final method = await showDialog<String>(
         context: context,
         builder: (_) => AlertDialog(
-          title: const Text('Aceitar orçamento?'),
+          title: const Text('Como queres pagar?'),
           content: const Text(
-              'Ao aceitar, autorizas o técnico a avançar com o serviço pelo valor apresentado.'),
+              'Ao aceitar, autorizas o técnico a avançar com o serviço pelo valor apresentado. Escolhe a forma de pagamento:'),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Voltar')),
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Voltar')),
             TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Sim, aceitar', style: TextStyle(color: Color(0xFF16A34A))),
+              onPressed: () => Navigator.pop(context, 'CASH'),
+              child: const Text('Dinheiro no final'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'ONLINE'),
+              child: const Text('Pagar agora online', style: TextStyle(color: Color(0xFF16A34A), fontWeight: FontWeight.bold)),
             ),
           ],
         ),
       );
-      if (ok != true) return;
+      if (method == null) return;
+      if (!context.mounted) return;
+      await _approveQuote(context, ref, paymentMethod: method);
+      return;
     } else {
       final controller = TextEditingController();
       final ok = await showDialog<bool>(
@@ -363,17 +443,12 @@ class _Detail extends ConsumerWidget {
     }
 
     try {
-      final svc = ref.read(clientServiceProvider);
-      if (approve) {
-        await svc.approveQuote(request.id);
-      } else {
-        await svc.rejectQuote(request.id, reason: reason);
-      }
+      await ref.read(clientServiceProvider).rejectQuote(request.id, reason: reason);
       ref.invalidate(clientServiceRequestsProvider);
       ref.invalidate(serviceRequestDetailProvider(request.id));
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(approve ? 'Orçamento aceite' : 'Orçamento recusado')),
+          const SnackBar(content: Text('Orçamento recusado')),
         );
       }
     } catch (_) {
@@ -383,6 +458,108 @@ class _Detail extends ConsumerWidget {
               content: Text('Não foi possível responder ao orçamento. O prazo pode ter terminado.')),
         );
       }
+    }
+  }
+
+  /// Aceita o orçamento com a forma de pagamento escolhida. Se for ONLINE e a
+  /// resposta trouxer `clientSecret`, apresenta a PaymentSheet da Stripe —
+  /// exatamente como em `payment_confirm_page.dart` / `subscription_page.dart`.
+  Future<void> _approveQuote(BuildContext context, WidgetRef ref, {required String paymentMethod}) async {
+    try {
+      final res = await ref.read(clientServiceProvider).approveQuote(request.id, paymentMethod: paymentMethod);
+      if (!context.mounted) return;
+      await _handleQuotePaymentResult(context, ref, res);
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Não foi possível responder ao orçamento. O prazo pode ter terminado.')),
+        );
+      }
+    }
+  }
+
+  /// Repete a cobrança online do orçamento (ex.: o cliente fechou a
+  /// PaymentSheet sem concluir da primeira vez).
+  Future<void> _retryQuotePayment(BuildContext context, WidgetRef ref) async {
+    try {
+      final res = await ref.read(clientServiceProvider).payQuote(request.id);
+      if (!context.mounted) return;
+      await _handleQuotePaymentResult(context, ref, res);
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Não foi possível iniciar o pagamento. Tenta novamente.')),
+        );
+      }
+    }
+  }
+
+  /// Trata a resposta comum a `approveQuote` (ONLINE) e `payQuote`:
+  /// - `clientSecret` presente → apresenta a PaymentSheet nativa da Stripe.
+  /// - `simulated`/`alreadyPaid` → já ficou pago no servidor, só refresca.
+  /// - caso contrário (ex.: aprovação em CASH) → só refresca e avisa.
+  Future<void> _handleQuotePaymentResult(
+    BuildContext context,
+    WidgetRef ref,
+    Map<String, dynamic> res,
+  ) async {
+    final clientSecret = res['clientSecret'] as String?;
+    if (clientSecret != null && clientSecret.isNotEmpty) {
+      final ok = await _presentPaymentSheet(context, ref, clientSecret);
+      ref.invalidate(clientServiceRequestsProvider);
+      ref.invalidate(serviceRequestDetailProvider(request.id));
+      if (ok && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Pagamento confirmado!')),
+        );
+      }
+      return;
+    }
+
+    ref.invalidate(clientServiceRequestsProvider);
+    ref.invalidate(serviceRequestDetailProvider(request.id));
+    if (!context.mounted) return;
+    final msg = (res['simulated'] == true || res['alreadyPaid'] == true)
+        ? 'Pagamento confirmado!'
+        : 'Orçamento aceite';
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  /// Apresenta a PaymentSheet nativa da Stripe para o `clientSecret` dado.
+  /// Mesmo idiom usado em `payment_confirm_page.dart` e `subscription_page.dart`.
+  /// Devolve `true` só quando o pagamento é concluído com sucesso.
+  Future<bool> _presentPaymentSheet(BuildContext context, WidgetRef ref, String clientSecret) async {
+    try {
+      final pk = ref.read(appSettingsProvider).valueOrNull?.stripePublishableKey ?? '';
+      if (pk.isEmpty) throw Exception('Pagamento indisponível de momento.');
+      Stripe.publishableKey = pk;
+      await Stripe.instance.applySettings();
+      await Stripe.instance.initPaymentSheet(
+        paymentSheetParameters: SetupPaymentSheetParameters(
+          paymentIntentClientSecret: clientSecret,
+          merchantDisplayName: 'ResolvaAgora',
+          style: ThemeMode.light,
+        ),
+      );
+      await Stripe.instance.presentPaymentSheet();
+      return true;
+    } on StripeException catch (_) {
+      // Cliente fechou/cancelou a folha de pagamento — fica por confirmar,
+      // o banner de retry vai aparecer depois do refresh.
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Pagamento cancelado. Podes tentar novamente mais tarde.')),
+        );
+      }
+      return false;
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Não foi possível concluir o pagamento. Tenta novamente.')),
+        );
+      }
+      return false;
     }
   }
 }

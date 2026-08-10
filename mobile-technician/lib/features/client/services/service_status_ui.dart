@@ -1,6 +1,14 @@
 import 'package:flutter/material.dart';
 import '../../../core/models/service_request.dart';
 
+/// Nível de cancelamento aplicável a um pedido, consoante o seu estado atual
+/// (espelha as regras do backend em `DELETE /service-requests/:id`):
+/// - [free]: cancelamento grátis, reembolso total do que foi pago.
+/// - [feeKept]: cancelamento permitido, mas a taxa de deslocação é retida.
+/// - [blocked]: já em execução — não é possível cancelar do lado do cliente.
+/// - [none]: nada a cancelar (já concluído/cancelado/rejeitado/expirado).
+enum CancelTier { free, feeKept, blocked, none }
+
 /// Customer-friendly label + colour for each [ServiceStatus].
 class ServiceStatusUi {
   final String label;
@@ -43,9 +51,38 @@ class ServiceStatusUi {
     }
   }
 
+  // Antes de o técnico se deslocar — cancelamento grátis, reembolso total.
+  static const _freeCancelStatuses = {
+    ServiceStatus.DRAFT,
+    ServiceStatus.AWAITING_PAYMENT,
+    ServiceStatus.PAID,
+    ServiceStatus.IN_DISTRIBUTION,
+    ServiceStatus.ASSIGNED,
+  };
+
+  // Técnico já se deslocou e/ou orçamento já aprovado, mas o trabalho ainda
+  // não começou — cancelamento permitido, mas a taxa de deslocação fica retida.
+  static const _feeKeptCancelStatuses = {
+    ServiceStatus.IN_TRANSIT,
+    ServiceStatus.ARRIVED,
+    ServiceStatus.IN_DIAGNOSIS,
+    ServiceStatus.QUOTE_SENT,
+    ServiceStatus.QUOTE_APPROVED,
+  };
+
+  /// Nível de cancelamento aplicável ao estado atual do pedido.
+  static CancelTier cancelTier(ServiceStatus status) {
+    if (_freeCancelStatuses.contains(status)) return CancelTier.free;
+    if (_feeKeptCancelStatuses.contains(status)) return CancelTier.feeKept;
+    if (status == ServiceStatus.IN_EXECUTION) return CancelTier.blocked;
+    return CancelTier.none;
+  }
+
   /// Whether the customer can still cancel a request in this status.
-  static bool cancellable(ServiceStatus status) =>
-      status == ServiceStatus.DRAFT || status == ServiceStatus.AWAITING_PAYMENT;
+  static bool cancellable(ServiceStatus status) {
+    final tier = cancelTier(status);
+    return tier != CancelTier.none && tier != CancelTier.blocked;
+  }
 }
 
 Widget statusChip(ServiceStatus status) {

@@ -148,8 +148,12 @@ class ClientService {
     return ServiceRequest.fromJson(r.data as Map<String, dynamic>);
   }
 
-  Future<void> cancelServiceRequest(String id) async {
-    await _dio.delete('/service-requests/$id');
+  /// Cancela o pedido. O backend calcula o "tier" de cancelamento a partir do
+  /// estado atual (grátis / mantém taxa de deslocação / bloqueado) e devolve
+  /// os valores efetivamente reembolsado/retido: { refunded, kept } (euros).
+  Future<Map<String, dynamic>> cancelServiceRequest(String id) async {
+    final r = await _dio.delete('/service-requests/$id');
+    return Map<String, dynamic>.from(r.data as Map);
   }
 
   /// Cotação de deslocação baseada na distância até à morada indicada.
@@ -170,9 +174,24 @@ class ClientService {
     return Map<String, dynamic>.from(r.data as Map);
   }
 
-  /// Aceita o orçamento enviado pelo técnico (→ QUOTE_APPROVED).
-  Future<void> approveQuote(String id) async {
-    await _dio.post('/service-requests/$id/quote/approve');
+  /// Aceita o orçamento enviado pelo técnico (→ QUOTE_APPROVED). É obrigatório
+  /// indicar a forma de pagamento: 'ONLINE' cobra de imediato via Stripe (a
+  /// resposta pode trazer `clientSecret` para apresentar a PaymentSheet, ou
+  /// `simulated: true` em modo de teste); 'CASH' só cria o registo de
+  /// pagamento para efeitos de contabilidade, sem nada a fazer no cliente.
+  Future<Map<String, dynamic>> approveQuote(String id, {required String paymentMethod}) async {
+    final r = await _dio.post('/service-requests/$id/quote/approve', data: {
+      'paymentMethod': paymentMethod,
+    });
+    return Map<String, dynamic>.from(r.data as Map);
+  }
+
+  /// Repete a cobrança online do orçamento (ex.: cliente fechou a PaymentSheet
+  /// sem concluir). Mesma forma de resposta que [approveQuote] em modo ONLINE,
+  /// mais `alreadyPaid: true` se entretanto já tiver sido pago.
+  Future<Map<String, dynamic>> payQuote(String id) async {
+    final r = await _dio.post('/service-requests/$id/quote/pay');
+    return Map<String, dynamic>.from(r.data as Map);
   }
 
   /// Recusa o orçamento enviado pelo técnico (→ QUOTE_REJECTED), com motivo opcional.
