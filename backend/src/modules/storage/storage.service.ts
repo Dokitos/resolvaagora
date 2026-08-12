@@ -12,7 +12,7 @@ const MAX_BYTES = 8 * 1024 * 1024; // 8 MB
  * sozinho — isto impede que um ficheiro renomeado/malicioso (ex.: um HTML
  * disfarçado de .jpg) passe pela allowlist só porque mentiu o Content-Type.
  */
-function matchesDeclaredType(buffer: Buffer, mimetype: string): boolean {
+export function matchesDeclaredType(buffer: Buffer, mimetype: string): boolean {
   if (buffer.length < 12) return false;
   switch (mimetype) {
     case 'image/jpeg':
