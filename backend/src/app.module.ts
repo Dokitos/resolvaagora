@@ -23,10 +23,11 @@ import { BannersModule } from './modules/banners/banners.module';
 import { OtpModule } from './modules/otp/otp.module';
 import { EmailModule } from './modules/email/email.module';
 import { ServicePricesModule } from './modules/service-prices/service-prices.module';
+import { validateEnv } from './shared/utils/env.validation';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
     ScheduleModule.forRoot(),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
     SharedInfrastructureModule,
