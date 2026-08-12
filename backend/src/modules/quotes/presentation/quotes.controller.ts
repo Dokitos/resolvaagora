@@ -75,6 +75,15 @@ export class QuotesController {
     return this.respondQuote.approve(user.id, id, paymentMethod);
   }
 
+  // Cliente mudou de ideias sobre pagar online (ex: fechou o Payment Sheet
+  // sem concluir) e quer passar a pagar em dinheiro no fim do serviço.
+  @Post('service-requests/:id/quote/switch-to-cash')
+  @HttpCode(HttpStatus.OK)
+  @Roles('CLIENT')
+  switchToCash(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.respondQuote.switchToCash(user.id, id);
+  }
+
   // Cliente rejeita
   @Post('service-requests/:id/quote/reject')
   @HttpCode(HttpStatus.OK)

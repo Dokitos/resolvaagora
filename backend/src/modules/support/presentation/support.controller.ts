@@ -15,6 +15,7 @@ import { CurrentUser } from '../../auth/presentation/decorators/current-user.dec
 import { AuthenticatedUser } from '../../auth/infrastructure/jwt.strategy';
 import { PrismaService } from '@shared/infrastructure/database/prisma.service';
 import { NotificationsGateway } from '../../notifications/presentation/notifications.gateway';
+import { SendSupportMessageDto } from '../application/dto/send-support-message.dto';
 
 /** Client-facing support chat (one thread per client, with admins). */
 @Controller('support')
@@ -52,15 +53,14 @@ export class SupportController {
   @HttpCode(HttpStatus.CREATED)
   async send(
     @CurrentUser() user: AuthenticatedUser,
-    @Body('body') body: string,
-    @Body('serviceRequestId') serviceRequestId?: string,
+    @Body() dto: SendSupportMessageDto,
   ) {
     const msg = await this.prisma.supportMessage.create({
       data: {
         clientUserId: user.id,
-        serviceRequestId: serviceRequestId ?? null,
+        serviceRequestId: dto.serviceRequestId ?? null,
         senderRole: 'CLIENT',
-        body,
+        body: dto.body,
       },
     });
 

@@ -16,10 +16,12 @@ import { RefreshTokenUseCase } from '../application/use-cases/refresh-token.use-
 import { ForgotPasswordUseCase } from '../application/use-cases/forgot-password.use-case';
 import { ResetPasswordUseCase } from '../application/use-cases/reset-password.use-case';
 import { EmailVerificationUseCase } from '../application/use-cases/email-verification.use-case';
+import { ChangePasswordUseCase } from '../application/use-cases/change-password.use-case';
 import { LoginDto } from '../application/dto/login.dto';
 import { RegisterDto } from '../application/dto/register.dto';
 import { RefreshTokenDto } from '../application/dto/refresh-token.dto';
 import { ForgotPasswordDto, ResetPasswordDto } from '../application/dto/reset-password.dto';
+import { ChangePasswordDto } from '../application/dto/change-password.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { AuthenticatedUser } from '../infrastructure/jwt.strategy';
@@ -34,6 +36,7 @@ export class AuthController {
     private readonly forgotPasswordUseCase: ForgotPasswordUseCase,
     private readonly resetPasswordUseCase: ResetPasswordUseCase,
     private readonly emailVerificationUseCase: EmailVerificationUseCase,
+    private readonly changePasswordUseCase: ChangePasswordUseCase,
     private readonly redis: RedisService,
   ) {}
 
@@ -99,6 +102,15 @@ export class AuthController {
   async resendVerification(@CurrentUser() user: AuthenticatedUser) {
     await this.emailVerificationUseCase.resend(user.id);
     return { sent: true };
+  }
+
+  /** Alterar palavra-passe a partir do perfil (utilizador já autenticado). */
+  @Post('change-password')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  changePassword(@CurrentUser() user: AuthenticatedUser, @Body() dto: ChangePasswordDto) {
+    return this.changePasswordUseCase.execute(user.id, dto.currentPassword, dto.newPassword);
   }
 
   @Post('logout')

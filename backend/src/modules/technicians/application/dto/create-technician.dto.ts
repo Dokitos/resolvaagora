@@ -1,4 +1,4 @@
-import { IsString, IsEmail, IsArray, IsEnum, IsOptional, IsInt, Min, Max, MinLength } from 'class-validator';
+import { IsString, IsEmail, IsArray, IsEnum, IsOptional, IsInt, Min, Max, MinLength, MaxLength } from 'class-validator';
 import { Specialty } from '@prisma/client';
 
 export class CreateTechnicianDto {
@@ -10,16 +10,20 @@ export class CreateTechnicianDto {
   password: string;
 
   @IsString()
+  @MaxLength(100)
   firstName: string;
 
   @IsString()
+  @MaxLength(100)
   lastName: string;
 
   @IsString()
+  @MaxLength(20)
   phone: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(20)
   nif?: string;
 
   @IsArray()
@@ -28,6 +32,7 @@ export class CreateTechnicianDto {
 
   @IsArray()
   @IsString({ each: true })
+  @MaxLength(100, { each: true })
   coverageDistricts: string[];
 
   @IsOptional()

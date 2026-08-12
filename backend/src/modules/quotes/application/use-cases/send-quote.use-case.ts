@@ -92,6 +92,10 @@ export class SendQuoteUseCase {
       quoteId: quote.id,
       serviceRequestId,
       clientId: sr.clientId,
+      description: dto.description,
+      laborCost: labor,
+      materialsCost: materials,
+      vatRate: VAT_RATE,
       totalCost,
       expiresAt,
     });

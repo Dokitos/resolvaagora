@@ -3,8 +3,16 @@ import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
 import * as nodemailer from 'nodemailer';
 import { PrismaService } from '@shared/infrastructure/database/prisma.service';
+import { escapeHtml, escapeHtmlWithLineBreaks } from '@shared/utils/html.util';
 
 const SITE_URL = 'https://www.resolvaagora.pt';
+
+/** Anexo de email — usado, por ex., para o PDF do orçamento. */
+export interface EmailAttachment {
+  filename: string;
+  content: Buffer;
+  contentType?: string;
+}
 
 @Injectable()
 export class EmailService {
@@ -43,19 +51,36 @@ export class EmailService {
    * Envia o email (Resend ou SMTP) e guarda sempre uma cópia na pasta
    * "Enviados" do admin — inclui os envios automáticos (recibos, códigos,
    * notificações), não só os compostos manualmente no painel.
+   *
+   * `attachments` é opcional e aditivo (ex.: PDF do orçamento) — todos os
+   * chamadores existentes que só passam `to/subject/html` continuam a
+   * funcionar sem alterações.
    */
-  async send(to: string, subject: string, html: string): Promise<{ id: string; status: 'enviado' | 'falhou' }> {
+  async send(
+    to: string,
+    subject: string,
+    html: string,
+    attachments?: EmailAttachment[],
+  ): Promise<{ id: string; status: 'enviado' | 'falhou' }> {
     let status: 'enviado' | 'falhou' = 'enviado';
     // Preferir a API HTTP da Resend (não depende de portas SMTP).
     if (this.resendKey) {
       try {
+        const body: Record<string, unknown> = { from: this.from, to, subject, html };
+        if (attachments?.length) {
+          body.attachments = attachments.map((a) => ({
+            filename: a.filename,
+            content: a.content.toString('base64'),
+            ...(a.contentType ? { content_type: a.contentType } : {}),
+          }));
+        }
         const res = await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${this.resendKey}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ from: this.from, to, subject, html }),
+          body: JSON.stringify(body),
         });
         if (!res.ok) {
           status = 'falhou';
@@ -68,7 +93,15 @@ export class EmailService {
     } else {
       // Fallback: SMTP (nodemailer).
       try {
-        await this.transporter.sendMail({ from: this.from, to, subject, html });
+        await this.transporter.sendMail({
+          from: this.from,
+          to,
+          subject,
+          html,
+          ...(attachments?.length
+            ? { attachments: attachments.map((a) => ({ filename: a.filename, content: a.content, contentType: a.contentType })) }
+            : {}),
+        });
       } catch (err) {
         status = 'falhou';
         this.logger.error(`Email send failed to ${to}`, err);
@@ -146,13 +179,38 @@ export class EmailService {
     `;
   }
 
-  quoteReceivedEmail(totalCost: number, expiresAt: Date): string {
+  quoteReceivedEmail(quote: {
+    description: string;
+    laborCost: number;
+    materialsCost: number;
+    totalCost: number;
+    expiresAt: Date;
+  }): string {
+    const eur = (v: number) => `${v.toFixed(2)} €`;
+    // `description` é texto livre escrito pelo técnico — tem de ser escapado
+    // antes de entrar no HTML do email (mesma proteção do resto do ficheiro).
+    const safeDescription = escapeHtmlWithLineBreaks(quote.description);
     return this.brandedEmail(
       'Orçamento recebido',
       `
-      <p style="margin:0 0 12px;font-size:15px;color:#374151">Recebeu um orçamento de <strong>€${totalCost.toFixed(2)}</strong>.</p>
-      <p style="margin:0 0 12px;font-size:15px;color:#374151">Tem até <strong>${expiresAt.toLocaleDateString('pt-PT')}</strong> para aceitar ou rejeitar.</p>
-      <p style="margin:0;font-size:15px;color:#374151">Aceda à plataforma para ver os detalhes e responder.</p>
+      <p style="margin:0 0 4px;font-size:13px;color:#6B7280;text-transform:uppercase;letter-spacing:.4px">Descrição do trabalho</p>
+      <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.6">${safeDescription}</p>
+      <table style="width:100%;border-collapse:collapse;font-size:14px;margin:0 0 16px">
+        <tr>
+          <td style="padding:8px 0;color:#6B7280">Mão de obra</td>
+          <td style="padding:8px 0;text-align:right;font-weight:600;color:#161616">${eur(quote.laborCost)}</td>
+        </tr>
+        <tr>
+          <td style="padding:8px 0;color:#6B7280;border-top:1px solid #E5E7EB">Materiais</td>
+          <td style="padding:8px 0;text-align:right;font-weight:600;color:#161616;border-top:1px solid #E5E7EB">${eur(quote.materialsCost)}</td>
+        </tr>
+        <tr>
+          <td style="padding:10px 0 0;border-top:1px solid #E5E7EB;font-weight:bold">Total c/ IVA</td>
+          <td style="padding:10px 0 0;border-top:1px solid #E5E7EB;text-align:right;font-weight:bold;color:#161616">${eur(quote.totalCost)}</td>
+        </tr>
+      </table>
+      <p style="margin:0 0 12px;font-size:15px;color:#374151">Tem até <strong>${quote.expiresAt.toLocaleDateString('pt-PT')}</strong> para aceitar ou rejeitar este orçamento.</p>
+      <p style="margin:0;font-size:15px;color:#374151">Aceda à plataforma para ver os detalhes e responder. Em anexo enviamos também o orçamento em PDF.</p>
       `,
     );
   }
@@ -161,7 +219,7 @@ export class EmailService {
     return this.brandedEmail(
       'Serviço concluído',
       `
-      <p style="margin:0 0 12px;font-size:15px;color:#374151">O seu serviço foi concluído pelo técnico <strong>${technicianName}</strong>.</p>
+      <p style="margin:0 0 12px;font-size:15px;color:#374151">O seu serviço foi concluído pelo técnico <strong>${escapeHtml(technicianName)}</strong>.</p>
       <p style="margin:0;font-size:15px;color:#374151">Por favor, avalie o serviço na plataforma.</p>
       `,
     );
@@ -181,17 +239,17 @@ export class EmailService {
     const rows = data.lines
       .map(
         (l) =>
-          `<tr><td style="padding:6px 0;color:#374151">${l.label}</td><td style="padding:6px 0;text-align:right">${l.value}</td></tr>`,
+          `<tr><td style="padding:6px 0;color:#374151">${escapeHtml(l.label)}</td><td style="padding:6px 0;text-align:right">${escapeHtml(l.value)}</td></tr>`,
       )
       .join('');
     return this.brandedEmail(
       'Recibo de serviço',
       `
-      <p style="margin:0 0 4px"><strong>${data.serviceLabel}</strong></p>
+      <p style="margin:0 0 4px"><strong>${escapeHtml(data.serviceLabel)}</strong></p>
       <p style="margin:0;color:#6B7280;font-size:13px">Pedido #${data.requestId.slice(0, 8).toUpperCase()} · ${data.date}</p>
-      <p style="margin:12px 0 0;font-size:14px">Cliente: ${data.clientName}${data.nif ? ` · NIF ${data.nif}` : ''}</p>
-      ${data.billingAddress ? `<p style="margin:2px 0 0;font-size:14px;color:#374151">Morada de faturação: ${data.billingAddress}</p>` : ''}
-      ${data.technicianName ? `<p style="margin:2px 0 0;font-size:14px">Técnico: ${data.technicianName}</p>` : ''}
+      <p style="margin:12px 0 0;font-size:14px">Cliente: ${escapeHtml(data.clientName)}${data.nif ? ` · NIF ${escapeHtml(data.nif)}` : ''}</p>
+      ${data.billingAddress ? `<p style="margin:2px 0 0;font-size:14px;color:#374151">Morada de faturação: ${escapeHtml(data.billingAddress)}</p>` : ''}
+      ${data.technicianName ? `<p style="margin:2px 0 0;font-size:14px">Técnico: ${escapeHtml(data.technicianName)}</p>` : ''}
       <table style="width:100%;margin-top:16px;border-top:1px solid #E5E7EB;font-size:14px">
         ${rows}
         <tr><td style="padding:10px 0 0;border-top:1px solid #E5E7EB;font-weight:bold">Total</td><td style="padding:10px 0 0;border-top:1px solid #E5E7EB;text-align:right;font-weight:bold;color:#161616">${data.total}</td></tr>
@@ -219,8 +277,8 @@ export class EmailService {
     return this.brandedEmail(
       null,
       `
-      <h3 style="margin:0 0 10px;color:#161616">${title}</h3>
-      <p style="margin:0;color:#374151;font-size:15px;line-height:1.6">${body}</p>
+      <h3 style="margin:0 0 10px;color:#161616">${escapeHtml(title)}</h3>
+      <p style="margin:0;color:#374151;font-size:15px;line-height:1.6">${escapeHtml(body)}</p>
       <p style="margin:16px 0 0;color:#9CA3AF;font-size:12px">Podes acompanhar tudo na app ResolvaAgora.</p>
       `,
     );
@@ -231,11 +289,11 @@ export class EmailService {
     return this.brandedEmail(
       'Bem-vindo à equipa de técnicos',
       `
-      <p style="margin:0 0 12px;font-size:15px;color:#374151">Olá ${name},</p>
+      <p style="margin:0 0 12px;font-size:15px;color:#374151">Olá ${escapeHtml(name)},</p>
       <p style="margin:0 0 12px;font-size:15px;color:#374151">Foi criada uma conta de técnico para ti na ResolvaAgora. Podes entrar na aplicação com estas credenciais:</p>
       <div style="background:#FFF7E0;border:1px solid #F5B301;border-radius:10px;padding:16px 18px;margin:18px 0">
-        <p style="margin:0 0 6px"><strong>Email:</strong> ${email}</p>
-        <p style="margin:0"><strong>Palavra-passe:</strong> ${password}</p>
+        <p style="margin:0 0 6px"><strong>Email:</strong> ${escapeHtml(email)}</p>
+        <p style="margin:0"><strong>Palavra-passe:</strong> ${escapeHtml(password)}</p>
       </div>
       <p style="margin:0;color:#6B7280;font-size:13px">Por segurança, recomendamos que alteres a palavra-passe após o primeiro acesso.</p>
       `,

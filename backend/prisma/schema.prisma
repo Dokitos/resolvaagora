@@ -617,6 +617,10 @@ model AppSetting {
   paymentsEnabled        Boolean  @default(true) @map("payments_enabled")
   paymentsTestMode       Boolean  @default(true) @map("payments_test_mode")
   smsVerificationEnabled Boolean  @default(false) @map("sms_verification_enabled")
+  // Distinto de smsVerificationEnabled (que só liga/desliga o OTP no registo/login):
+  // controla se é enviado um SMS de confirmação quando um pedido fica com
+  // técnico atribuído (paralelo ao email/push que já existem para isso).
+  smsNotificationsEnabled Boolean @default(true) @map("sms_notifications_enabled")
   // Origem e parâmetros do cálculo da taxa de deslocação por distância.
   displacementOriginLat  Float?   @default(38.7169) @map("displacement_origin_lat")
   displacementOriginLng  Float?   @default(-9.1395) @map("displacement_origin_lng")

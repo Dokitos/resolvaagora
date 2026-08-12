@@ -19,6 +19,7 @@ export class SettingsService {
     paymentsEnabled?: boolean;
     paymentsTestMode?: boolean;
     smsVerificationEnabled?: boolean;
+    smsNotificationsEnabled?: boolean;
     displacementOriginLat?: number | null;
     displacementOriginLng?: number | null;
     displacementPerKm?: number;

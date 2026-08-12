@@ -1,7 +1,8 @@
-import { IsString, IsNumber, IsPositive, IsOptional, Min } from 'class-validator';
+import { IsString, IsNumber, IsPositive, IsOptional, Min, MaxLength } from 'class-validator';
 
 export class SendQuoteDto {
   @IsString()
+  @MaxLength(2000)
   description: string;
 
   @IsNumber()

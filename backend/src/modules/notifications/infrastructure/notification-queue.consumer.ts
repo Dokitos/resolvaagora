@@ -2,7 +2,9 @@ import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { PrismaService } from '@shared/infrastructure/database/prisma.service';
 import { RabbitMQService } from '@shared/infrastructure/messaging/rabbitmq.service';
 import { FcmService } from './fcm.service';
-import { EmailService } from './email.service';
+import { EmailService, EmailAttachment } from './email.service';
+import { QuotePdfService } from './quote-pdf.service';
+import { SmsService } from '../../otp/sms.service';
 import { NotificationsGateway } from '../presentation/notifications.gateway';
 
 /**
@@ -25,6 +27,8 @@ export class NotificationQueueConsumer implements OnModuleInit {
     private readonly rabbitmq: RabbitMQService,
     private readonly fcm: FcmService,
     private readonly email: EmailService,
+    private readonly quotePdf: QuotePdfService,
+    private readonly sms: SmsService,
     private readonly gateway: NotificationsGateway,
   ) {}
 
@@ -47,8 +51,19 @@ export class NotificationQueueConsumer implements OnModuleInit {
 
     sub(this.rabbitmq.exchanges.quotes, 'notifications.quote-sent', 'quote.sent',
       async (msg) => {
-        const { serviceRequestId, clientId, totalCost, expiresAt } = msg.data as any;
-        await this.notifyQuoteSent(serviceRequestId, clientId, totalCost, expiresAt);
+        const { quoteId, serviceRequestId, clientId, description, laborCost, materialsCost, vatRate, totalCost, expiresAt } =
+          msg.data as any;
+        await this.notifyQuoteSent(
+          quoteId,
+          serviceRequestId,
+          clientId,
+          description,
+          laborCost,
+          materialsCost,
+          vatRate,
+          totalCost,
+          expiresAt,
+        );
       });
 
     sub(this.rabbitmq.exchanges.quotes, 'notifications.quote-approved', 'quote.approved',
@@ -278,6 +293,28 @@ export class NotificationQueueConsumer implements OnModuleInit {
         'service-status-updated',
         { serviceRequestId, newStatus: 'ASSIGNED' },
       );
+      await this.sendBookingConfirmationSms(sr.client.id);
+    }
+  }
+
+  /**
+   * SMS curto de confirmação enviado ao cliente quando um técnico é atribuído — o primeiro
+   * momento em que o pedido (já pago) está de facto confirmado a caminho. Distinto do OTP
+   * (AppSetting.smsVerificationEnabled, só liga/desliga a verificação por SMS no registo/login):
+   * este respeita o toggle dedicado AppSetting.smsNotificationsEnabled. Degrada graciosamente
+   * (log em vez de envio) quando a Twilio não está configurada — comportamento já embutido
+   * no SmsService, nada a fazer aqui além de não deixar a falha derrubar o resto do fluxo.
+   */
+  private async sendBookingConfirmationSms(clientId: string) {
+    try {
+      const settings = await this.prisma.appSetting.findUnique({ where: { id: 'app' } });
+      if (settings?.smsNotificationsEnabled === false) return;
+      const client = await this.prisma.client.findUnique({ where: { id: clientId } });
+      if (!client?.phone) return;
+      const to = client.phone.replace(/\s+/g, '');
+      await this.sms.send(to, 'ResolvaAgora: o seu pedido foi confirmado! Acompanhe tudo na app.');
+    } catch (e) {
+      this.logger.error(`Falha no SMS de confirmação para cliente ${clientId}: ${e}`);
     }
   }
 
@@ -323,7 +360,17 @@ export class NotificationQueueConsumer implements OnModuleInit {
     );
   }
 
-  private async notifyQuoteSent(serviceRequestId: string, clientId: string, totalCost: number, expiresAt: string) {
+  private async notifyQuoteSent(
+    quoteId: string,
+    serviceRequestId: string,
+    clientId: string,
+    description: string,
+    laborCost: number,
+    materialsCost: number,
+    vatRate: number,
+    totalCost: number,
+    expiresAt: string,
+  ) {
     const client = await this.resolveClient(clientId);
     if (!client) return;
 
@@ -337,7 +384,47 @@ export class NotificationQueueConsumer implements OnModuleInit {
     }
     if (client.email) {
       try {
-        await this.email.send(client.email, title, this.email.quoteReceivedEmail(totalCost, new Date(expiresAt)));
+        const expiresDate = new Date(expiresAt);
+        const html = this.email.quoteReceivedEmail({
+          description,
+          laborCost: Number(laborCost),
+          materialsCost: Number(materialsCost),
+          totalCost: Number(totalCost),
+          expiresAt: expiresDate,
+        });
+
+        // Dados extra (morada, técnico, nome do cliente) só existem na BD —
+        // não vão no payload do evento, por isso são buscados aqui só para o PDF.
+        const sr = await this.prisma.serviceRequest.findUnique({
+          where: { id: serviceRequestId },
+          include: { address: true, technician: true, client: true },
+        });
+
+        let attachments: EmailAttachment[] | undefined;
+        try {
+          const pdfBuffer = await this.quotePdf.generate({
+            quoteId,
+            serviceRequestId,
+            description,
+            laborCost: Number(laborCost),
+            materialsCost: Number(materialsCost),
+            vatRate: Number(vatRate),
+            totalCost: Number(totalCost),
+            expiresAt: expiresDate,
+            createdAt: new Date(),
+            clientName: sr?.client ? `${sr.client.firstName} ${sr.client.lastName}` : client.firstName,
+            serviceAddress: sr?.address
+              ? `${sr.address.street}, ${sr.address.number}${sr.address.floor ? `, ${sr.address.floor}` : ''} — ${sr.address.postalCode} ${sr.address.city}`
+              : 'Morada não disponível',
+            technicianName: sr?.technician ? `${sr.technician.firstName} ${sr.technician.lastName}` : 'Técnico',
+            technicianSpecialty: sr?.specialty ?? '',
+          });
+          attachments = [{ filename: 'orcamento-resolvaagora.pdf', content: pdfBuffer, contentType: 'application/pdf' }];
+        } catch (e) {
+          this.logger.error(`Falha ao gerar PDF do orçamento (${quoteId}): ${e}`);
+        }
+
+        await this.email.send(client.email, title, html, attachments);
       } catch (e) {
         this.logger.error(`Falha no email (quote) para ${client.email}: ${e}`);
       }

@@ -24,6 +24,7 @@ export class CreateServiceRequestDto {
   specialty: Specialty;
 
   @IsString()
+  @MaxLength(2000)
   description: string;
 
   @IsOptional()

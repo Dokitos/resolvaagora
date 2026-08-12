@@ -7,6 +7,37 @@ const ALLOWED = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 const MAX_BYTES = 8 * 1024 * 1024; // 8 MB
 
 /**
+ * Confere a assinatura binária (magic bytes) contra o mimetype declarado.
+ * O Content-Type do multipart é escolhido pelo cliente e não é confiável
+ * sozinho — isto impede que um ficheiro renomeado/malicioso (ex.: um HTML
+ * disfarçado de .jpg) passe pela allowlist só porque mentiu o Content-Type.
+ */
+function matchesDeclaredType(buffer: Buffer, mimetype: string): boolean {
+  if (buffer.length < 12) return false;
+  switch (mimetype) {
+    case 'image/jpeg':
+      return buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
+    case 'image/png':
+      return (
+        buffer[0] === 0x89 &&
+        buffer[1] === 0x50 &&
+        buffer[2] === 0x4e &&
+        buffer[3] === 0x47 &&
+        buffer[4] === 0x0d &&
+        buffer[5] === 0x0a &&
+        buffer[6] === 0x1a &&
+        buffer[7] === 0x0a
+      );
+    case 'image/gif':
+      return buffer.toString('ascii', 0, 6) === 'GIF87a' || buffer.toString('ascii', 0, 6) === 'GIF89a';
+    case 'image/webp':
+      return buffer.toString('ascii', 0, 4) === 'RIFF' && buffer.toString('ascii', 8, 12) === 'WEBP';
+    default:
+      return false;
+  }
+}
+
+/**
  * Armazenamento de imagens no Cloudflare R2 (compatível com S3). Em modo stub
  * (chaves placeholder) recusa uploads com uma mensagem clara — o código fica
  * pronto e ativa-se assim que as chaves reais entram nas variáveis de ambiente.
@@ -65,6 +96,9 @@ export class StorageService {
     }
     if (file.size > MAX_BYTES) {
       throw new BadRequestException('Imagem demasiado grande (máx. 8 MB).');
+    }
+    if (!matchesDeclaredType(file.buffer, file.mimetype)) {
+      throw new BadRequestException('O conteúdo do ficheiro não corresponde ao formato declarado.');
     }
 
     const ext = file.mimetype.split('/')[1].replace('jpeg', 'jpg');

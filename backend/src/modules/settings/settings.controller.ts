@@ -30,6 +30,7 @@ export class SettingsController {
       paymentsEnabled: s.paymentsEnabled,
       paymentsTestMode: s.paymentsTestMode,
       smsVerificationEnabled: s.smsVerificationEnabled,
+      smsNotificationsEnabled: s.smsNotificationsEnabled,
       // A app usa isto para iniciar a Stripe e mostrar o total com deslocação.
       // Builds antigos esperam um número: usa a taxa mínima/base das definições
       // (cai para a constante legada se ambas forem 0/indefinidas).

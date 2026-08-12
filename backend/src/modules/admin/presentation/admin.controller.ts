@@ -17,9 +17,12 @@ import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard';
 import { Roles } from '../../auth/presentation/decorators/roles.decorator';
 import { RolesGuard } from '../../auth/presentation/guards/roles.guard';
 import { PrismaService } from '@shared/infrastructure/database/prisma.service';
+import { RabbitMQService } from '@shared/infrastructure/messaging/rabbitmq.service';
 import { AutoAssignUseCase } from '../../distribution/application/use-cases/auto-assign.use-case';
 import { CreateTechnicianUseCase } from '../../technicians/application/use-cases/create-technician.use-case';
 import { CreateTechnicianDto } from '../../technicians/application/dto/create-technician.dto';
+import { SendSupportMessageDto } from '../../support/application/dto/send-support-message.dto';
+import { BroadcastNotificationDto } from '../application/dto/broadcast-notification.dto';
 import { CurrentUser } from '../../auth/presentation/decorators/current-user.decorator';
 import { AuthenticatedUser } from '../../auth/infrastructure/jwt.strategy';
 import { NotificationsGateway } from '../../notifications/presentation/notifications.gateway';
@@ -33,6 +36,7 @@ import { CancelServiceRequestUseCase } from '../../service-requests/application/
 export class AdminController {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly rabbitmq: RabbitMQService,
     private readonly autoAssign: AutoAssignUseCase,
     private readonly createTechnician: CreateTechnicianUseCase,
     private readonly gateway: NotificationsGateway,
@@ -174,6 +178,18 @@ export class AdminController {
       });
     });
 
+    // Sem isto, a atribuição manual/reatribuição pelo admin gravava o técnico
+    // na BD mas NUNCA avisava ninguém — nem o técnico (novo trabalho) nem o
+    // cliente (técnico atribuído) recebiam push/email/notificação in-app,
+    // porque toda a entrega (NotificationQueueConsumer.notifyAssignment) só
+    // corre a partir deste evento. O fluxo automático (AutoAssignUseCase) já
+    // publicava este evento corretamente — só faltava aqui, no caminho manual.
+    await this.rabbitmq.publish(
+      this.rabbitmq.exchanges.serviceRequests,
+      'service-request.assigned',
+      { serviceRequestId: id, technicianId, clientId: sr.clientId },
+    );
+
     return { success: true };
   }
 
@@ -289,15 +305,14 @@ export class AdminController {
   @HttpCode(HttpStatus.CREATED)
   async sendClientMessage(
     @Param('clientUserId') clientUserId: string,
-    @Body('body') body: string,
-    @Body('serviceRequestId') serviceRequestId?: string,
+    @Body() dto: SendSupportMessageDto,
   ) {
     const msg = await this.prisma.supportMessage.create({
       data: {
         clientUserId,
-        serviceRequestId: serviceRequestId ?? null,
+        serviceRequestId: dto.serviceRequestId ?? null,
         senderRole: 'ADMIN',
-        body,
+        body: dto.body,
       },
     });
     this.gateway.emitToUser(clientUserId, 'support-message', msg);
@@ -459,9 +474,17 @@ export class AdminController {
     // amount = itens + deslocação, ligado ao ServiceRequest (que guarda a
     // displacementFee). A comissão da plataforma é definida em Definições.
     const { commissionRate } = await this.settings.get();
-    const [orderPayments, subscriptions, earnings, pendingRequests] = await Promise.all([
+    const [orderPayments, quotePayments, subscriptions, earnings, pendingRequests, pendingCashQuotes] = await Promise.all([
       this.prisma.payment.findMany({
         where: { type: 'SERVICE', status: 'COMPLETED', paidAt: dateFilter },
+        include: { serviceRequest: true },
+      }),
+      // Pagamentos de orçamento (pós-diagnóstico) — pagos online ou já
+      // cobrados em dinheiro no fim do serviço. Antes ficavam de fora desta
+      // agregação, por isso a comissão/receita destes trabalhos nunca
+      // aparecia no financeiro mesmo já tendo sido cobrados/ganhos.
+      this.prisma.payment.findMany({
+        where: { type: 'QUOTE', status: 'COMPLETED', paidAt: dateFilter },
         include: { serviceRequest: true },
       }),
       this.prisma.subscription.findMany({
@@ -475,6 +498,10 @@ export class AdminController {
       this.prisma.serviceRequest.findMany({
         where: { status: 'AWAITING_PAYMENT', createdAt: dateFilter },
         select: { id: true, displacementFee: true, itemsTotal: true },
+      }),
+      this.prisma.payment.findMany({
+        where: { type: 'QUOTE', status: 'PENDING' },
+        select: { amount: true },
       }),
     ]);
 
@@ -508,6 +535,28 @@ export class AdminController {
 
       const b = bucket(dayKey(p.paidAt ?? p.createdAt));
       b.displacement += disp;
+      b.commissions += commission;
+
+      const specialty = p.serviceRequest?.specialty ?? 'OUTRO';
+      const cat = byCategory.get(specialty) ?? { total: 0, count: 0 };
+      cat.total += amount;
+      cat.count += 1;
+      byCategory.set(specialty, cat);
+    }
+
+    // Orçamentos (pós-diagnóstico): o valor todo é "trabalho" — a
+    // deslocação já foi cobrada e contabilizada à parte, antes do
+    // diagnóstico — por isso a comissão aqui é sobre o valor total pago.
+    let quoteCommissionCount = 0;
+    for (const p of quotePayments) {
+      const amount = Number(p.amount);
+      const commission = amount * commissionRate;
+
+      commissionsTotal += commission;
+      ordersTotal += amount;
+      quoteCommissionCount += 1;
+
+      const b = bucket(dayKey(p.paidAt ?? p.createdAt));
       b.commissions += commission;
 
       const specialty = p.serviceRequest?.specialty ?? 'OUTRO';
@@ -559,22 +608,27 @@ export class AdminController {
       .map(([specialty, v]) => ({ specialty, total: round(v.total), count: v.count }))
       .sort((a, b) => b.total - a.total);
 
-    // ─── Pagamentos pendentes (AWAITING_PAYMENT) ──────────────────────────
+    // ─── Pagamentos pendentes (AWAITING_PAYMENT + orçamentos em dinheiro
+    // ainda não cobrados, criados na aprovação e só ficam COMPLETED quando
+    // o técnico marca o serviço como concluído) ────────────────────────────
     let pendingTotal = 0;
     for (const r of pendingRequests) {
       pendingTotal += Number(r.displacementFee ?? 0) + Number(r.itemsTotal ?? 0);
+    }
+    for (const p of pendingCashQuotes) {
+      pendingTotal += Number(p.amount);
     }
 
     return {
       commissionRate,
       displacement: { total: round(displacementTotal), count: orderPayments.length },
-      commissions: { total: round(commissionsTotal), count: orderPayments.length },
+      commissions: { total: round(commissionsTotal), count: orderPayments.length + quoteCommissionCount },
       subscriptions: { total: round(subscriptionsTotal), count: subscriptions.length },
       totalRevenue: round(ordersTotal + subscriptionsTotal),
       breakdown,
       byTechnician,
       byCategory: byCategoryList,
-      pending: { total: round(pendingTotal), count: pendingRequests.length },
+      pending: { total: round(pendingTotal), count: pendingRequests.length + pendingCashQuotes.length },
       payouts: {
         toTechnicians: round(payoutsToTechnicians),
         platformCommission: round(commissionsTotal),
@@ -1204,6 +1258,7 @@ export class AdminController {
       paymentsEnabled: data.paymentsEnabled,
       paymentsTestMode: data.paymentsTestMode,
       smsVerificationEnabled: data.smsVerificationEnabled,
+      smsNotificationsEnabled: data.smsNotificationsEnabled,
       displacementOriginLat: num(data.displacementOriginLat),
       displacementOriginLng: num(data.displacementOriginLng),
       displacementPerKm: num(data.displacementPerKm),
@@ -1217,9 +1272,7 @@ export class AdminController {
 
   @Post('notifications/broadcast')
   @HttpCode(HttpStatus.CREATED)
-  async broadcast(
-    @Body() body: { target: string; userId?: string; title: string; body: string },
-  ) {
+  async broadcast(@Body() body: BroadcastNotificationDto) {
     let userIds: string[];
     if (body.target === 'USER' && body.userId) {
       userIds = [body.userId];

@@ -1,12 +1,14 @@
-import { IsString, IsOptional, IsBoolean, Matches } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, Matches, MaxLength } from 'class-validator';
 
 export class UpdateProfileDto {
   @IsOptional()
   @IsString()
+  @MaxLength(100)
   firstName?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(100)
   lastName?: string;
 
   @IsOptional()
@@ -16,6 +18,7 @@ export class UpdateProfileDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(20)
   nif?: string;
 
   @IsOptional()

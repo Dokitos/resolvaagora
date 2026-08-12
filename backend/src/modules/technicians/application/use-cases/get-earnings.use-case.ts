@@ -39,6 +39,26 @@ export class GetEarningsUseCase {
 
     const total = earnings.reduce((sum, e) => sum + Number(e.amount), 0);
 
-    return { earnings, total, period };
+    // Enriquece cada entrada com a referência do serviço que a gerou (o
+    // técnico via só "Serviço concluído" sem saber de qual cliente/morada
+    // vinha o valor). Mantém os campos originais e apenas acrescenta.
+    const enriched = earnings.map((e) => {
+      const sr = e.serviceRequest;
+      const clientName = sr?.client
+        ? `${sr.client.firstName} ${sr.client.lastName}`.trim()
+        : null;
+      return {
+        id: e.id,
+        type: e.type,
+        amount: e.amount,
+        serviceRequestId: e.serviceRequestId,
+        earnedAt: e.earnedAt,
+        specialty: sr?.specialty ?? null,
+        clientName,
+        city: sr?.address?.city ?? null,
+      };
+    });
+
+    return { earnings: enriched, total, period };
   }
 }

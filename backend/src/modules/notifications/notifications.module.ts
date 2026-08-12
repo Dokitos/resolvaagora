@@ -3,6 +3,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { FcmService } from './infrastructure/fcm.service';
 import { EmailService } from './infrastructure/email.service';
+import { QuotePdfService } from './infrastructure/quote-pdf.service';
 import { NotificationQueueConsumer } from './infrastructure/notification-queue.consumer';
 import { NotificationsGateway } from './presentation/notifications.gateway';
 import { NotificationsController } from './presentation/notifications.controller';
@@ -19,7 +20,7 @@ import { NotificationsController } from './presentation/notifications.controller
     }),
   ],
   controllers: [NotificationsController],
-  providers: [FcmService, EmailService, NotificationQueueConsumer, NotificationsGateway],
+  providers: [FcmService, EmailService, QuotePdfService, NotificationQueueConsumer, NotificationsGateway],
   exports: [FcmService, EmailService, NotificationsGateway],
 })
 export class NotificationsModule {}

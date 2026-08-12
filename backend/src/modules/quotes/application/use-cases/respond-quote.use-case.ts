@@ -27,6 +27,56 @@ export class RespondQuoteUseCase {
     return this.respond(userId, serviceRequestId, 'REJECTED', reason);
   }
 
+  /**
+   * Cliente escolheu pagar online, não concluiu o pagamento (fechou o Payment
+   * Sheet, cartão recusado, etc.) e quer mudar para pagar em dinheiro no fim
+   * do serviço em vez de ficar preso a tentar o cartão outra vez.
+   */
+  async switchToCash(userId: string, serviceRequestId: string) {
+    const clientUser = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { client: true },
+    });
+    if (!clientUser?.client) throw new ForbiddenException('Client only');
+
+    const sr = await this.prisma.serviceRequest.findFirst({
+      where: { id: serviceRequestId, clientId: clientUser.client.id },
+      include: { quote: true, payments: true },
+    });
+    if (!sr || !sr.quote) throw new NotFoundException('Quote not found');
+    if (sr.status !== 'QUOTE_APPROVED' || sr.quote.paymentMethod !== 'ONLINE') {
+      throw new BadRequestException('Este orçamento não está à espera de pagamento online');
+    }
+    const alreadyPaid = sr.payments.some((p) => p.type === 'QUOTE' && p.status === 'COMPLETED');
+    if (alreadyPaid) {
+      throw new BadRequestException('O pagamento online já foi confirmado — não é possível mudar para dinheiro');
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.quote.update({
+        where: { id: sr.quote!.id },
+        data: { paymentMethod: 'CASH' },
+      });
+      // Qualquer tentativa de pagamento online por cartão que tenha ficado
+      // pendente fica sem efeito — a cobrança passa a ser feita em dinheiro.
+      await tx.payment.updateMany({
+        where: { serviceRequestId, type: 'QUOTE', status: 'PENDING' },
+        data: { status: 'FAILED' },
+      });
+      await tx.payment.create({
+        data: {
+          serviceRequestId,
+          type: 'QUOTE',
+          amount: sr.quote!.totalCost,
+          currency: 'EUR',
+          status: 'PENDING',
+        },
+      });
+    });
+
+    return { success: true, paymentMethod: 'CASH' as const };
+  }
+
   private async respond(
     userId: string,
     serviceRequestId: string,
