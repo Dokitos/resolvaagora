@@ -124,6 +124,20 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
     }
   }
 
+  async function handleSwitchQuoteToCash() {
+    setActionLoading(true)
+    try {
+      await serviceRequestsApi.switchQuoteToCash(id)
+      setCheckout(null)
+      toast.success('Combinado! Paga em dinheiro ao técnico quando o serviço terminar.')
+      await load()
+    } catch (err: any) {
+      toast.error(err.message)
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
   async function handleRejectQuote() {
     setRejectModal(false)
     setActionLoading(true)
@@ -276,9 +290,12 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
               />
             </CardFooter>
           ) : (
-            <CardFooter>
+            <CardFooter className="flex-col items-stretch gap-2">
               <Button onClick={handleRetryQuotePayment} loading={actionLoading} className="w-full">
                 Tentar pagamento novamente
+              </Button>
+              <Button onClick={handleSwitchQuoteToCash} loading={actionLoading} variant="outline" className="w-full">
+                Prefiro pagar em dinheiro no fim
               </Button>
             </CardFooter>
           )}

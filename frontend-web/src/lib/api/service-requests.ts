@@ -43,6 +43,9 @@ export const serviceRequestsApi = {
       `/service-requests/${id}/quote/pay`,
     ).then((r) => r.data),
 
+  switchQuoteToCash: (id: string) =>
+    api.post<{ success: boolean; paymentMethod: 'CASH' }>(`/service-requests/${id}/quote/switch-to-cash`).then((r) => r.data),
+
   rejectQuote: (id: string, reason?: string) =>
     api.post(`/service-requests/${id}/quote/reject`, { reason }).then((r) => r.data),
 

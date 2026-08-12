@@ -10,6 +10,7 @@ import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { PasswordStrengthMeter } from '@/components/ui/password-strength'
 import { api } from '@/lib/api/client'
 import { Wrench } from 'lucide-react'
 
@@ -26,9 +27,10 @@ type FormData = z.infer<typeof schema>
 export default function RegisterPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
-  const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, watch, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
   })
+  const password = watch('password')
 
   async function onSubmit(data: FormData) {
     setLoading(true)
@@ -63,7 +65,10 @@ export default function RegisterPage() {
             </div>
             <Input id="email" label="Email" type="email" placeholder="nome@email.pt" error={errors.email?.message} {...register('email')} />
             <Input id="phone" label="Telemóvel (opcional)" placeholder="+351 912 345 678" {...register('phone')} />
-            <Input id="password" label="Password" type="password" placeholder="••••••••" error={errors.password?.message} {...register('password')} />
+            <div className="flex flex-col gap-2">
+              <Input id="password" label="Password" type="password" placeholder="••••••••" error={errors.password?.message} {...register('password')} />
+              <PasswordStrengthMeter password={password ?? ''} />
+            </div>
             <Button type="submit" className="w-full" loading={loading}>
               Criar conta
             </Button>
