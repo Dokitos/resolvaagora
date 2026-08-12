@@ -8,7 +8,31 @@ import '../../core/models/service_request.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/theme/app_theme.dart';
 
-final availabilityProvider = StateProvider<bool>((ref) => true);
+/// Override local e otimista da disponibilidade: aplicado assim que o
+/// técnico mexe no switch, antes (e independentemente) do refetch do
+/// perfil. `null` = ainda não há override → usar o valor vindo do backend.
+final _availabilityOverrideProvider = StateProvider<bool?>((ref) => null);
+
+/// Disponibilidade real do técnico (`true` = AVAILABLE), derivada do
+/// `technicianProfileProvider` (que reflete o `Technician.status` guardado
+/// no backend) em vez de um valor fixo. Isto corrige o bug em que o switch
+/// reaparecia sempre como "Disponível" ao reabrir a app, mesmo que o
+/// backend tivesse `BUSY` guardado de uma sessão anterior.
+///
+/// `null` enquanto o perfil ainda está a carregar (o ecrã mostra um loader
+/// no lugar do switch nesse intervalo, em vez de assumir um valor —
+/// nunca mostra "Disponível" por defeito antes de saber o valor real).
+final availabilityProvider = Provider<bool?>((ref) {
+  final override = ref.watch(_availabilityOverrideProvider);
+  if (override != null) return override;
+  final profileAsync = ref.watch(technicianProfileProvider);
+  final status = profileAsync.valueOrNull?['status']?.toString();
+  if (status != null) return status == 'AVAILABLE';
+  // Falha ao carregar o perfil: assume "Ocupado" (lado seguro) em vez de
+  // ficar preso num loader eterno — nunca assume "Disponível" sem certeza.
+  if (profileAsync.hasError) return false;
+  return null; // ainda a carregar
+});
 
 class ScheduleScreen extends ConsumerWidget {
   const ScheduleScreen({super.key});
@@ -26,40 +50,54 @@ class ScheduleScreen extends ConsumerWidget {
           const OnboardingTrigger(role: OnboardingRole.technician),
           Padding(
             padding: const EdgeInsets.only(right: 16),
-            child: Row(
-              children: [
-                Text(
-                  isAvailable ? l.available : l.busy,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: isAvailable ? AppTheme.success : Colors.grey[500],
+            child: isAvailable == null
+                // Ainda a carregar o estado real (perfil do técnico) — não
+                // assume "Disponível" nem "Ocupado" enquanto não sabe.
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: Center(
+                      child: SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                  )
+                : Row(
+                    children: [
+                      Text(
+                        isAvailable ? l.available : l.busy,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: isAvailable ? AppTheme.success : Colors.grey[500],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Switch.adaptive(
+                        value: isAvailable,
+                        activeColor: AppTheme.success,
+                        onChanged: (v) async {
+                          final previous = isAvailable;
+                          ref.read(_availabilityOverrideProvider.notifier).state = v;
+                          try {
+                            await ref.read(technicianServiceProvider).setAvailability(v);
+                          } catch (_) {
+                            ref.read(_availabilityOverrideProvider.notifier).state = previous;
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Não foi possível atualizar a disponibilidade.'),
+                                  backgroundColor: AppTheme.danger,
+                                ),
+                              );
+                            }
+                          }
+                        },
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(width: 8),
-                Switch.adaptive(
-                  value: isAvailable,
-                  activeColor: AppTheme.success,
-                  onChanged: (v) async {
-                    final previous = ref.read(availabilityProvider);
-                    ref.read(availabilityProvider.notifier).state = v;
-                    try {
-                      await ref.read(technicianServiceProvider).setAvailability(v);
-                    } catch (_) {
-                      ref.read(availabilityProvider.notifier).state = previous;
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Não foi possível atualizar a disponibilidade.'),
-                            backgroundColor: AppTheme.danger,
-                          ),
-                        );
-                      }
-                    }
-                  },
-                ),
-              ],
-            ),
           ),
         ],
       ),
@@ -97,17 +135,83 @@ class ScheduleScreen extends ConsumerWidget {
               ),
             );
           }
+          // Agrupa por "Hoje" vs "Próximos" — antes era uma lista plana sem
+          // qualquer estrutura, difícil de ler quando há vários dias de
+          // serviços atribuídos de uma vez.
+          final now = DateTime.now();
+          bool isToday(DateTime? d) =>
+              d != null && d.year == now.year && d.month == now.month && d.day == now.day;
+          final today = jobs.where((j) => isToday(j.scheduledDate)).toList();
+          final upcoming = jobs.where((j) => !isToday(j.scheduledDate)).toList()
+            ..sort((a, b) {
+              final ad = a.scheduledDate;
+              final bd = b.scheduledDate;
+              if (ad == null && bd == null) return 0;
+              if (ad == null) return 1; // sem data agendada vai para o fim
+              if (bd == null) return -1;
+              return ad.compareTo(bd);
+            });
+
           return RefreshIndicator(
-            onRefresh: () async => ref.invalidate(assignedJobsProvider),
-            child: ListView.separated(
+            onRefresh: () async {
+              ref.invalidate(assignedJobsProvider);
+              // Descarta o override otimista e vai buscar o status real de
+              // novo — reflete alterações feitas noutra sessão/dispositivo.
+              ref.read(_availabilityOverrideProvider.notifier).state = null;
+              ref.invalidate(technicianProfileProvider);
+            },
+            child: ListView(
               padding: const EdgeInsets.all(16),
-              itemCount: jobs.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 10),
-              itemBuilder: (_, i) => _JobCard(job: jobs[i]),
+              children: [
+                if (today.isNotEmpty) ...[
+                  _SectionHeader(title: l.todaySection, count: today.length),
+                  const SizedBox(height: 10),
+                  for (final job in today) ...[
+                    _JobCard(job: job),
+                    const SizedBox(height: 10),
+                  ],
+                  const SizedBox(height: 6),
+                ],
+                if (upcoming.isNotEmpty) ...[
+                  _SectionHeader(title: l.upcomingSection, count: upcoming.length),
+                  const SizedBox(height: 10),
+                  for (final job in upcoming) ...[
+                    _JobCard(job: job),
+                    const SizedBox(height: 10),
+                  ],
+                ],
+              ],
             ),
           );
         },
       ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  final String title;
+  final int count;
+  const _SectionHeader({required this.title, required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+        const SizedBox(width: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(
+            color: Colors.grey[200],
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Text(
+            '$count',
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey[700]),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -179,6 +283,19 @@ class _JobCard extends StatelessWidget {
                       '${job.address?.city ?? ''} • ${job.client?.fullName ?? ''}',
                       style: TextStyle(color: Colors.grey[600], fontSize: 13),
                     ),
+                    if (job.scheduledDate != null) ...[
+                      const SizedBox(height: 3),
+                      Row(
+                        children: [
+                          Icon(Icons.schedule, size: 13, color: Colors.grey[500]),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${formatWeekdayShort(job.scheduledDate!)}, ${formatDateShort(job.scheduledDate!)} • ${formatTime(job.scheduledDate!)}',
+                            style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: 6),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),

@@ -13,6 +13,8 @@ import '../../features/job/upload_photos_screen.dart';
 import '../../features/earnings/earnings_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/profile/edit_technician_profile.dart';
+import '../../features/profile/change_password_screen.dart';
+import '../../features/profile/technician_support_page.dart';
 import '../../features/shell/app_shell.dart';
 // Admin screens
 import '../../features/admin/admin_shell.dart';
@@ -132,6 +134,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/profile/edit',
         builder: (_, __) => const EditTechnicianProfileScreen(),
+      ),
+      GoRoute(
+        path: '/profile/change-password',
+        builder: (_, __) => const ChangePasswordScreen(),
+      ),
+      GoRoute(
+        path: '/profile/support',
+        builder: (_, __) => const TechnicianSupportPage(),
       ),
       GoRoute(
         path: '/jobs/:id',

@@ -232,6 +232,20 @@ class _Detail extends ConsumerWidget {
                     label: const Text('Tentar pagamento novamente', style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
                 ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () => _switchQuoteToCash(context, ref),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppTheme.brandBlue,
+                      side: const BorderSide(color: AppTheme.brandBlue),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                    ),
+                    child: const Text('Prefiro pagar em dinheiro no fim', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ),
               ],
             ),
           ),
@@ -490,6 +504,26 @@ class _Detail extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Não foi possível iniciar o pagamento. Tenta novamente.')),
+        );
+      }
+    }
+  }
+
+  /// Desiste do pagamento online (ex.: fechou a PaymentSheet sem concluir) e
+  /// passa a pagar em dinheiro ao técnico no fim do serviço.
+  Future<void> _switchQuoteToCash(BuildContext context, WidgetRef ref) async {
+    try {
+      await ref.read(clientServiceProvider).switchQuoteToCash(request.id);
+      ref.invalidate(clientServiceRequestsProvider);
+      ref.invalidate(serviceRequestDetailProvider(request.id));
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Combinado! Paga em dinheiro ao técnico quando o serviço terminar.')),
+      );
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Não foi possível mudar o método de pagamento. Tenta novamente.')),
         );
       }
     }

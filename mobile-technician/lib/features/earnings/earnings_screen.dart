@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:moura_technician/l10n/generated/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/services/technician_service.dart';
 import '../../core/models/earning.dart';
 import '../../core/utils/formatters.dart';
@@ -107,6 +108,12 @@ class EarningsScreen extends ConsumerWidget {
                   )),
                 ],
               ),
+              if (data.items.isNotEmpty) ...[
+                const SizedBox(height: 20),
+                Text(l.earningsBySpecialty, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+                const SizedBox(height: 10),
+                _SpecialtyBreakdown(items: data.items),
+              ],
               const SizedBox(height: 20),
               Text(l.history, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
               const SizedBox(height: 10),
@@ -174,9 +181,19 @@ class _EarningTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDisplacement = earning.type == 'DISPLACEMENT';
+    final specialtyLabel = earning.specialty != null ? specialtyLabels[earning.specialty] ?? earning.specialty : null;
+    // Ex.: "Eletricidade, Maria Santos, Lisboa" — para o técnico saber de
+    // imediato qual serviço gerou este valor, sem ter de adivinhar.
+    final jobRefParts = [specialtyLabel, earning.clientName, earning.city]
+        .where((p) => p != null && p.trim().isNotEmpty)
+        .toList();
+    final jobRef = jobRefParts.join(', ');
+    final canOpenJob = earning.serviceRequestId != null && earning.serviceRequestId!.isNotEmpty;
+
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
+        onTap: canOpenJob ? () => context.push('/jobs/${earning.serviceRequestId}') : null,
         leading: Container(
           width: 40,
           height: 40,
@@ -194,13 +211,108 @@ class _EarningTile extends StatelessWidget {
           isDisplacement ? AppLocalizations.of(context).priceDisplacement : AppLocalizations.of(context).serviceCompleted,
           style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
         ),
-        subtitle: Text(
-          formatDate(earning.createdAt),
-          style: TextStyle(color: Colors.grey[500], fontSize: 12),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (jobRef.isNotEmpty) ...[
+              const SizedBox(height: 2),
+              Text(
+                jobRef,
+                style: const TextStyle(color: AppTheme.primary, fontSize: 12.5, fontWeight: FontWeight.w500),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+            const SizedBox(height: 2),
+            Text(
+              formatDate(earning.createdAt),
+              style: TextStyle(color: Colors.grey[500], fontSize: 12),
+            ),
+          ],
         ),
-        trailing: Text(
-          formatCurrency(earning.amount),
-          style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.success, fontSize: 15),
+        isThreeLine: jobRef.isNotEmpty,
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              formatCurrency(earning.amount),
+              style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.success, fontSize: 15),
+            ),
+            if (canOpenJob) ...[
+              const SizedBox(height: 2),
+              Icon(Icons.chevron_right, size: 16, color: Colors.grey[400]),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Resumo de ganhos agrupados por especialidade — ajuda o técnico a ver
+/// rapidamente que tipo de serviço lhe rende mais no período selecionado.
+class _SpecialtyBreakdown extends StatelessWidget {
+  final List<Earning> items;
+  const _SpecialtyBreakdown({required this.items});
+
+  @override
+  Widget build(BuildContext context) {
+    final totals = <String, double>{};
+    for (final e in items) {
+      final key = e.specialty;
+      if (key == null || key.isEmpty) continue;
+      totals[key] = (totals[key] ?? 0) + e.amount;
+    }
+    if (totals.isEmpty) return const SizedBox.shrink();
+
+    final sorted = totals.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    final grandTotal = totals.values.fold(0.0, (sum, v) => sum + v);
+    final top = sorted.take(5);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        child: Column(
+          children: [
+            for (final entry in top)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  children: [
+                    Text(specialtyIcons[entry.key] ?? '🔧', style: const TextStyle(fontSize: 16)),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            specialtyLabels[entry.key] ?? entry.key,
+                            style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w500),
+                          ),
+                          const SizedBox(height: 4),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: LinearProgressIndicator(
+                              value: grandTotal > 0 ? entry.value / grandTotal : 0,
+                              minHeight: 5,
+                              backgroundColor: Colors.grey[200],
+                              valueColor: const AlwaysStoppedAnimation(AppTheme.primary),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      formatCurrency(entry.value),
+                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+          ],
         ),
       ),
     );

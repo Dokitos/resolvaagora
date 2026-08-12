@@ -7,6 +7,11 @@ class Earning {
   final double amount;
   final String? serviceRequestId;
   final DateTime createdAt;
+  // Referência ao serviço que gerou este ganho — para o técnico saber de
+  // qual cliente/morada veio o valor, não só "Serviço concluído" solto.
+  final String? specialty;
+  final String? clientName;
+  final String? city;
 
   const Earning({
     required this.id,
@@ -14,6 +19,9 @@ class Earning {
     required this.amount,
     this.serviceRequestId,
     required this.createdAt,
+    this.specialty,
+    this.clientName,
+    this.city,
   });
 
   factory Earning.fromJson(Map<String, dynamic> j) => Earning(
@@ -22,6 +30,9 @@ class Earning {
     amount: _toDouble(j['amount']),
     serviceRequestId: j['serviceRequestId'] as String?,
     createdAt: DateTime.parse((j['earnedAt'] ?? j['createdAt']) as String),
+    specialty: j['specialty'] as String?,
+    clientName: j['clientName'] as String?,
+    city: j['city'] as String?,
   );
 }
 

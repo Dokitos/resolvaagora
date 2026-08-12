@@ -36,7 +36,24 @@ final dioProvider = Provider<Dio>((ref) {
       handler.next(options);
     },
     onError: (error, handler) async {
-      if (error.response?.statusCode == 401) {
+      // Endpoints de auth (login, registo, refresh, recuperação de password)
+      // devolvem 401 pelo próprio motivo do pedido falhar (ex.: password
+      // errada), não porque o access token expirou. Tratá-los como sessão
+      // expirada disparava um refresh silencioso (sem refresh_token ainda,
+      // porque o login nem chegou a suceder) e depois invalidava o
+      // authProvider — precisamente o notifier que o `login()`/`register()`
+      // está a meio de marcar como `AsyncError`. O invalidate descartava essa
+      // instância e recriava-a a partir de storage vazio (não-autenticado,
+      // sem erro), fazendo o ecrã de login ler `hasError == false` e não
+      // mostrar snackbar nenhuma. Por isso estes paths ficam de fora da
+      // lógica de refresh/invalidate abaixo.
+      final path = error.requestOptions.path;
+      final isAuthEndpoint = path.contains('/auth/login') ||
+          path.contains('/auth/register') ||
+          path.contains('/auth/refresh') ||
+          path.contains('/auth/forgot-password') ||
+          path.contains('/auth/reset-password');
+      if (error.response?.statusCode == 401 && !isAuthEndpoint) {
         bool refreshed;
         final existing = _refreshCompleter;
         if (existing != null) {

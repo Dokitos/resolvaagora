@@ -22,6 +22,7 @@
   "accountReferral": "Invite friends",
   "accountSectionSupport": "Support",
   "accountHelp": "Help & support",
+  "accountChangePassword": "Change password",
   "accountTerms": "Terms & conditions",
   "accountLogout": "Sign out",
   "emailVerifyTitle": "Confirm your email",
@@ -227,5 +228,10 @@
   "joinProviderButton": "GET STARTED",
 
   "freeVisitButton": "Use free visit",
-  "freeVisitHint": "Pick a service to use your free visit."
+  "freeVisitHint": "Pick a service to use your free visit.",
+
+  "todaySection": "Today",
+  "upcomingSection": "Upcoming",
+  "noDateScheduled": "No date scheduled",
+  "earningsBySpecialty": "By specialty"
 }

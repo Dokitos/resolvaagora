@@ -3,6 +3,8 @@ import 'package:intl/intl.dart';
 final _currency = NumberFormat.currency(locale: 'pt_PT', symbol: '€', decimalDigits: 2);
 final _date = DateFormat('dd/MM/yyyy HH:mm', 'pt_PT');
 final _dateShort = DateFormat('dd MMM', 'pt_PT');
+final _time = DateFormat('HH:mm', 'pt_PT');
+final _weekdayShort = DateFormat('EEE', 'pt_PT');
 
 /// Safely parses a numeric value that may arrive as a String (e.g. Prisma
 /// Decimal fields serialize to strings in JSON), a num, or null.
@@ -12,6 +14,8 @@ double parseAmount(dynamic v) =>
 String formatCurrency(double amount) => _currency.format(amount);
 String formatDate(DateTime date) => _date.format(date.toLocal());
 String formatDateShort(DateTime date) => _dateShort.format(date.toLocal());
+String formatTime(DateTime date) => _time.format(date.toLocal());
+String formatWeekdayShort(DateTime date) => _weekdayShort.format(date.toLocal());
 
 const Map<String, String> specialtyLabels = {
   'ELECTRICITY': 'Eletricidade',

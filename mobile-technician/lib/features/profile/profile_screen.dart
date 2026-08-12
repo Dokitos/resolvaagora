@@ -3,11 +3,16 @@ import 'package:moura_technician/l10n/generated/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../../core/i18n/language_selector.dart';
 import '../../core/i18n/locale_provider.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/technician_service.dart';
 import '../../core/theme/app_theme.dart';
+
+/// Versão real do build em execução (nome+versão+número de build), lida do
+/// próprio pacote em vez de um literal fixo no código.
+final appInfoProvider = FutureProvider<PackageInfo>((ref) => PackageInfo.fromPlatform());
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -141,6 +146,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ],
                   ),
                 ),
+                const Divider(height: 1, indent: 56),
+                ListTile(
+                  leading: const Icon(Icons.lock_outline, color: AppTheme.primary),
+                  title: Text(l.accountChangePassword),
+                  onTap: () => context.push('/profile/change-password'),
+                  trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+                ),
               ],
             ),
           ),
@@ -152,13 +164,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   leading: const Icon(Icons.help_outline, color: Colors.grey),
                   title: Text(l.accountHelp),
                   trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-                  onTap: () {},
+                  onTap: () => context.push('/profile/support'),
                 ),
                 const Divider(height: 1, indent: 56),
                 ListTile(
                   leading: const Icon(Icons.info_outline, color: Colors.grey),
                   title: Text(l.appVersion),
-                  trailing: Text('1.0.0', style: TextStyle(color: Colors.grey[500])),
+                  trailing: Text(
+                    ref.watch(appInfoProvider).when(
+                          data: (info) => '${info.version} (${info.buildNumber})',
+                          loading: () => '…',
+                          error: (_, __) => '—',
+                        ),
+                    style: TextStyle(color: Colors.grey[500]),
+                  ),
                 ),
               ],
             ),

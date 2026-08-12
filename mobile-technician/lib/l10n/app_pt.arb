@@ -22,6 +22,7 @@
   "accountReferral": "Convida amigos",
   "accountSectionSupport": "Apoio",
   "accountHelp": "Ajuda e suporte",
+  "accountChangePassword": "Alterar palavra-passe",
   "accountTerms": "Termos e condições",
   "accountLogout": "Terminar sessão",
   "emailVerifyTitle": "Confirma o teu email",
@@ -235,5 +236,10 @@
   "joinProviderButton": "COMEÇAR AGORA",
 
   "freeVisitButton": "Usar visita grátis",
-  "freeVisitHint": "Escolhe um serviço para usar a tua visita grátis."
+  "freeVisitHint": "Escolhe um serviço para usar a tua visita grátis.",
+
+  "todaySection": "Hoje",
+  "upcomingSection": "Próximos",
+  "noDateScheduled": "Sem data agendada",
+  "earningsBySpecialty": "Por especialidade"
 }

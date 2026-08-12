@@ -194,6 +194,13 @@ class ClientService {
     return Map<String, dynamic>.from(r.data as Map);
   }
 
+  /// Cliente desiste de pagar online (ex.: fechou a PaymentSheet) e passa a
+  /// pagar em dinheiro ao técnico no fim do serviço.
+  Future<Map<String, dynamic>> switchQuoteToCash(String id) async {
+    final r = await _dio.post('/service-requests/$id/quote/switch-to-cash');
+    return Map<String, dynamic>.from(r.data as Map);
+  }
+
   /// Recusa o orçamento enviado pelo técnico (→ QUOTE_REJECTED), com motivo opcional.
   Future<void> rejectQuote(String id, {String? reason}) async {
     await _dio.post('/service-requests/$id/quote/reject', data: {

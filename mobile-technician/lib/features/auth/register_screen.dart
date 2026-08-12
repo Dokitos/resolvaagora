@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/password_strength_meter.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   final String? from;
@@ -24,7 +25,18 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   bool _obscure = true;
 
   @override
+  void initState() {
+    super.initState();
+    // Reconstrói o ecrã a cada tecla para atualizar o medidor de força da
+    // password em tempo real.
+    _password.addListener(_onPasswordChanged);
+  }
+
+  void _onPasswordChanged() => setState(() {});
+
+  @override
   void dispose() {
+    _password.removeListener(_onPasswordChanged);
     for (final c in [_firstName, _lastName, _email, _phone, _password, _referral]) {
       c.dispose();
     }
@@ -111,6 +123,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 ),
                 validator: (v) => (v?.length ?? 0) >= 8 ? null : 'Mínimo 8 caracteres',
               ),
+              PasswordStrengthMeter(password: _password.text),
               const SizedBox(height: 16),
               _field(_referral, 'Código de referência (opcional)', Icons.card_giftcard_outlined,
                   keyboard: TextInputType.text),

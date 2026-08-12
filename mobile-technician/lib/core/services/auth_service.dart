@@ -6,6 +6,42 @@ import 'client_service.dart';
 
 const _storage = FlutterSecureStorage();
 
+/// Extrai uma mensagem amigável (PT) do erro de um pedido de auth, traduzindo
+/// as mensagens conhecidas que o backend devolve em inglês. Segue o mesmo
+/// padrão de `_friendlyError` usado em `job_detail_screen.dart`/etc., mas
+/// específico do fluxo de auth porque aqui vale a pena traduzir mensagens
+/// conhecidas (ex.: "Invalid credentials") em vez de as mostrar tal e qual.
+String _authErrorMessage(DioException e, String fallback) {
+  final data = e.response?.data;
+  final raw = data is Map ? data['message'] : null;
+  if (raw == null) {
+    if (e.type == DioExceptionType.connectionTimeout ||
+        e.type == DioExceptionType.receiveTimeout ||
+        e.type == DioExceptionType.sendTimeout ||
+        e.type == DioExceptionType.connectionError) {
+      return 'Sem ligação à internet. Verifica a tua ligação e tenta novamente.';
+    }
+    return fallback;
+  }
+  if (raw is List) {
+    return raw.map((m) => _translateAuthMessage(m.toString())).join(', ');
+  }
+  return _translateAuthMessage(raw.toString());
+}
+
+String _translateAuthMessage(String backendMsg) {
+  switch (backendMsg) {
+    case 'Invalid credentials':
+      return 'Email ou palavra-passe incorretos';
+    case 'Invalid refresh token':
+    case 'Refresh token revoked':
+    case 'User not found or inactive':
+      return 'Sessão expirada. Inicia sessão novamente.';
+    default:
+      return backendMsg;
+  }
+}
+
 class AuthState {
   final bool isAuthenticated;
   final String? userId;
@@ -91,8 +127,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       // pedidos, subscrição, notificações…) para o próximo ecrã voltar a buscar.
       _invalidateClientData();
     } on DioException catch (e) {
-      final msg = e.response?.data?['message'] ?? 'Erro ao iniciar sessão';
-      state = AsyncError(msg, e.stackTrace);
+      state = AsyncError(_authErrorMessage(e, 'Erro ao iniciar sessão'), e.stackTrace);
     }
   }
 
@@ -117,8 +152,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
         if (referralCode != null && referralCode.isNotEmpty) 'referralCode': referralCode,
       });
     } on DioException catch (e) {
-      final msg = e.response?.data?['message'] ?? 'Erro ao criar conta';
-      state = AsyncError(msg is List ? msg.join(', ') : msg, e.stackTrace);
+      state = AsyncError(_authErrorMessage(e, 'Erro ao criar conta'), e.stackTrace);
       return;
     }
     // login() sets the authenticated state (storage + tokens + name).
@@ -137,6 +171,18 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   Future<void> resetPassword(String email, String code, String newPassword) async {
     final dio = ref.read(dioProvider);
     await dio.post('/auth/reset-password', data: {'email': email, 'code': code, 'newPassword': newPassword});
+  }
+
+  /// Change the current user's password from within the app (profile
+  /// screen), confirming the current password server-side before applying
+  /// the new one. Throws [DioException] on failure (e.g. wrong current
+  /// password) — the caller reads `e.response?.data?['message']`.
+  Future<void> changePassword(String currentPassword, String newPassword) async {
+    final dio = ref.read(dioProvider);
+    await dio.post('/auth/change-password', data: {
+      'currentPassword': currentPassword,
+      'newPassword': newPassword,
+    });
   }
 
   /// Refresh the cached display name after the client edits their profile.
