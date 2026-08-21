@@ -42,9 +42,13 @@ workflows:
   #   1. Teams > Integrations > App Store Connect: ligar a chave da API do
   #      App Store Connect com o nome EXATO "resolvaagora_app_store".
   #   2. Application settings > Environment variables > grupo "ios-firebase":
-  #      GOOGLE_SERVICE_INFO_PLIST = ficheiro GoogleService-Info.plist do
-  #      Firebase em base64, marcado "Secret". (O mesmo grupo é usado pelo
-  #      ios-build-verify, porque o plist passou a ser um recurso do build.)
+  #      - GOOGLE_SERVICE_INFO_PLIST = GoogleService-Info.plist do Firebase em
+  #        base64, marcado "Secret". (O mesmo grupo é usado pelo
+  #        ios-build-verify, porque o plist passou a ser um recurso do build.)
+  #      - CERTIFICATE_PRIVATE_KEY = chave RSA privada em PEM, marcada
+  #        "Secret". É com ela que o fetch-signing-files cria o certificado de
+  #        distribuição na Apple; guardar o .pem fora do repositório, porque
+  #        perdê-la obriga a revogar o certificado e a criar tudo de novo.
   ios-release:
     name: iOS - Build assinado + TestFlight
     max_build_duration: 60
@@ -58,11 +62,9 @@ workflows:
       cocoapods: default
       groups:
         - ios-firebase
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: pt.resolvaagora.app
       vars:
         APP_STORE_APPLE_ID: 6804067347
+        BUNDLE_ID: pt.resolvaagora.app
     triggering:
       events:
         - tag
@@ -76,8 +78,17 @@ workflows:
         script: flutter gen-l10n
       - name: Escrever GoogleService-Info.plist
         script: echo "$GOOGLE_SERVICE_INFO_PLIST" | base64 --decode > ios/Runner/GoogleService-Info.plist
+      # A conta Apple é nova: não há certificado de distribuição nem perfil
+      # para este bundle ID. O --create cria ambos (e é idempotente nas
+      # builds seguintes, que passam a reutilizá-los).
       - name: Set up code signing
-        script: xcode-project use-profiles
+        script: |
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --create
+          keychain add-certificates
+          xcode-project use-profiles
       # A Apple rejeita uploads com um build number já usado. Tal como no
       # Android, o número vem do que já lá está (+1) em vez do pubspec.yaml,
       # senão cada tag nova exigia editar o ficheiro à mão.
