@@ -12,6 +12,8 @@ workflows:
       flutter: stable
       xcode: latest
       cocoapods: default
+      groups:
+        - ios-firebase
     triggering:
       events:
         - push
@@ -27,31 +29,40 @@ workflows:
         script: flutter pub get
       - name: Gerar localizacao
         script: flutter gen-l10n
+      - name: Escrever GoogleService-Info.plist
+        script: echo "$GOOGLE_SERVICE_INFO_PLIST" | base64 --decode > ios/Runner/GoogleService-Info.plist
       - name: Build iOS (sem assinatura)
         script: flutter build ios --release --no-codesign
     artifacts:
       - build/ios/iphoneos/*.app
 
-  # Workflow de distribuição — só funciona depois de:
-  #   1. Criar conta Apple Developer Program (developer.apple.com)
-  #   2. Ligar essa conta ao Codemagic (Teams > Integrations > Apple Developer Portal)
-  #   3. Configurar `app_store_connect` + `ios_signing` nas Codemagic UI env vars
-  #      (App Store Connect API key + grupo de certificados)
-  # Depois disso, ativar o trigger abaixo e o publishing.
+  # Workflow de distribuição iOS. Dispara com uma tag "ios-v*" (não com push),
+  # para o envio para o TestFlight ser sempre um ato deliberado.
+  # Pré-requisitos, todos já do lado da Codemagic UI:
+  #   1. Teams > Integrations > App Store Connect: ligar a chave da API do
+  #      App Store Connect com o nome EXATO "resolvaagora_app_store".
+  #   2. Application settings > Environment variables > grupo "ios-firebase":
+  #      GOOGLE_SERVICE_INFO_PLIST = ficheiro GoogleService-Info.plist do
+  #      Firebase em base64, marcado "Secret". (O mesmo grupo é usado pelo
+  #      ios-build-verify, porque o plist passou a ser um recurso do build.)
   ios-release:
     name: iOS - Build assinado + TestFlight
     max_build_duration: 60
     instance_type: mac_mini_m2
     working_directory: mobile-technician
+    integrations:
+      app_store_connect: resolvaagora_app_store
     environment:
       flutter: stable
       xcode: latest
       cocoapods: default
+      groups:
+        - ios-firebase
       ios_signing:
         distribution_type: app_store
         bundle_identifier: pt.resolvaagora.app
       vars:
-        APP_STORE_APPLE_ID: 0 # substituir pelo Apple ID numérico da app depois de criada em App Store Connect
+        APP_STORE_APPLE_ID: 6804067347
     triggering:
       events:
         - tag
@@ -63,28 +74,34 @@ workflows:
         script: flutter pub get
       - name: Gerar localizacao
         script: flutter gen-l10n
+      - name: Escrever GoogleService-Info.plist
+        script: echo "$GOOGLE_SERVICE_INFO_PLIST" | base64 --decode > ios/Runner/GoogleService-Info.plist
       - name: Set up code signing
         script: xcode-project use-profiles
+      # A Apple rejeita uploads com um build number já usado. Tal como no
+      # Android, o número vem do que já lá está (+1) em vez do pubspec.yaml,
+      # senão cada tag nova exigia editar o ficheiro à mão.
+      - name: Calcular numero de build (TestFlight + 1)
+        script: |
+          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-testflight-build-number \
+            "$APP_STORE_APPLE_ID" || echo "")
+          if [ -z "$LATEST_BUILD_NUMBER" ]; then
+            LATEST_BUILD_NUMBER=0
+          fi
+          echo "BUILD_NUMBER=$(($LATEST_BUILD_NUMBER + 1))" >> $CM_ENV
       - name: Build IPA assinado
         script: |
           flutter build ipa --release \
+            --build-number=$BUILD_NUMBER \
             --dart-define=API_URL=https://api.resolvaagora.pt/api/v1 \
             --export-options-plist=/Users/builder/export_options.plist
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
-    # Publishing para o TestFlight desativado por agora: precisa de uma
-    # integração "App Store Connect" ligada em Teams > Integrations (só
-    # possível depois de teres conta Apple Developer). Quando a ligares,
-    # acrescenta a chave "integrations" ao nível do workflow (irmã de
-    # "scripts"/"publishing" acima) com o nome que deres à integração no
-    # Codemagic, e descomenta o bloco publishing abaixo:
-    # integrations:
-    #   app_store_connect: nome_da_integracao
-    # publishing:
-    #   app_store_connect:
-    #     auth: integration
-    #     submit_to_testflight: true
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
 
   # Workflow de distribuição Android — só funciona depois de:
   #   1. Na Codemagic (Teams > Code signing identities > Android), fazer

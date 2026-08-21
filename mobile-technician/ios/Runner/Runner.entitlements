@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Capability "Push Notifications" (APNs), usada pelo firebase_messaging.
+	     O valor fica "development": nas builds exportadas para App Store /
+	     TestFlight o xcodebuild volta a assinar com o perfil de distribuicao e
+	     substitui-o por "production" automaticamente. -->
+	<key>aps-environment</key>
+	<string>development</string>
+</dict>
+</plist>
