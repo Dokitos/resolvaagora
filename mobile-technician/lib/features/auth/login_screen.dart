@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
 import 'package:moura_technician/l10n/generated/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -150,6 +152,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         : Text(l.loginButton, style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 0.5)),
                   ),
                 ),
+                const SizedBox(height: 20),
+                const _SocialDivider(),
+                const SizedBox(height: 16),
+                _SocialButton(
+                  label: 'Continuar com Google',
+                  icon: Icons.g_mobiledata,
+                  onPressed: isLoading
+                      ? null
+                      : () => ref.read(authProvider.notifier).signInWithGoogle(),
+                ),
+                // O botão da Apple só aparece no iOS: no Android abriria um
+                // fluxo web que a Apple não pretende para essa plataforma, e a
+                // diretriz 4.8 só se aplica onde há login social de terceiros.
+                if (Platform.isIOS) ...[
+                  const SizedBox(height: 10),
+                  _SocialButton(
+                    label: 'Continuar com Apple',
+                    icon: Icons.apple,
+                    dark: true,
+                    onPressed: isLoading
+                        ? null
+                        : () => ref.read(authProvider.notifier).signInWithApple(),
+                  ),
+                ],
                 const SizedBox(height: 8),
                 Center(
                   child: TextButton(
@@ -176,6 +202,62 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SocialDivider extends StatelessWidget {
+  const _SocialDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(child: Divider(color: Colors.grey[300])),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Text('ou', style: TextStyle(color: Colors.grey[500], fontSize: 13)),
+        ),
+        Expanded(child: Divider(color: Colors.grey[300])),
+      ],
+    );
+  }
+}
+
+class _SocialButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool dark;
+  final VoidCallback? onPressed;
+
+  const _SocialButton({
+    required this.label,
+    required this.icon,
+    required this.onPressed,
+    this.dark = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 52,
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon, size: 24, color: dark ? Colors.white : Colors.black87),
+        label: Text(
+          label,
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: dark ? Colors.white : Colors.black87,
+          ),
+        ),
+        style: OutlinedButton.styleFrom(
+          backgroundColor: dark ? Colors.black : Colors.white,
+          side: BorderSide(color: dark ? Colors.black : Colors.grey[300]!),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
         ),
       ),
     );

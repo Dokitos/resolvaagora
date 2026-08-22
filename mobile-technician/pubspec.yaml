@@ -45,6 +45,13 @@ dependencies:
   firebase_core: ^3.8.0
   firebase_messaging: ^15.1.5
 
+  # Login social (só clientes). O Firebase Auth é a camada de identidade: o
+  # backend valida o ID token dele em vez de lidar com as chaves da Apple e os
+  # clientes OAuth da Google.
+  firebase_auth: ^5.3.4
+  google_sign_in: ^6.2.2
+  sign_in_with_apple: ^6.1.3
+
   # App/build info (mostra a versão real no ecrã de perfil)
   package_info_plus: ^8.1.0
 

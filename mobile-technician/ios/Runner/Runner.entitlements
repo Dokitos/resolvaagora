@@ -12,5 +12,12 @@
 	     desenvolvimento local exigiria trocar isto de volta. -->
 	<key>aps-environment</key>
 	<string>production</string>
+	<!-- Capability "Sign in with Apple". ATENCAO: tem de estar ativada tambem
+	     no App ID em developer.apple.com antes da proxima build, senao o
+	     perfil de distribuicao sai sem ela e a assinatura falha. -->
+	<key>com.apple.developer.applesignin</key>
+	<array>
+		<string>Default</string>
+	</array>
 </dict>
 </plist>

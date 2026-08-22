@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { LoginUseCase } from '../application/use-cases/login.use-case';
+import { SocialLoginUseCase } from '../application/use-cases/social-login.use-case';
 import { RegisterClientUseCase } from '../application/use-cases/register-client.use-case';
 import { RefreshTokenUseCase } from '../application/use-cases/refresh-token.use-case';
 import { ForgotPasswordUseCase } from '../application/use-cases/forgot-password.use-case';
@@ -18,6 +19,7 @@ import { ResetPasswordUseCase } from '../application/use-cases/reset-password.us
 import { EmailVerificationUseCase } from '../application/use-cases/email-verification.use-case';
 import { ChangePasswordUseCase } from '../application/use-cases/change-password.use-case';
 import { LoginDto } from '../application/dto/login.dto';
+import { SocialLoginDto } from '../application/dto/social-login.dto';
 import { RegisterDto } from '../application/dto/register.dto';
 import { RefreshTokenDto } from '../application/dto/refresh-token.dto';
 import { ForgotPasswordDto, ResetPasswordDto } from '../application/dto/reset-password.dto';
@@ -31,6 +33,7 @@ import { RedisService } from '@shared/infrastructure/cache/redis.service';
 export class AuthController {
   constructor(
     private readonly loginUseCase: LoginUseCase,
+    private readonly socialLoginUseCase: SocialLoginUseCase,
     private readonly registerClientUseCase: RegisterClientUseCase,
     private readonly refreshTokenUseCase: RefreshTokenUseCase,
     private readonly forgotPasswordUseCase: ForgotPasswordUseCase,
@@ -52,6 +55,14 @@ export class AuthController {
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   login(@Body() dto: LoginDto) {
     return this.loginUseCase.execute(dto);
+  }
+
+  /** Entrada com Apple ou Google (só clientes). */
+  @Post('social')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  social(@Body() dto: SocialLoginDto) {
+    return this.socialLoginUseCase.execute(dto.idToken, dto.name);
   }
 
   @Post('refresh')

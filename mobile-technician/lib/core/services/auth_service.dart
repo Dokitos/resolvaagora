@@ -1,6 +1,9 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:firebase_auth/firebase_auth.dart' as fb;
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import '../network/api_client.dart';
 import 'client_service.dart';
 
@@ -87,48 +90,136 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
         'email': email,
         'password': password,
       });
-      final data = response.data as Map<String, dynamic>;
-      final role = data['user']['role'] as String;
-
-      await _storage.write(key: 'access_token', value: data['accessToken']);
-      await _storage.write(key: 'refresh_token', value: data['refreshToken']);
-      await _storage.write(key: 'user_id', value: data['user']['id']);
-      await _storage.write(key: 'user_role', value: role);
-
-      String name = data['user']['email'] as String;
-
-      if (role == 'TECHNICIAN') {
-        try {
-          final profile = await ref.read(dioProvider).get('/technician/me');
-          final t = profile.data as Map<String, dynamic>?;
-          if (t != null && t['firstName'] != null) {
-            name = '${t['firstName']} ${t['lastName']}';
-          }
-        } catch (_) {}
-      } else if (role == 'CLIENT') {
-        try {
-          final profile = await ref.read(dioProvider).get('/clients/me');
-          final t = profile.data as Map<String, dynamic>?;
-          if (t != null && t['firstName'] != null) {
-            name = '${t['firstName']} ${t['lastName']}';
-          }
-        } catch (_) {}
-      }
-
-      await _storage.write(key: 'user_name', value: name);
-
-      state = AsyncData(AuthState(
-        isAuthenticated: true,
-        userId: data['user']['id'],
-        name: name,
-        role: role,
-      ));
-      // Nova identidade → descarta os dados de cliente em cache (perfil, moradas,
-      // pedidos, subscrição, notificações…) para o próximo ecrã voltar a buscar.
-      _invalidateClientData();
+      await _completeLogin(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       state = AsyncError(_authErrorMessage(e, 'Erro ao iniciar sessão'), e.stackTrace);
     }
+  }
+
+  /// Guarda a sessão devolvida pelo backend e resolve o nome a mostrar.
+  ///
+  /// Partilhado pelo login com password e pelo login social: a sessão é a
+  /// mesma, muda só a forma de a obter.
+  Future<void> _completeLogin(Map<String, dynamic> data) async {
+      final role = data['user']['role'] as String;
+
+    await _storage.write(key: 'access_token', value: data['accessToken']);
+    await _storage.write(key: 'refresh_token', value: data['refreshToken']);
+    await _storage.write(key: 'user_id', value: data['user']['id']);
+    await _storage.write(key: 'user_role', value: role);
+
+    String name = data['user']['email'] as String;
+
+    if (role == 'TECHNICIAN') {
+      try {
+        final profile = await ref.read(dioProvider).get('/technician/me');
+        final t = profile.data as Map<String, dynamic>?;
+        if (t != null && t['firstName'] != null) {
+          name = '${t['firstName']} ${t['lastName']}';
+        }
+      } catch (_) {}
+    } else if (role == 'CLIENT') {
+      try {
+        final profile = await ref.read(dioProvider).get('/clients/me');
+        final t = profile.data as Map<String, dynamic>?;
+        if (t != null && t['firstName'] != null) {
+          name = '${t['firstName']} ${t['lastName']}';
+        }
+      } catch (_) {}
+    }
+
+    await _storage.write(key: 'user_name', value: name);
+
+    state = AsyncData(AuthState(
+      isAuthenticated: true,
+      userId: data['user']['id'],
+      name: name,
+      role: role,
+    ));
+    // Nova identidade → descarta os dados de cliente em cache (perfil, moradas,
+    // pedidos, subscrição, notificações…) para o próximo ecrã voltar a buscar.
+    _invalidateClientData();
+  }
+
+  /// Entrada com Google. Só faz sentido para clientes — as contas de técnico
+  /// são criadas pela administração.
+  Future<void> signInWithGoogle() => _social(_googleCredential);
+
+  /// Entrada com Apple.
+  Future<void> signInWithApple() => _social(_appleCredential);
+
+  /// Autentica no Firebase com o fornecedor escolhido, troca o ID token pela
+  /// sessão da plataforma e guarda-a como qualquer outra.
+  Future<void> _social(
+    Future<({fb.AuthCredential credential, String? name})> Function() obtain,
+  ) async {
+    state = const AsyncLoading();
+    try {
+      final result = await obtain();
+      final credential =
+          await fb.FirebaseAuth.instance.signInWithCredential(result.credential);
+      final idToken = await credential.user?.getIdToken();
+      if (idToken == null) {
+        throw Exception('O fornecedor não devolveu um token válido.');
+      }
+
+      final response = await ref.read(dioProvider).post('/auth/social', data: {
+        'idToken': idToken,
+        if (result.name != null && result.name!.isNotEmpty) 'name': result.name,
+      });
+      await _completeLogin(response.data as Map<String, dynamic>);
+    } on _SignInCancelled {
+      // Desistir não é um erro: volta ao ecrã como estava, sem mensagem.
+      state = AsyncData(AuthState.unauthenticated());
+    } on DioException catch (e) {
+      state = AsyncError(_authErrorMessage(e, 'Erro ao iniciar sessão'), e.stackTrace);
+    } catch (e, st) {
+      state = AsyncError('Não foi possível iniciar sessão: $e', st);
+    }
+  }
+
+  Future<({fb.AuthCredential credential, String? name})> _googleCredential() async {
+    final account = await GoogleSignIn().signIn();
+    if (account == null) throw _SignInCancelled();
+
+    final auth = await account.authentication;
+    return (
+      credential: fb.GoogleAuthProvider.credential(
+        idToken: auth.idToken,
+        accessToken: auth.accessToken,
+      ),
+      name: account.displayName,
+    );
+  }
+
+  Future<({fb.AuthCredential credential, String? name})> _appleCredential() async {
+    final AuthorizationCredentialAppleID apple;
+    try {
+      apple = await SignInWithApple.getAppleIDCredential(
+        scopes: const [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+      );
+    } on SignInWithAppleAuthorizationException catch (e) {
+      if (e.code == AuthorizationErrorCode.canceled) throw _SignInCancelled();
+      rethrow;
+    }
+
+    // A Apple só envia o nome no primeiro início de sessão; daí ir à parte
+    // para o backend o poder guardar nessa única oportunidade.
+    final name = [apple.givenName, apple.familyName]
+        .whereType<String>()
+        .join(' ')
+        .trim();
+
+    return (
+      credential: fb.OAuthProvider('apple.com').credential(
+        idToken: apple.identityToken,
+        accessToken: apple.authorizationCode,
+      ),
+      name: name.isEmpty ? null : name,
+    );
   }
 
   /// Register a new CLIENT account, then sign in automatically.
@@ -224,3 +315,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
 
 final authProvider =
     AsyncNotifierProvider<AuthNotifier, AuthState>(AuthNotifier.new);
+
+/// O utilizador fechou o ecrã do fornecedor. Distinguir isto de uma falha real
+/// evita mostrar um erro a quem simplesmente mudou de ideias.
+class _SignInCancelled implements Exception {}

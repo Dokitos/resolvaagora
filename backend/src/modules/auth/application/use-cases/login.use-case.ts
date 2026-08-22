@@ -34,6 +34,13 @@ export class LoginUseCase {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    // Conta criada por Apple/Google nunca teve password. Recusa-se sem revelar
+    // que o email existe — quem quiser passar a entrar com password usa o
+    // "esqueci-me da palavra-passe", que a define pela primeira vez.
+    if (!user.passwordHash) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
     const passwordValid = await bcrypt.compare(dto.password, user.passwordHash);
     if (!passwordValid) {
       throw new UnauthorizedException('Invalid credentials');

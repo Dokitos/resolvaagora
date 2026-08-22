@@ -5,6 +5,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthController } from './presentation/auth.controller';
 import { JwtStrategy } from './infrastructure/jwt.strategy';
 import { LoginUseCase } from './application/use-cases/login.use-case';
+import { SocialLoginUseCase } from './application/use-cases/social-login.use-case';
 import { RegisterClientUseCase } from './application/use-cases/register-client.use-case';
 import { RefreshTokenUseCase } from './application/use-cases/refresh-token.use-case';
 import { ForgotPasswordUseCase } from './application/use-cases/forgot-password.use-case';
@@ -30,6 +31,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
   providers: [
     JwtStrategy,
     LoginUseCase,
+    SocialLoginUseCase,
     RegisterClientUseCase,
     RefreshTokenUseCase,
     ForgotPasswordUseCase,

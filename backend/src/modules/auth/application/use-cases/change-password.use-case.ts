@@ -28,6 +28,14 @@ export class ChangePasswordUseCase {
       throw new UnauthorizedException('Sessão inválida.');
     }
 
+    // Sem password definida (conta social), não há "atual" para confirmar: o
+    // caminho correto é definir uma através do fluxo de recuperação.
+    if (!user.passwordHash) {
+      throw new BadRequestException(
+        'Esta conta entra com Apple ou Google. Use "Esqueci-me da palavra-passe" para definir uma.',
+      );
+    }
+
     const valid = await bcrypt.compare(currentPassword, user.passwordHash);
     if (!valid) {
       throw new BadRequestException('Palavra-passe atual incorreta.');
