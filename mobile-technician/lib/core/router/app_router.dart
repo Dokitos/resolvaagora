@@ -144,10 +144,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/profile/support',
         builder: (_, __) => const TechnicianSupportPage(),
       ),
-      // Rota única partilhada pelo técnico e pelo cliente — o diagnóstico é o
-      // mesmo e não depende do papel do utilizador.
+      // O mesmo ecrã é servido em dois caminhos, um por área. O `redirect`
+      // global só deixa cada papel dentro da sua (técnico: /profile, cliente:
+      // /client), por isso uma rota fora delas seria inalcançável.
       GoRoute(
-        path: '/push-diagnostics',
+        path: '/profile/push-diagnostics',
         builder: (_, __) => const PushDiagnosticsPage(),
       ),
       GoRoute(
@@ -229,6 +230,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: '/client/account/notifications', builder: (_, __) => const NotificationsPage()),
       GoRoute(path: '/client/account/support', builder: (_, __) => const SupportPage()),
+      GoRoute(
+        path: '/client/account/push-diagnostics',
+        builder: (_, __) => const PushDiagnosticsPage(),
+      ),
       GoRoute(path: '/client/account/support/chat', builder: (_, __) => const SupportChatPage()),
       GoRoute(path: '/client/subscription', builder: (_, __) => const SubscriptionPage()),
       GoRoute(path: '/client/referral', builder: (_, __) => const ReferralPage()),

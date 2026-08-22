@@ -132,7 +132,7 @@ class ClientAccountScreen extends ConsumerWidget {
             _MenuTile(
               icon: Icons.notifications_active_outlined,
               label: 'Diagnóstico de notificações',
-              onTap: () => context.push('/push-diagnostics'),
+              onTap: () => context.push('/client/account/push-diagnostics'),
             ),
           ]),
           const SizedBox(height: 20),
