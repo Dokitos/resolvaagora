@@ -26,6 +26,13 @@ class ServiceRequestDetailPage extends ConsumerWidget {
         backgroundColor: AppTheme.brandRed,
         foregroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          IconButton(
+            tooltip: 'Mensagens com o técnico',
+            icon: const Icon(Icons.chat_bubble_outline),
+            onPressed: () => context.push('/client/messages/$serviceRequestId'),
+          ),
+        ],
       ),
       body: detail.when(
         loading: () => ListView(

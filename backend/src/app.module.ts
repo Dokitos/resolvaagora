@@ -12,6 +12,7 @@ import { QuotesModule } from './modules/quotes/quotes.module';
 import { DistributionModule } from './modules/distribution/distribution.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { MessagesModule } from './modules/messages/messages.module';
 import { SlaModule } from './modules/sla/sla.module';
 import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
 import { AdminModule } from './modules/admin/admin.module';
@@ -40,6 +41,7 @@ import { validateEnv } from './shared/utils/env.validation';
     DistributionModule,
     PaymentsModule,
     NotificationsModule,
+    MessagesModule,
     SlaModule,
     SubscriptionsModule,
     AdminModule,

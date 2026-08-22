@@ -17,6 +17,7 @@ import '../../features/profile/change_password_screen.dart';
 import '../../features/profile/technician_support_page.dart';
 import '../../features/profile/push_diagnostics_page.dart';
 import '../../features/communications/communications_screen.dart';
+import '../../features/messages/chat_screen.dart';
 import '../../features/shell/app_shell.dart';
 // Admin screens
 import '../../features/admin/admin_shell.dart';
@@ -134,6 +135,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/communications', builder: (_, __) => const CommunicationsScreen()),
           GoRoute(path: '/profile',  builder: (_, __) => const ProfileScreen()),
         ],
+      ),
+      // A conversa fica fora do shell (ecrã inteiro) e sob um prefixo que a
+      // lista de permissões de cada papel já autoriza: /communications para o
+      // técnico, /client para o cliente.
+      GoRoute(
+        path: '/communications/:id',
+        builder: (_, state) => ChatScreen(serviceRequestId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/client/messages/:id',
+        builder: (_, state) => ChatScreen(serviceRequestId: state.pathParameters['id']!),
       ),
       GoRoute(
         path: '/profile/edit',

@@ -3,11 +3,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/services/communications_service.dart';
+import '../messages/conversations_list.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatters.dart';
 
-/// Aba "Comunicação": avisos da aplicação, emails enviados ao técnico e
-/// pagamentos recebidos, num feed único ordenado por data.
+/// Os dois lados da aba: o que a plataforma comunica ao técnico, e o que ele
+/// troca com os clientes.
+enum _Segment { notices, messages }
+
+/// Aba "Comunicação". Junta num só sítio os avisos, emails e pagamentos
+/// (separador "Avisos") e as conversas com clientes (separador "Mensagens") —
+/// preferido a duas abas separadas para a barra inferior não passar de quatro.
 class CommunicationsScreen extends ConsumerStatefulWidget {
   const CommunicationsScreen({super.key});
 
@@ -17,6 +23,7 @@ class CommunicationsScreen extends ConsumerStatefulWidget {
 
 class _CommunicationsScreenState extends ConsumerState<CommunicationsScreen> {
   final _scroll = ScrollController();
+  _Segment _segment = _Segment.notices;
 
   /// Páginas seguintes, acumuladas à medida que se desce. A primeira vem do
   /// provider, para aproveitar o refresh e o tratamento de erro dele.
@@ -70,7 +77,39 @@ class _CommunicationsScreenState extends ConsumerState<CommunicationsScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Comunicação')),
-      body: firstPage.when(
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: SegmentedButton<_Segment>(
+              segments: const [
+                ButtonSegment(
+                  value: _Segment.notices,
+                  icon: Icon(Icons.campaign_outlined, size: 18),
+                  label: Text('Avisos'),
+                ),
+                ButtonSegment(
+                  value: _Segment.messages,
+                  icon: Icon(Icons.chat_bubble_outline, size: 18),
+                  label: Text('Mensagens'),
+                ),
+              ],
+              selected: {_segment},
+              onSelectionChanged: (sel) => setState(() => _segment = sel.first),
+            ),
+          ),
+          Expanded(
+            child: _segment == _Segment.messages
+                ? const ConversationsList(isTechnician: true)
+                : _buildNotices(firstPage),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNotices(AsyncValue<CommunicationsPage> firstPage) {
+    return firstPage.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
           child: Column(
@@ -143,7 +182,6 @@ class _CommunicationsScreenState extends ConsumerState<CommunicationsScreen> {
             ),
           );
         },
-      ),
     );
   }
 }

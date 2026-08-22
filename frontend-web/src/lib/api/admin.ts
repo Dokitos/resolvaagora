@@ -216,6 +216,10 @@ export const adminApi = {
   previewAudience: (data: Pick<CampaignInput, 'audience' | 'groupId' | 'segment'>) =>
     api.post('/admin/notifications/audience/preview', data).then((r) => r.data),
 
+  /** Conversa cliente↔técnico de um pedido (leitura, para moderação). */
+  serviceMessages: (serviceRequestId: string) =>
+    api.get(`/service-requests/${serviceRequestId}/messages`).then((r) => r.data),
+
   notificationGroups: () =>
     api.get('/admin/notifications/groups').then((r) => r.data),
 

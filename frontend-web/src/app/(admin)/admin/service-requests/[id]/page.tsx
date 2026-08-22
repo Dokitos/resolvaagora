@@ -243,6 +243,9 @@ export default function AdminServiceRequestDetailPage({ params }: { params: { id
         </Card>
       )}
 
+      {/* Conversa cliente↔técnico (moderação) */}
+      <ServiceConversation serviceRequestId={params.id} />
+
       {/* Chat de suporte */}
       {clientUserId && (
         <Card>
@@ -357,5 +360,69 @@ export default function AdminServiceRequestDetailPage({ params }: { params: { id
         </div>
       </Modal>
     </div>
+  )
+}
+
+/**
+ * Conversa entre o cliente e o técnico deste pedido, só de leitura.
+ *
+ * O admin não escreve aqui: uma mensagem da plataforma no meio da conversa
+ * confundiria quem está a falar com quem. Serve para arbitrar disputas, e as
+ * duas partes são avisadas na app de que pode ser consultada.
+ */
+function ServiceConversation({ serviceRequestId }: { serviceRequestId: string }) {
+  const [messages, setMessages] = useState<
+    { id: string; body: string; senderName: string; senderRole: string; createdAt: string }[]
+  >([])
+  const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    adminApi
+      .serviceMessages(serviceRequestId)
+      .then((d: { messages: typeof messages }) => setMessages(d.messages))
+      .catch(() => setMessages([]))
+      .finally(() => setLoaded(true))
+  }, [serviceRequestId])
+
+  if (!loaded || messages.length === 0) return null
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <MessageCircle className="h-4 w-4" />
+          Conversa cliente ↔ técnico
+          <span className="text-xs font-normal text-gray-400">({messages.length} mensagens)</span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="max-h-64 space-y-2 overflow-auto rounded-lg bg-gray-50 p-3">
+          {messages.map((m) => (
+            <div
+              key={m.id}
+              className={`flex ${m.senderRole === 'TECHNICIAN' ? 'justify-end' : 'justify-start'}`}
+            >
+              <div
+                className={`max-w-[75%] rounded-2xl px-3 py-1.5 text-sm ${
+                  m.senderRole === 'TECHNICIAN'
+                    ? 'bg-blue-600 text-white'
+                    : 'border border-gray-200 bg-white'
+                }`}
+              >
+                <div className="text-[10px] opacity-70">{m.senderName}</div>
+                {m.body}
+                <div
+                  className={`mt-0.5 text-[10px] ${
+                    m.senderRole === 'TECHNICIAN' ? 'text-white/70' : 'text-gray-400'
+                  }`}
+                >
+                  {formatDate(m.createdAt)}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   )
 }

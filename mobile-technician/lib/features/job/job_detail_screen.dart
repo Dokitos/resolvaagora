@@ -32,6 +32,15 @@ class JobDetailScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Detalhes do Serviço'),
         leading: BackButton(onPressed: () => context.pop()),
+        actions: [
+          // A conversa é sempre alcançável a partir do trabalho; se o serviço
+          // já terminou, o ecrã abre em leitura e explica porquê.
+          IconButton(
+            tooltip: 'Mensagens com o cliente',
+            icon: const Icon(Icons.chat_bubble_outline),
+            onPressed: () => context.push('/communications/$id'),
+          ),
+        ],
       ),
       body: jobAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
