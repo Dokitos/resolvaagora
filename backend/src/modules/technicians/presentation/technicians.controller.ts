@@ -21,6 +21,7 @@ import { AuthenticatedUser } from '../../auth/infrastructure/jwt.strategy';
 import { GetScheduleUseCase } from '../application/use-cases/get-schedule.use-case';
 import { UpdateAvailabilityUseCase } from '../application/use-cases/update-availability.use-case';
 import { GetEarningsUseCase } from '../application/use-cases/get-earnings.use-case';
+import { GetCommunicationsUseCase } from '../application/use-cases/get-communications.use-case';
 import { StorageService } from '../../storage/storage.service';
 import { PrismaService } from '@shared/infrastructure/database/prisma.service';
 
@@ -32,9 +33,23 @@ export class TechniciansController {
     private readonly getSchedule: GetScheduleUseCase,
     private readonly updateAvailability: UpdateAvailabilityUseCase,
     private readonly getEarnings: GetEarningsUseCase,
+    private readonly getCommunications: GetCommunicationsUseCase,
     private readonly storage: StorageService,
     private readonly prisma: PrismaService,
   ) {}
+
+  /** Feed da aba "Comunicação": avisos, emails recebidos e pagamentos. */
+  @Get('communications')
+  communications(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('before') before?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.getCommunications.execute(user.id, {
+      before,
+      limit: limit ? Number(limit) : undefined,
+    });
+  }
 
   @Get('me')
   async profile(@CurrentUser() user: AuthenticatedUser) {

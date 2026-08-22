@@ -4,6 +4,7 @@ import { CreateTechnicianUseCase } from './application/use-cases/create-technici
 import { UpdateAvailabilityUseCase } from './application/use-cases/update-availability.use-case';
 import { GetScheduleUseCase } from './application/use-cases/get-schedule.use-case';
 import { GetEarningsUseCase } from './application/use-cases/get-earnings.use-case';
+import { GetCommunicationsUseCase } from './application/use-cases/get-communications.use-case';
 import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
@@ -14,6 +15,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     UpdateAvailabilityUseCase,
     GetScheduleUseCase,
     GetEarningsUseCase,
+    GetCommunicationsUseCase,
   ],
   exports: [CreateTechnicianUseCase],
 })

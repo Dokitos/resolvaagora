@@ -10,6 +10,7 @@ class AppShell extends ConsumerWidget {
   static const _tabs = [
     (path: '/schedule', label: 'Agenda', icon: Icons.calendar_today_outlined, activeIcon: Icons.calendar_today),
     (path: '/earnings', label: 'Ganhos',  icon: Icons.euro_outlined,           activeIcon: Icons.euro),
+    (path: '/communications', label: 'Comunicação', icon: Icons.forum_outlined, activeIcon: Icons.forum),
     (path: '/profile',  label: 'Perfil',  icon: Icons.person_outline,          activeIcon: Icons.person),
   ];
 

@@ -16,6 +16,7 @@ import '../../features/profile/edit_technician_profile.dart';
 import '../../features/profile/change_password_screen.dart';
 import '../../features/profile/technician_support_page.dart';
 import '../../features/profile/push_diagnostics_page.dart';
+import '../../features/communications/communications_screen.dart';
 import '../../features/shell/app_shell.dart';
 // Admin screens
 import '../../features/admin/admin_shell.dart';
@@ -91,6 +92,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         if (isTechnician) {
           final techArea = loc.startsWith('/schedule') ||
               loc.startsWith('/earnings') ||
+              loc.startsWith('/communications') ||
               loc.startsWith('/profile') ||
               loc.startsWith('/jobs');
           return techArea ? null : '/schedule';
@@ -129,6 +131,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(path: '/schedule', builder: (_, __) => const ScheduleScreen()),
           GoRoute(path: '/earnings', builder: (_, __) => const EarningsScreen()),
+          GoRoute(path: '/communications', builder: (_, __) => const CommunicationsScreen()),
           GoRoute(path: '/profile',  builder: (_, __) => const ProfileScreen()),
         ],
       ),
