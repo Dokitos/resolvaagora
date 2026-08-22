@@ -135,6 +135,12 @@ class ClientAccountScreen extends ConsumerWidget {
           // ── Logout ──
           _MenuGroup(children: [
             _MenuTile(
+              icon: Icons.person_remove_outlined,
+              label: 'Eliminar conta',
+              color: AppTheme.brandRed,
+              onTap: () => context.push('/client/account/delete-account'),
+            ),
+            _MenuTile(
               icon: Icons.logout,
               label: l.accountLogout,
               color: AppTheme.brandRed,

@@ -82,6 +82,45 @@ export const authOptions: NextAuthOptions = {
         }
       },
     }),
+
+    /**
+     * Entrada com Apple ou Google. O browser autentica-se no Firebase e passa
+     * aqui o ID token; o backend valida-o e devolve a mesma sessão do login
+     * com password, pelo que o resto do NextAuth não precisa de distinguir os
+     * dois caminhos.
+     */
+    CredentialsProvider({
+      id: 'social',
+      name: 'social',
+      credentials: {
+        idToken: { label: 'ID token', type: 'text' },
+        name: { label: 'Nome', type: 'text' },
+      },
+      async authorize(credentials) {
+        if (!credentials?.idToken) return null
+
+        try {
+          const res = await api.post('/auth/social', {
+            idToken: credentials.idToken,
+            ...(credentials.name ? { name: credentials.name } : {}),
+          })
+
+          const { accessToken, refreshToken, user } = res.data
+
+          return {
+            id: user.id,
+            email: user.email,
+            role: user.role,
+            accessToken,
+            refreshToken,
+          }
+        } catch (err: any) {
+          const msg = err?.response?.data?.message || err?.message || 'Erro desconhecido'
+          console.error('[NextAuth] social login failed:', msg)
+          throw new Error(Array.isArray(msg) ? msg.join(', ') : msg)
+        }
+      },
+    }),
   ],
   callbacks: {
     async jwt({ token, user }) {

@@ -30,7 +30,7 @@ class ServiceRequestDetailPage extends ConsumerWidget {
           IconButton(
             tooltip: 'Mensagens com o técnico',
             icon: const Icon(Icons.chat_bubble_outline),
-            onPressed: () => context.push('/client/messages/$serviceRequestId'),
+            onPressed: () => context.push('/client/messages/$id'),
           ),
         ],
       ),

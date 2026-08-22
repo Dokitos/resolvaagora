@@ -22,6 +22,10 @@ enum UserStatus {
   ACTIVE
   INACTIVE
   SUSPENDED
+  /// Conta eliminada pelo próprio. Os dados pessoais foram removidos, mas a
+  /// linha fica: os pedidos, pagamentos e recibos apontam para ela e a lei
+  /// obriga a guardá-los. Ver `DeleteAccountUseCase`.
+  DELETED
 }
 
 enum Specialty {

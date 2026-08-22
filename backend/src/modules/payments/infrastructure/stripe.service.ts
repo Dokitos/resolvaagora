@@ -24,6 +24,29 @@ export class StripeService {
     return !this.isStub;
   }
 
+  /**
+   * Cancela a subscrição na Stripe. Usado ao eliminar uma conta: sem isto, a
+   * assinatura continuaria a cobrar alguém que já não tem conta.
+   *
+   * Tolera o cancelamento de uma subscrição que já lá não está — o objetivo é
+   * garantir que deixa de cobrar, não que a operação foi a primeira.
+   */
+  async cancelSubscription(subscriptionId: string): Promise<void> {
+    if (this.isStub) {
+      this.logger.log(`[STUB] cancelSubscription(${subscriptionId})`);
+      return;
+    }
+    try {
+      await this.stripe.subscriptions.cancel(subscriptionId);
+    } catch (err) {
+      if (err instanceof Stripe.errors.StripeInvalidRequestError) {
+        this.logger.warn(`Subscrição ${subscriptionId} já não existe na Stripe`);
+        return;
+      }
+      throw err;
+    }
+  }
+
   async createPaymentIntent(amount: number, currency = 'eur', metadata: Record<string, string> = {}) {
     if (this.isStub) {
       const id = `pi_stub_${Date.now()}`;

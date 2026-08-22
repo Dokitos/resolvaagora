@@ -16,6 +16,7 @@ import '../../features/profile/edit_technician_profile.dart';
 import '../../features/profile/change_password_screen.dart';
 import '../../features/profile/technician_support_page.dart';
 import '../../features/profile/push_diagnostics_page.dart';
+import '../../features/profile/delete_account_screen.dart';
 import '../../features/communications/communications_screen.dart';
 import '../../features/messages/chat_screen.dart';
 import '../../features/shell/app_shell.dart';
@@ -165,6 +166,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/profile/push-diagnostics',
         builder: (_, __) => const PushDiagnosticsPage(),
+      ),
+      // Eliminação da conta: uma rota por área, porque o `redirect` mantém
+      // cada papel dentro da sua.
+      GoRoute(
+        path: '/profile/delete-account',
+        builder: (_, __) => const DeleteAccountScreen(),
+      ),
+      GoRoute(
+        path: '/client/account/delete-account',
+        builder: (_, __) => const DeleteAccountScreen(),
       ),
       GoRoute(
         path: '/jobs/:id',

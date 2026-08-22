@@ -127,10 +127,10 @@ workflows:
   #      ficheiro JSON da conta de serviço (marcar "Secret").
   #   4. A app tem de já ter sido submetida manualmente à Play Console pelo
   #      menos uma vez (a API não cria a ficha da app, só publica versões).
-  # Depois disso, cada push a "main" que altere algo dentro de
-  # mobile-technician/ gera um app bundle assinado e publica-o automaticamente
-  # na faixa de testes interna da Play Store. Alterações só no backend/ ou
-  # frontend-web/ não disparam este build (ver "when: changeset" abaixo).
+  # Dispara com uma tag "android-v*", tal como o iOS dispara com "ios-v*".
+  # Antes corria a cada push que tocasse em mobile-technician/, o que gerava e
+  # publicava uma versão na Play Store por commit — caro e sem utilidade, já
+  # que a maior parte dos commits não é para distribuir.
   android-release:
     name: Android - Build assinado + Play Store (testes internos)
     max_build_duration: 60
@@ -144,14 +144,10 @@ workflows:
         - resolvaagora_keystore
     triggering:
       events:
-        - push
-      branch_patterns:
-        - pattern: main
+        - tag
+      tag_patterns:
+        - pattern: "android-v*"
           include: true
-    when:
-      changeset:
-        includes:
-          - 'mobile-technician/'
     scripts:
       - name: Get Flutter packages
         script: flutter pub get

@@ -5,8 +5,7 @@ import Link from 'next/link'
 import { signOut, useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
 import {
-  Edit, Star, User, MapPin, Receipt, Bell, Gift, HelpCircle, FileText, LogOut, MailWarning, ChevronRight,
-} from 'lucide-react'
+  Edit, Star, User, MapPin, Receipt, Bell, Gift, HelpCircle, FileText, LogOut, MailWarning, ChevronRight, UserMinus } from 'lucide-react'
 import { clientApi } from '@/lib/api/client-api'
 import { notificationsApi } from '@/lib/api/notifications'
 import { api } from '@/lib/api/client'
@@ -119,6 +118,14 @@ export default function AccountPage() {
         <p className="px-1 pb-2 text-xs font-bold uppercase tracking-wide text-gray-500">Apoio</p>
         <MenuGroup items={supportItems} />
       </div>
+
+      <Link
+        href="/account/delete"
+        className="flex w-full items-center gap-3.5 rounded-2xl border border-gray-200 bg-white px-4 py-3.5 text-red-600"
+      >
+        <UserMinus className="h-5 w-5" />
+        <span className="text-sm font-medium">Eliminar conta</span>
+      </Link>
 
       <button
         onClick={() => signOut({ callbackUrl: '/login' })}

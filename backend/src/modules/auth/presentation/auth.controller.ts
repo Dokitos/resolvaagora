@@ -12,6 +12,7 @@ import {
 import { Throttle } from '@nestjs/throttler';
 import { LoginUseCase } from '../application/use-cases/login.use-case';
 import { SocialLoginUseCase } from '../application/use-cases/social-login.use-case';
+import { DeleteAccountUseCase } from '../application/use-cases/delete-account.use-case';
 import { RegisterClientUseCase } from '../application/use-cases/register-client.use-case';
 import { RefreshTokenUseCase } from '../application/use-cases/refresh-token.use-case';
 import { ForgotPasswordUseCase } from '../application/use-cases/forgot-password.use-case';
@@ -20,6 +21,7 @@ import { EmailVerificationUseCase } from '../application/use-cases/email-verific
 import { ChangePasswordUseCase } from '../application/use-cases/change-password.use-case';
 import { LoginDto } from '../application/dto/login.dto';
 import { SocialLoginDto } from '../application/dto/social-login.dto';
+import { DeleteAccountDto } from '../application/dto/delete-account.dto';
 import { RegisterDto } from '../application/dto/register.dto';
 import { RefreshTokenDto } from '../application/dto/refresh-token.dto';
 import { ForgotPasswordDto, ResetPasswordDto } from '../application/dto/reset-password.dto';
@@ -34,6 +36,7 @@ export class AuthController {
   constructor(
     private readonly loginUseCase: LoginUseCase,
     private readonly socialLoginUseCase: SocialLoginUseCase,
+    private readonly deleteAccountUseCase: DeleteAccountUseCase,
     private readonly registerClientUseCase: RegisterClientUseCase,
     private readonly refreshTokenUseCase: RefreshTokenUseCase,
     private readonly forgotPasswordUseCase: ForgotPasswordUseCase,
@@ -122,6 +125,20 @@ export class AuthController {
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   changePassword(@CurrentUser() user: AuthenticatedUser, @Body() dto: ChangePasswordDto) {
     return this.changePasswordUseCase.execute(user.id, dto.currentPassword, dto.newPassword);
+  }
+
+  /**
+   * Eliminação da conta pelo próprio (diretriz 5.1.1(v) da App Store).
+   *
+   * Remove os dados pessoais e fecha a conta; os registos de faturação ficam,
+   * já sem identificação — ver DeleteAccountUseCase.
+   */
+  @Post('delete-account')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
+  deleteAccount(@CurrentUser() user: AuthenticatedUser, @Body() dto: DeleteAccountDto) {
+    return this.deleteAccountUseCase.execute(user.id, dto.password);
   }
 
   @Post('logout')

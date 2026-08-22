@@ -168,6 +168,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ),
                 const Divider(height: 1, indent: 56),
                 ListTile(
+                  leading: const Icon(Icons.person_remove_outlined, color: AppTheme.danger),
+                  title: const Text('Eliminar conta', style: TextStyle(color: AppTheme.danger)),
+                  trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+                  onTap: () => context.push('/profile/delete-account'),
+                ),
+                const Divider(height: 1, indent: 56),
+                ListTile(
                   leading: const Icon(Icons.info_outline, color: Colors.grey),
                   title: Text(l.appVersion),
                   // Entrada discreta para o diagnóstico das push: fora do menu
