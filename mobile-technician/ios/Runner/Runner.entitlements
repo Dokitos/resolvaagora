@@ -3,10 +3,14 @@
 <plist version="1.0">
 <dict>
 	<!-- Capability "Push Notifications" (APNs), usada pelo firebase_messaging.
-	     O valor fica "development": nas builds exportadas para App Store /
-	     TestFlight o xcodebuild volta a assinar com o perfil de distribuicao e
-	     substitui-o por "production" automaticamente. -->
+	     Fixo em "production": contava-se que a exportacao para App Store o
+	     trocasse a partir de "development", mas nao aconteceu — o iPhone
+	     ficava sem token APNs (registerForRemoteNotifications falha sem uma
+	     aps-environment valida para o perfil) e nenhuma push chegava.
+	     Todas as builds saem do Codemagic com perfil de distribuicao App
+	     Store, por isso "production" e o valor correto; uma build de
+	     desenvolvimento local exigiria trocar isto de volta. -->
 	<key>aps-environment</key>
-	<string>development</string>
+	<string>production</string>
 </dict>
 </plist>

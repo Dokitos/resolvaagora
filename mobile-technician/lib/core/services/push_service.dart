@@ -83,8 +83,8 @@ class PushService {
   ///
   /// Devolve `false` se não aparecer dentro do tempo limite — acontece quando
   /// o utilizador recusou as notificações ou não há rede no arranque.
-  Future<bool> _waitForApnsToken(FirebaseMessaging messaging) async {
-    for (var attempt = 0; attempt < 10; attempt++) {
+  Future<bool> _waitForApnsToken(FirebaseMessaging messaging, {int attempts = 10}) async {
+    for (var attempt = 0; attempt < attempts; attempt++) {
       if (await messaging.getAPNSToken() != null) return true;
       await Future<void>.delayed(const Duration(seconds: 1));
     }
@@ -153,7 +153,12 @@ class PushService {
 
     try {
       permission = (await messaging.getNotificationSettings()).authorizationStatus.name;
-      if (Platform.isIOS) apnsToken = await messaging.getAPNSToken();
+      if (Platform.isIOS) {
+        // Espera curta (o ecrã fica à espera): distingue "a Apple nunca
+        // entregou o token" de "ainda não tinha chegado quando olhámos".
+        await _waitForApnsToken(messaging, attempts: 5);
+        apnsToken = await messaging.getAPNSToken();
+      }
       // No iOS isto lança `apns-token-not-set` se o passo anterior falhou; a
       // mensagem da exceção é precisamente o que queremos mostrar.
       fcmToken = await messaging.getToken();
