@@ -7,6 +7,10 @@ import { QuotePdfService } from './infrastructure/quote-pdf.service';
 import { NotificationQueueConsumer } from './infrastructure/notification-queue.consumer';
 import { NotificationsGateway } from './presentation/notifications.gateway';
 import { NotificationsController } from './presentation/notifications.controller';
+import { NotificationCampaignsController } from './presentation/notification-campaigns.controller';
+import { AudienceService } from './application/audience.service';
+import { CampaignService } from './application/campaign.service';
+import { CampaignScheduler } from './infrastructure/campaign.scheduler';
 
 @Module({
   imports: [
@@ -19,8 +23,17 @@ import { NotificationsController } from './presentation/notifications.controller
       }),
     }),
   ],
-  controllers: [NotificationsController],
-  providers: [FcmService, EmailService, QuotePdfService, NotificationQueueConsumer, NotificationsGateway],
+  controllers: [NotificationsController, NotificationCampaignsController],
+  providers: [
+    FcmService,
+    EmailService,
+    QuotePdfService,
+    NotificationQueueConsumer,
+    NotificationsGateway,
+    AudienceService,
+    CampaignService,
+    CampaignScheduler,
+  ],
   exports: [FcmService, EmailService, NotificationsGateway],
 })
 export class NotificationsModule {}

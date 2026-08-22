@@ -72,7 +72,18 @@ export class FcmService implements OnModuleInit {
       android: { priority: 'high', notification: { sound: 'default' } },
       apns: { payload: { aps: { sound: 'default' } } },
     }));
-    const response = await admin.messaging().sendEach(messages);
+    // `sendEach` aceita no máximo 500 mensagens por chamada. Sem partir em
+    // lotes, uma campanha para toda a base de utilizadores falharia por
+    // inteiro em vez de ser entregue.
+    const BATCH = 500;
+    let successCount = 0;
+    const responses: admin.messaging.SendResponse[] = [];
+    for (let i = 0; i < messages.length; i += BATCH) {
+      const batch = await admin.messaging().sendEach(messages.slice(i, i + BATCH));
+      successCount += batch.successCount;
+      responses.push(...batch.responses);
+    }
+    const response = { successCount, responses, failureCount: responses.length - successCount };
     // `sendEach` devolve um resultado por token e nunca lança quando só alguns
     // falham. Sem isto, uma falha exclusiva do iOS (tipicamente a chave APNs
     // mal configurada no Firebase, que dá `messaging/third-party-auth-error`)

@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
-import { Settings, Megaphone, Wrench, Gift, MapPin, Percent } from 'lucide-react'
+import { Settings, Wrench, Gift, MapPin, Percent } from 'lucide-react'
 
 type AppSettings = {
   maintenanceMode: boolean
@@ -39,8 +39,6 @@ type ReferralConfig = {
 
 export default function AdminSettingsPage() {
   const [s, setS] = useState<AppSettings | null>(null)
-  const [bc, setBc] = useState({ target: 'ALL_CLIENTS', title: '', body: '' })
-  const [sending, setSending] = useState(false)
   const [rc, setRc] = useState<ReferralConfig | null>(null)
   const [savingRc, setSavingRc] = useState(false)
   const [disp, setDisp] = useState<DisplacementForm | null>(null)
@@ -109,16 +107,6 @@ export default function AdminSettingsPage() {
     const updated = await adminApi.updateSettings(data)
     setS(updated)
     toast.success('Definições atualizadas')
-  }
-
-  async function send() {
-    if (!bc.title.trim() || !bc.body.trim()) return toast.error('Título e mensagem obrigatórios')
-    setSending(true)
-    try {
-      const r = await adminApi.broadcast(bc)
-      toast.success(`Notificação enviada a ${r.sent} utilizador(es)`)
-      setBc({ ...bc, title: '', body: '' })
-    } catch (err: any) { toast.error(err.message) } finally { setSending(false) }
   }
 
   return (
@@ -218,30 +206,6 @@ export default function AdminSettingsPage() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader><CardTitle className="flex items-center gap-2"><Megaphone className="h-4 w-4" />Enviar notificação</CardTitle></CardHeader>
-        <CardContent className="space-y-3">
-          <Select
-            value={bc.target}
-            onChange={(e) => setBc({ ...bc, target: e.target.value })}
-            options={[
-              { value: 'ALL_CLIENTS', label: 'Todos os clientes' },
-              { value: 'ALL_TECHNICIANS', label: 'Todos os técnicos' },
-            ]}
-          />
-          <Input placeholder="Título" value={bc.title} onChange={(e) => setBc({ ...bc, title: e.target.value })} />
-          <textarea
-            placeholder="Mensagem"
-            value={bc.body}
-            onChange={(e) => setBc({ ...bc, body: e.target.value })}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-600/30 min-h-24"
-          />
-          <Button onClick={send} loading={sending} className="bg-brand-600 hover:bg-brand-700">
-            <Settings className="h-4 w-4 mr-1" />Enviar notificação
-          </Button>
-          <p className="text-xs text-gray-400">Aparece no ecrã de notificações da app dos destinatários (em tempo real).</p>
-        </CardContent>
-      </Card>
     </div>
   )
 }

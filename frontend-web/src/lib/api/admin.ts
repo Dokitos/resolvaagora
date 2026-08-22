@@ -41,6 +41,33 @@ export interface TransactionsResponse {
   pageSize: number
 }
 
+export type CampaignAudience =
+  | 'ALL_USERS'
+  | 'ALL_CLIENTS'
+  | 'ALL_TECHNICIANS'
+  | 'GROUP'
+  | 'SEGMENT'
+
+/** Criterios de segmentacao; todos opcionais e combinados com E logico. */
+export type AudienceSegment = {
+  role?: 'CLIENT' | 'TECHNICIAN'
+  registeredWithinDays?: number
+  registeredMoreThanDays?: number
+  minCompletedServices?: number
+  maxCompletedServices?: number
+  district?: string
+}
+
+export type CampaignInput = {
+  title: string
+  body: string
+  audience: CampaignAudience
+  groupId?: string
+  segment?: AudienceSegment
+  /** ISO. Presente agenda; ausente guarda como rascunho. */
+  scheduledAt?: string | null
+}
+
 export const adminApi = {
   dashboard: () =>
     api.get<DashboardMetrics>('/admin/dashboard').then((r) => r.data),
@@ -167,8 +194,36 @@ export const adminApi = {
   updateSettings: (data: any) =>
     api.patch('/admin/settings', data).then((r) => r.data),
 
-  broadcast: (data: { target: string; userId?: string; title: string; body: string }) =>
-    api.post('/admin/notifications/broadcast', data).then((r) => r.data),
+  // ── Notificacoes: campanhas e grupos ─────────────────────
+  campaigns: (status?: string) =>
+    api.get('/admin/notifications/campaigns', { params: status ? { status } : {} }).then((r) => r.data),
+
+  createCampaign: (data: CampaignInput) =>
+    api.post('/admin/notifications/campaigns', data).then((r) => r.data),
+
+  updateCampaign: (id: string, data: Partial<CampaignInput>) =>
+    api.patch(`/admin/notifications/campaigns/${id}`, data).then((r) => r.data),
+
+  deleteCampaign: (id: string) =>
+    api.delete(`/admin/notifications/campaigns/${id}`).then((r) => r.data),
+
+  sendCampaign: (id: string) =>
+    api.post(`/admin/notifications/campaigns/${id}/send`).then((r) => r.data),
+
+  cancelCampaign: (id: string) =>
+    api.post(`/admin/notifications/campaigns/${id}/cancel`).then((r) => r.data),
+
+  previewAudience: (data: Pick<CampaignInput, 'audience' | 'groupId' | 'segment'>) =>
+    api.post('/admin/notifications/audience/preview', data).then((r) => r.data),
+
+  notificationGroups: () =>
+    api.get('/admin/notifications/groups').then((r) => r.data),
+
+  createNotificationGroup: (data: { name: string; description?: string }) =>
+    api.post('/admin/notifications/groups', data).then((r) => r.data),
+
+  deleteNotificationGroup: (id: string) =>
+    api.delete(`/admin/notifications/groups/${id}`).then((r) => r.data),
 
   setClientStatus: (clientUserId: string, status: 'ACTIVE' | 'SUSPENDED') =>
     api.patch(`/admin/clients/${clientUserId}/status`, { status }).then((r) => r.data),

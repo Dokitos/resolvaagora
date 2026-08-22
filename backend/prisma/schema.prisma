@@ -153,6 +153,9 @@ model User {
   statusChanges   ServiceStatusHistory[]
   supportMessages SupportMessage[]       @relation("ClientSupportMessages")
 
+  notificationGroups NotificationGroupMember[]
+  createdCampaigns   NotificationCampaign[]
+
   @@map("users")
 }
 
@@ -497,6 +500,91 @@ model FcmToken {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("fcm_tokens")
+}
+
+// ─── CAMPANHAS DE NOTIFICAÇÕES ───────────────────────────────────────────────
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  SENDING
+  SENT
+  CANCELLED
+  FAILED
+}
+
+enum CampaignAudience {
+  ALL_USERS
+  ALL_CLIENTS
+  ALL_TECHNICIANS
+  GROUP
+  SEGMENT
+}
+
+/// Uma notificação escrita no painel de admin: pode ficar guardada como
+/// rascunho, ser agendada para uma data/hora, ou ser enviada de imediato.
+model NotificationCampaign {
+  id       String           @id @default(uuid())
+  title    String
+  body     String           @db.Text
+  status   CampaignStatus   @default(DRAFT)
+  audience CampaignAudience
+  groupId  String?          @map("group_id")
+
+  /// Regras do segmento quando `audience = SEGMENT`. Guardado como JSON em vez
+  /// de colunas próprias porque o conjunto de critérios ainda vai crescer, e
+  /// cada novo critério obrigaria a alterar a tabela. A forma aceite está
+  /// validada em `AudienceSegmentDto` — ver `audience.service.ts`.
+  segment Json?
+
+  scheduledAt DateTime? @map("scheduled_at")
+  sentAt      DateTime? @map("sent_at")
+
+  /// Contagens no momento do envio. Guardadas em vez de recalculadas porque a
+  /// audiência muda com o tempo: recalcular daria um número diferente do que
+  /// foi realmente enviado.
+  recipientCount Int     @default(0) @map("recipient_count")
+  deliveredCount Int     @default(0) @map("delivered_count")
+  failureReason  String? @map("failure_reason") @db.Text
+
+  createdById String   @map("created_by_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  group     NotificationGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  createdBy User               @relation(fields: [createdById], references: [id])
+
+  // O scheduler varre por (status, scheduledAt) a cada minuto.
+  @@index([status, scheduledAt])
+  @@map("notification_campaigns")
+}
+
+/// Lista de utilizadores escolhidos à mão, para enviar sempre para o mesmo
+/// conjunto sem repetir os critérios.
+model NotificationGroup {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  members   NotificationGroupMember[]
+  campaigns NotificationCampaign[]
+
+  @@map("notification_groups")
+}
+
+model NotificationGroupMember {
+  id        String   @id @default(uuid())
+  groupId   String   @map("group_id")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  group NotificationGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@map("notification_group_members")
 }
 
 // ─── SLA ──────────────────────────────────────────────────────────────────────
