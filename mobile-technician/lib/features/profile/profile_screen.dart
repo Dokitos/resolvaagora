@@ -168,6 +168,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ),
                 const Divider(height: 1, indent: 56),
                 ListTile(
+                  leading: const Icon(Icons.notifications_active_outlined, color: Colors.grey),
+                  title: const Text('Diagnóstico de notificações'),
+                  trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+                  onTap: () => context.push('/push-diagnostics'),
+                ),
+                const Divider(height: 1, indent: 56),
+                ListTile(
                   leading: const Icon(Icons.info_outline, color: Colors.grey),
                   title: Text(l.appVersion),
                   trailing: Text(

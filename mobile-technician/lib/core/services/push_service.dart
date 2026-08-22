@@ -1,4 +1,5 @@
 import 'dart:io' show Platform;
+import 'package:dio/dio.dart' show DioException;
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -37,7 +38,9 @@ class PushService {
         if (initialMessage != null) _handleNotificationTap(initialMessage);
 
         // Fora do guard ficaria a registar um listener novo a cada `init()`.
-        messaging.onTokenRefresh.listen(_register);
+        messaging.onTokenRefresh.listen((t) {
+          _register(t);
+        });
       }
 
       if (!_permissionAsked) {
@@ -66,7 +69,10 @@ class PushService {
       if (Platform.isIOS && !await _waitForApnsToken(messaging)) return;
 
       final token = await messaging.getToken();
-      if (token != null) await _register(token);
+      if (token != null) {
+        final error = await _register(token);
+        if (error != null) debugPrint('PushService: registo falhou — $error');
+      }
     } catch (e) {
       // Não pode voltar a ser silencioso: era o que escondia esta falha.
       debugPrint('PushService.init falhou: $e');
@@ -114,16 +120,76 @@ class PushService {
     }
   }
 
-  Future<void> _register(String token) async {
+  /// Envia o token para o backend. Devolve `null` em caso de sucesso ou uma
+  /// descrição do erro — antes era engolido, e um registo falhado ficava
+  /// indistinguível de "este telemóvel não recebe notificações".
+  Future<String?> _register(String token) async {
     try {
       await _ref.read(dioProvider).post('/notifications/register-token', data: {
         'token': token,
         'platform': Platform.isIOS ? 'IOS' : 'ANDROID',
       });
-    } catch (_) {
-      // Sem sessão / offline → ignora; volta a tentar no próximo arranque.
+      return null;
+    } on DioException catch (e) {
+      final status = e.response?.statusCode;
+      return status != null ? 'HTTP $status' : (e.message ?? 'sem resposta do servidor');
+    } catch (e) {
+      return e.toString();
     }
+  }
+
+  /// Estado de cada elo da cadeia de push, para o ecrã de diagnóstico.
+  ///
+  /// Existe porque no iOS uma falha em qualquer um destes passos produz o
+  /// mesmo sintoma — não chega nada — e os logs do dispositivo só se leem
+  /// com um Mac.
+  Future<PushDiagnostics> diagnose() async {
+    final messaging = FirebaseMessaging.instance;
+    var permission = 'desconhecida';
+    String? apnsToken;
+    String? fcmToken;
+    String? registration;
+    String? error;
+
+    try {
+      permission = (await messaging.getNotificationSettings()).authorizationStatus.name;
+      if (Platform.isIOS) apnsToken = await messaging.getAPNSToken();
+      // No iOS isto lança `apns-token-not-set` se o passo anterior falhou; a
+      // mensagem da exceção é precisamente o que queremos mostrar.
+      fcmToken = await messaging.getToken();
+      if (fcmToken != null) registration = await _register(fcmToken) ?? 'ok';
+    } catch (e) {
+      error = e.toString();
+    }
+
+    return PushDiagnostics(
+      platform: Platform.isIOS ? 'iOS' : 'Android',
+      permission: permission,
+      apnsToken: apnsToken,
+      fcmToken: fcmToken,
+      registration: registration,
+      error: error,
+    );
   }
 }
 
 final pushServiceProvider = Provider<PushService>((ref) => PushService(ref));
+
+/// Fotografia da cadeia de push num dado momento (ver `PushService.diagnose`).
+class PushDiagnostics {
+  final String platform;
+  final String permission;
+  final String? apnsToken;
+  final String? fcmToken;
+  final String? registration;
+  final String? error;
+
+  const PushDiagnostics({
+    required this.platform,
+    required this.permission,
+    this.apnsToken,
+    this.fcmToken,
+    this.registration,
+    this.error,
+  });
+}

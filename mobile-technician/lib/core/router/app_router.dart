@@ -15,6 +15,7 @@ import '../../features/profile/profile_screen.dart';
 import '../../features/profile/edit_technician_profile.dart';
 import '../../features/profile/change_password_screen.dart';
 import '../../features/profile/technician_support_page.dart';
+import '../../features/profile/push_diagnostics_page.dart';
 import '../../features/shell/app_shell.dart';
 // Admin screens
 import '../../features/admin/admin_shell.dart';
@@ -142,6 +143,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/profile/support',
         builder: (_, __) => const TechnicianSupportPage(),
+      ),
+      // Rota única partilhada pelo técnico e pelo cliente — o diagnóstico é o
+      // mesmo e não depende do papel do utilizador.
+      GoRoute(
+        path: '/push-diagnostics',
+        builder: (_, __) => const PushDiagnosticsPage(),
       ),
       GoRoute(
         path: '/jobs/:id',
