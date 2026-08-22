@@ -48,8 +48,8 @@ export class FcmService implements OnModuleInit {
         token,
         notification: { title, body },
         data: data ?? {},
-        android: { priority: 'high' },
-        apns: { payload: { aps: { contentAvailable: true } } },
+        android: { priority: 'high', notification: { sound: 'default' } },
+        apns: { payload: { aps: { sound: 'default' } } },
       });
     } catch (err) {
       this.logger.error(`FCM send failed for token ${token.substring(0, 20)}...`, err);
@@ -67,7 +67,10 @@ export class FcmService implements OnModuleInit {
       token,
       notification: { title, body },
       data: data ?? {},
-      android: { priority: 'high' },
+      // Sem `sound` o iOS mostra o alerta em silêncio; no Android o som vem
+      // do canal, e 'default' garante o do sistema.
+      android: { priority: 'high', notification: { sound: 'default' } },
+      apns: { payload: { aps: { sound: 'default' } } },
     }));
     const response = await admin.messaging().sendEach(messages);
     // `sendEach` devolve um resultado por token e nunca lança quando só alguns
