@@ -70,6 +70,19 @@ export class FcmService implements OnModuleInit {
       android: { priority: 'high' },
     }));
     const response = await admin.messaging().sendEach(messages);
+    // `sendEach` devolve um resultado por token e nunca lança quando só alguns
+    // falham. Sem isto, uma falha exclusiva do iOS (tipicamente a chave APNs
+    // mal configurada no Firebase, que dá `messaging/third-party-auth-error`)
+    // fica invisível: o Android recebe, o iOS não, e o log só mostra "2/3".
+    if (response.failureCount > 0) {
+      response.responses.forEach((r, i) => {
+        if (!r.success) {
+          this.logger.error(
+            `FCM falhou para ${tokens[i].substring(0, 12)}...: ${r.error?.code} — ${r.error?.message}`,
+          );
+        }
+      });
+    }
     this.logger.log(`FCM sent ${response.successCount}/${tokens.length}`);
     return { success: response.successCount, total: tokens.length };
   }

@@ -1306,7 +1306,18 @@ export class AdminController {
   /** Diagnóstico das notificações push: FCM ativo + nº de tokens registados. */
   @Get('fcm-status')
   async fcmStatus() {
-    return { ready: this.fcm.ready, tokens: await this.prisma.fcmToken.count() };
+    // Contagem por plataforma: o total sozinho não diz se o iOS chegou sequer
+    // a registar-se, que é a primeira coisa a despistar quando o Android
+    // recebe push e o iPhone não.
+    const byPlatform = await this.prisma.fcmToken.groupBy({
+      by: ['platform'],
+      _count: { _all: true },
+    });
+    return {
+      ready: this.fcm.ready,
+      tokens: await this.prisma.fcmToken.count(),
+      byPlatform: Object.fromEntries(byPlatform.map((p) => [p.platform, p._count._all])),
+    };
   }
 
   // ─── CLIENT ACCOUNT MANAGEMENT ─────────────────────────────────────────────
