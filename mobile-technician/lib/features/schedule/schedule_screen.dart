@@ -3,6 +3,7 @@ import '../../core/widgets/onboarding_overlay.dart';
 import 'package:moura_technician/l10n/generated/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:table_calendar/table_calendar.dart';
 import '../../core/services/technician_service.dart';
 import '../../core/models/service_request.dart';
 import '../../core/utils/formatters.dart';
@@ -34,11 +35,43 @@ final availabilityProvider = Provider<bool?>((ref) {
   return null; // ainda a carregar
 });
 
-class ScheduleScreen extends ConsumerWidget {
+/// Como a agenda e apresentada: grelha mensal ou lista por seccoes.
+enum _View { calendar, list }
+
+/// Dia a que um trabalho pertence, ignorando a hora.
+DateTime _dayKey(DateTime d) => DateTime(d.year, d.month, d.day);
+
+/// Data que posiciona o trabalho na agenda: a agendada quando existe, senao a
+/// de conclusao, senao a de criacao. Garante que nenhum trabalho desaparece do
+/// calendario por lhe faltar data agendada.
+DateTime _effectiveDate(ServiceRequest j) =>
+    j.scheduledDate ?? j.completedAt ?? j.createdAt;
+
+Map<DateTime, List<ServiceRequest>> _groupByDay(List<ServiceRequest> jobs) {
+  final map = <DateTime, List<ServiceRequest>>{};
+  for (final j in jobs) {
+    map.putIfAbsent(_dayKey(_effectiveDate(j)), () => <ServiceRequest>[]).add(j);
+  }
+  for (final list in map.values) {
+    list.sort((a, b) => _effectiveDate(a).compareTo(_effectiveDate(b)));
+  }
+  return map;
+}
+
+class ScheduleScreen extends ConsumerStatefulWidget {
   const ScheduleScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ScheduleScreen> createState() => _ScheduleScreenState();
+}
+
+class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
+  _View _view = _View.calendar;
+  DateTime _focusedDay = DateTime.now();
+  DateTime _selectedDay = _dayKey(DateTime.now());
+
+  @override
+  Widget build(BuildContext context) {
     final jobsAsync = ref.watch(assignedJobsProvider);
     final isAvailable = ref.watch(availabilityProvider);
     final l = AppLocalizations.of(context);
@@ -135,57 +168,162 @@ class ScheduleScreen extends ConsumerWidget {
               ),
             );
           }
-          // Agrupa por "Hoje" vs "Próximos" — antes era uma lista plana sem
-          // qualquer estrutura, difícil de ler quando há vários dias de
-          // serviços atribuídos de uma vez.
-          final now = DateTime.now();
-          bool isToday(DateTime? d) =>
-              d != null && d.year == now.year && d.month == now.month && d.day == now.day;
-          final today = jobs.where((j) => isToday(j.scheduledDate)).toList();
-          final upcoming = jobs.where((j) => !isToday(j.scheduledDate)).toList()
-            ..sort((a, b) {
-              final ad = a.scheduledDate;
-              final bd = b.scheduledDate;
-              if (ad == null && bd == null) return 0;
-              if (ad == null) return 1; // sem data agendada vai para o fim
-              if (bd == null) return -1;
-              return ad.compareTo(bd);
-            });
+          final byDay = _groupByDay(jobs);
 
           return RefreshIndicator(
             onRefresh: () async {
               ref.invalidate(assignedJobsProvider);
               // Descarta o override otimista e vai buscar o status real de
-              // novo — reflete alterações feitas noutra sessão/dispositivo.
+              // novo - reflete alteracoes feitas noutra sessao/dispositivo.
               ref.read(_availabilityOverrideProvider.notifier).state = null;
               ref.invalidate(technicianProfileProvider);
             },
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                if (today.isNotEmpty) ...[
-                  _SectionHeader(title: l.todaySection, count: today.length),
-                  const SizedBox(height: 10),
-                  for (final job in today) ...[
-                    _JobCard(job: job),
-                    const SizedBox(height: 10),
+                _SummaryStrip(jobs: jobs),
+                const SizedBox(height: 16),
+                SegmentedButton<_View>(
+                  segments: [
+                    ButtonSegment(
+                      value: _View.calendar,
+                      icon: const Icon(Icons.calendar_month_outlined, size: 18),
+                      label: Text(l.viewCalendar),
+                    ),
+                    ButtonSegment(
+                      value: _View.list,
+                      icon: const Icon(Icons.view_list_outlined, size: 18),
+                      label: Text(l.viewList),
+                    ),
                   ],
-                  const SizedBox(height: 6),
-                ],
-                if (upcoming.isNotEmpty) ...[
-                  _SectionHeader(title: l.upcomingSection, count: upcoming.length),
-                  const SizedBox(height: 10),
-                  for (final job in upcoming) ...[
-                    _JobCard(job: job),
-                    const SizedBox(height: 10),
-                  ],
-                ],
+                  selected: {_view},
+                  onSelectionChanged: (sel) => setState(() => _view = sel.first),
+                ),
+                const SizedBox(height: 16),
+                if (_view == _View.calendar)
+                  ..._buildCalendar(context, byDay, l)
+                else
+                  ..._buildSections(jobs, l),
               ],
             ),
           );
         },
       ),
     );
+  }
+
+  /// Grelha mensal com marcador nos dias que tem trabalhos, seguida dos
+  /// trabalhos do dia seleccionado.
+  List<Widget> _buildCalendar(
+    BuildContext context,
+    Map<DateTime, List<ServiceRequest>> byDay,
+    AppLocalizations l,
+  ) {
+    final doDia = byDay[_selectedDay] ?? const <ServiceRequest>[];
+    // So o pt tem dados de formatacao carregados no arranque (ver main.dart);
+    // passar null deixa o intl usar o de omissao em vez de rebentar.
+    final isPt = Localizations.localeOf(context).languageCode == 'pt';
+
+    return [
+      Card(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: TableCalendar<ServiceRequest>(
+            locale: isPt ? 'pt_PT' : null,
+            firstDay: DateTime.utc(2024, 1, 1),
+            lastDay: DateTime.utc(2030, 12, 31),
+            focusedDay: _focusedDay,
+            startingDayOfWeek: StartingDayOfWeek.monday,
+            selectedDayPredicate: (d) => isSameDay(_selectedDay, d),
+            eventLoader: (d) => byDay[_dayKey(d)] ?? const <ServiceRequest>[],
+            headerStyle: const HeaderStyle(
+              formatButtonVisible: false,
+              titleCentered: true,
+            ),
+            calendarStyle: CalendarStyle(
+              markerDecoration: const BoxDecoration(
+                color: AppTheme.primary,
+                shape: BoxShape.circle,
+              ),
+              todayDecoration: BoxDecoration(
+                color: AppTheme.primary.withValues(alpha: 0.25),
+                shape: BoxShape.circle,
+              ),
+              selectedDecoration: const BoxDecoration(
+                color: AppTheme.primary,
+                shape: BoxShape.circle,
+              ),
+            ),
+            onDaySelected: (sel, foc) => setState(() {
+              _selectedDay = _dayKey(sel);
+              _focusedDay = foc;
+            }),
+            // Sem setState: mudar de mes nao altera nada do que e desenhado
+            // fora do proprio calendario, que ja se redesenha sozinho.
+            onPageChanged: (foc) => _focusedDay = foc,
+          ),
+        ),
+      ),
+      const SizedBox(height: 16),
+      _SectionHeader(title: formatDateShort(_selectedDay), count: doDia.length),
+      const SizedBox(height: 10),
+      if (doDia.isEmpty)
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 28),
+          child: Center(
+            child: Text(l.noJobsOnDay, style: TextStyle(color: Colors.grey[500])),
+          ),
+        )
+      else
+        for (final job in doDia) ...[
+          _JobCard(job: job),
+          const SizedBox(height: 10),
+        ],
+    ];
+  }
+
+  /// Lista por seccoes: hoje, futuros e passados. Antes tudo o que nao fosse
+  /// hoje caia em "Proximos", incluindo trabalhos ja concluidos.
+  List<Widget> _buildSections(List<ServiceRequest> jobs, AppLocalizations l) {
+    final hoje = _dayKey(DateTime.now());
+    final deHoje = <ServiceRequest>[];
+    final futuros = <ServiceRequest>[];
+    final passados = <ServiceRequest>[];
+
+    for (final j in jobs) {
+      final d = _dayKey(_effectiveDate(j));
+      if (d == hoje) {
+        deHoje.add(j);
+      } else if (d.isAfter(hoje)) {
+        futuros.add(j);
+      } else {
+        passados.add(j);
+      }
+    }
+
+    deHoje.sort((a, b) => _effectiveDate(a).compareTo(_effectiveDate(b)));
+    futuros.sort((a, b) => _effectiveDate(a).compareTo(_effectiveDate(b)));
+    // Passados do mais recente para o mais antigo - e o que se quer rever.
+    passados.sort((a, b) => _effectiveDate(b).compareTo(_effectiveDate(a)));
+
+    return [
+      ..._section(l.todaySection, deHoje),
+      ..._section(l.upcomingSection, futuros),
+      ..._section(l.pastSection, passados),
+    ];
+  }
+
+  List<Widget> _section(String titulo, List<ServiceRequest> itens) {
+    if (itens.isEmpty) return const [];
+    return [
+      _SectionHeader(title: titulo, count: itens.length),
+      const SizedBox(height: 10),
+      for (final job in itens) ...[
+        _JobCard(job: job),
+        const SizedBox(height: 10),
+      ],
+      const SizedBox(height: 6),
+    ];
   }
 }
 
@@ -313,6 +451,78 @@ class _JobCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+
+/// Resumo do topo da agenda: quantos trabalhos hoje, quantos esta semana e
+/// quantos ja concluidos no mes. Contado a partir da lista ja carregada, sem
+/// pedidos extra ao servidor.
+class _SummaryStrip extends StatelessWidget {
+  final List<ServiceRequest> jobs;
+  const _SummaryStrip({required this.jobs});
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final agora = DateTime.now();
+    final hoje = _dayKey(agora);
+    // Semana a comecar a segunda, para coincidir com a grelha do calendario.
+    final inicioSemana = hoje.subtract(Duration(days: agora.weekday - 1));
+    final fimSemana = inicioSemana.add(const Duration(days: 6));
+
+    var nHoje = 0, nSemana = 0, nConcluidos = 0;
+    for (final j in jobs) {
+      final d = _dayKey(_effectiveDate(j));
+      if (d == hoje) nHoje++;
+      if (!d.isBefore(inicioSemana) && !d.isAfter(fimSemana)) nSemana++;
+      if (j.status == ServiceStatus.COMPLETED &&
+          d.year == agora.year &&
+          d.month == agora.month) {
+        nConcluidos++;
+      }
+    }
+
+    return Row(
+      children: [
+        Expanded(child: _SummaryCard(label: l.todaySection, value: '$nHoje', color: AppTheme.primary)),
+        const SizedBox(width: 10),
+        Expanded(child: _SummaryCard(label: l.thisWeekSection, value: '$nSemana', color: AppTheme.warning)),
+        const SizedBox(width: 10),
+        Expanded(child: _SummaryCard(label: l.completedSection, value: '$nConcluidos', color: AppTheme.success)),
+      ],
+    );
+  }
+}
+
+class _SummaryCard extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+  const _SummaryCard({required this.label, required this.value, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          Text(value, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: color)),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+          ),
+        ],
       ),
     );
   }

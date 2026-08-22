@@ -232,6 +232,12 @@
 
   "todaySection": "Today",
   "upcomingSection": "Upcoming",
+  "pastSection": "Past",
+  "viewCalendar": "Calendar",
+  "viewList": "List",
+  "noJobsOnDay": "No jobs on this day",
+  "thisWeekSection": "This week",
+  "completedSection": "Completed",
   "noDateScheduled": "No date scheduled",
   "earningsBySpecialty": "By specialty"
 }

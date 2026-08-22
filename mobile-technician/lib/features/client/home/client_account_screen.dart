@@ -129,11 +129,6 @@ class ClientAccountScreen extends ConsumerWidget {
               label: l.accountTerms,
               onTap: () => context.push('/client/account/terms'),
             ),
-            _MenuTile(
-              icon: Icons.notifications_active_outlined,
-              label: 'Diagnóstico de notificações',
-              onTap: () => context.push('/client/account/push-diagnostics'),
-            ),
           ]),
           const SizedBox(height: 20),
 
@@ -152,15 +147,19 @@ class ClientAccountScreen extends ConsumerWidget {
           ]),
           const SizedBox(height: 24),
           Center(
-            // Literal fixo aqui dava uma versão falsa (dizia 1.0.0 numa build
-            // 1.2.0) e chegou a atrapalhar um diagnóstico — lê-se do pacote.
-            child: Text(
+            // Toque longo abre o diagnóstico das push — ver profile_screen.
+            child: GestureDetector(
+              onLongPress: () => context.push('/client/account/push-diagnostics'),
+              // Literal fixo aqui dava uma versão falsa (dizia 1.0.0 numa build
+              // 1.2.0) e chegou a atrapalhar um diagnóstico — lê-se do pacote.
+              child: Text(
               ref.watch(appInfoProvider).when(
                     data: (info) => 'ResolvaAgora · v${info.version} (${info.buildNumber})',
                     loading: () => 'ResolvaAgora',
                     error: (_, __) => 'ResolvaAgora',
                   ),
-              style: TextStyle(color: Colors.grey[400], fontSize: 12),
+                style: TextStyle(color: Colors.grey[400], fontSize: 12),
+              ),
             ),
           ),
           const SizedBox(height: 24),

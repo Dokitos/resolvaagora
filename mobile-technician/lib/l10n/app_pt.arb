@@ -240,6 +240,12 @@
 
   "todaySection": "Hoje",
   "upcomingSection": "Próximos",
+  "pastSection": "Anteriores",
+  "viewCalendar": "Calendário",
+  "viewList": "Lista",
+  "noJobsOnDay": "Sem serviços neste dia",
+  "thisWeekSection": "Esta semana",
+  "completedSection": "Concluídos",
   "noDateScheduled": "Sem data agendada",
   "earningsBySpecialty": "Por especialidade"
 }
