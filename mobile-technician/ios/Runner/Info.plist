@@ -24,6 +24,19 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<!-- Esquema de URL do Google Sign-In: e por aqui que a app volta a si
+	     propria depois do ecra de escolha de conta. O valor e o
+	     REVERSED_CLIENT_ID do GoogleService-Info.plist e muda se o projeto
+	     Firebase for recriado. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.389922315760-7c54qo5p3egqj5eu7kcieunqmli6ghj3</string>
+			</array>
+		</dict>
+	</array>
 	<!-- Nao usa criptografia alem da standard (HTTPS): evita o questionario
 	     de conformidade de exportacao a cada upload para o TestFlight. -->
 	<key>ITSAppUsesNonExemptEncryption</key>
