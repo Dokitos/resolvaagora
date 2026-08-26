@@ -99,6 +99,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               loc.startsWith('/jobs');
           return techArea ? null : '/schedule';
         }
+        // Um cliente autenticado nunca deve ficar parado no login/registo — é
+        // "público" só para quem ainda não tem sessão. Sem este caso à parte,
+        // o login social (que não navega manualmente como o _submit() com
+        // password) ficava preso no ecrã de login depois de autenticar: a
+        // rota já contava como "pública" e por isso "permitida" também para
+        // quem acabou de entrar.
+        if (isAuthRoute) return '/client/home';
         // Client: ALLOWLIST — may only be in their own area (/client, /booking)
         // or on a public route. Anything else (technician /profile, /schedule,
         // /earnings, /jobs, admin, etc.) → back to the client home.

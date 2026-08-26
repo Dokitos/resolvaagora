@@ -3,10 +3,12 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
+import { useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
 import {
   LayoutDashboard, ClipboardList, Users, AlertTriangle,
   BarChart2, CreditCard, Star, LogOut, MessageSquare, Tag, Settings, Image as ImageIcon, Mail, Bell, DollarSign,
+  Menu, X,
 } from 'lucide-react'
 import { AdminNotificationBell } from '@/components/layout/admin-notification-bell'
 
@@ -29,11 +31,29 @@ const nav = [
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const [menuOpen, setMenuOpen] = useState(false)
+
+  // Fecha o menu ao navegar — senão fica aberto por cima do ecrã seguinte.
+  useEffect(() => setMenuOpen(false), [pathname])
 
   return (
     <div className="min-h-screen flex bg-gray-50">
-      {/* Sidebar */}
-      <aside className="w-60 bg-white border-r border-gray-200 flex flex-col shrink-0">
+      {/* Fundo escuro atrás do menu no telemóvel — clicar fecha. */}
+      {menuOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 md:hidden"
+          onClick={() => setMenuOpen(false)}
+        />
+      )}
+
+      {/* Sidebar: painel fixo no ecrã grande, gaveta deslizante no telemóvel. */}
+      <aside
+        className={cn(
+          'fixed inset-y-0 left-0 z-50 w-60 bg-white border-r border-gray-200 flex flex-col shrink-0 transition-transform duration-200 ease-in-out',
+          'md:static md:translate-x-0',
+          menuOpen ? 'translate-x-0' : '-translate-x-full',
+        )}
+      >
         <div className="h-16 flex items-center gap-3 px-6 bg-brand-600 text-white">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -41,13 +61,20 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             alt="ResolvaAgora"
             className="w-9 h-9 rounded-lg object-contain bg-white/15 p-0.5"
           />
-          <div className="leading-tight">
+          <div className="leading-tight flex-1">
             <p className="text-sm font-bold">ResolvaAgora</p>
             <p className="text-xs text-white/70">Administração</p>
           </div>
+          <button
+            onClick={() => setMenuOpen(false)}
+            className="md:hidden p-1 rounded-lg hover:bg-white/10"
+            aria-label="Fechar menu"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
 
-        <nav className="flex-1 p-3 space-y-0.5">
+        <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
           {nav.map(({ href, label, icon: Icon }) => {
             const active = pathname.startsWith(href)
             return (
@@ -81,10 +108,18 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-end gap-2 px-6 shrink-0">
+        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between gap-2 px-4 md:px-6 shrink-0">
+          <button
+            onClick={() => setMenuOpen(true)}
+            className="md:hidden p-2 -ml-2 rounded-lg text-gray-600 hover:bg-gray-100"
+            aria-label="Abrir menu"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+          <div className="flex-1 md:hidden" />
           <AdminNotificationBell />
         </header>
-        <main className="flex-1 p-6 overflow-auto">{children}</main>
+        <main className="flex-1 p-4 md:p-6 overflow-auto min-w-0">{children}</main>
       </div>
     </div>
   )

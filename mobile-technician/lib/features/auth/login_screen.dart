@@ -59,6 +59,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  /// Login social (Google/Apple) não navega manualmente como o [_submit] —
+  /// depende do redirect global do router reagir ao novo estado autenticado.
+  /// Mas erros (cancelar não conta, ver `_SignInCancelled`) também não tinham
+  /// nenhum feedback: o utilizador ficava sem saber porque "não aconteceu
+  /// nada". Mostra o mesmo snackbar do login por password.
+  Future<void> _socialSignIn(Future<void> Function() action) async {
+    await action();
+    if (!mounted) return;
+    final authState = ref.read(authProvider);
+    if (authState.hasError) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(authState.error.toString()), backgroundColor: AppTheme.danger),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isLoading = ref.watch(authProvider).isLoading;
@@ -160,7 +176,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   icon: Icons.g_mobiledata,
                   onPressed: isLoading
                       ? null
-                      : () => ref.read(authProvider.notifier).signInWithGoogle(),
+                      : () => _socialSignIn(ref.read(authProvider.notifier).signInWithGoogle),
                 ),
                 // O botão da Apple só aparece no iOS: no Android abriria um
                 // fluxo web que a Apple não pretende para essa plataforma, e a
@@ -173,7 +189,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     dark: true,
                     onPressed: isLoading
                         ? null
-                        : () => ref.read(authProvider.notifier).signInWithApple(),
+                        : () => _socialSignIn(ref.read(authProvider.notifier).signInWithApple),
                   ),
                 ],
                 const SizedBox(height: 8),
