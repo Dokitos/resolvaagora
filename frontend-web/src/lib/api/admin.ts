@@ -229,6 +229,24 @@ export const adminApi = {
   deleteNotificationGroup: (id: string) =>
     api.delete(`/admin/notifications/groups/${id}`).then((r) => r.data),
 
+  notificationGroup: (id: string) =>
+    api.get(`/admin/notifications/groups/${id}`).then((r) => r.data),
+
+  /** Pesquisa de utilizadores para preencher grupos (máx. 25 resultados). */
+  searchUsers: (q: string, role?: 'CLIENT' | 'TECHNICIAN') =>
+    api
+      .get('/admin/notifications/users', { params: { q, ...(role ? { role } : {}) } })
+      .then((r) => r.data),
+
+  addGroupMembers: (id: string, userIds: string[]) =>
+    api.post(`/admin/notifications/groups/${id}/members`, { userIds }).then((r) => r.data),
+
+  // O axios só envia corpo no DELETE através de `data`.
+  removeGroupMembers: (id: string, userIds: string[]) =>
+    api
+      .delete(`/admin/notifications/groups/${id}/members`, { data: { userIds } })
+      .then((r) => r.data),
+
   setClientStatus: (clientUserId: string, status: 'ACTIVE' | 'SUSPENDED') =>
     api.patch(`/admin/clients/${clientUserId}/status`, { status }).then((r) => r.data),
 

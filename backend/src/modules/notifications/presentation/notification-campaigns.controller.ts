@@ -83,6 +83,54 @@ export class NotificationCampaignsController {
     return this.campaigns.preview(dto.audience, dto.groupId, dto.segment);
   }
 
+  /**
+   * Procura utilizadores para preencher um grupo.
+   *
+   * Devolve no máximo 25 resultados: é um seletor com pesquisa, não uma
+   * listagem — quem procura sabe por quem, e devolver a base toda só tornaria
+   * o ecrã lento e inútil.
+   */
+  @Get('users')
+  async searchUsers(@Query('q') q?: string, @Query('role') role?: 'CLIENT' | 'TECHNICIAN') {
+    const term = q?.trim();
+    const like = { contains: term ?? '', mode: 'insensitive' as const };
+
+    const users = await this.prisma.user.findMany({
+      where: {
+        status: 'ACTIVE',
+        ...(role ? { role } : {}),
+        ...(term
+          ? {
+              OR: [
+                { email: like },
+                { client: { OR: [{ firstName: like }, { lastName: like }] } },
+                { technician: { OR: [{ firstName: like }, { lastName: like }] } },
+              ],
+            }
+          : {}),
+      },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        client: { select: { firstName: true, lastName: true } },
+        technician: { select: { firstName: true, lastName: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 25,
+    });
+
+    return users.map((u) => ({
+      id: u.id,
+      email: u.email,
+      role: u.role,
+      name: [u.client ?? u.technician]
+        .filter(Boolean)
+        .map((p) => `${p!.firstName} ${p!.lastName}`.trim())
+        .join('') || u.email,
+    }));
+  }
+
   // ─── Grupos ────────────────────────────────────────────────────────────────
 
   @Get('groups')

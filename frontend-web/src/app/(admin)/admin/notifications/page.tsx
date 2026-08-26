@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
-import { Bell, CalendarClock, Send, Trash2, Users, XCircle } from 'lucide-react'
+import { Bell, CalendarClock, Plus, Search, Send, Trash2, Users, X, XCircle } from 'lucide-react'
 
 type Campaign = {
   id: string
@@ -33,6 +33,24 @@ type Campaign = {
 }
 
 type Group = { id: string; name: string; description?: string; _count: { members: number } }
+
+type GroupMember = {
+  id: string
+  user: {
+    id: string
+    email: string
+    role: string
+    client?: { firstName: string; lastName: string } | null
+    technician?: { firstName: string; lastName: string } | null
+  }
+}
+
+type FoundUser = { id: string; email: string; role: string; name: string }
+
+function memberName(m: GroupMember): string {
+  const p = m.user.client ?? m.user.technician
+  return p ? `${p.firstName} ${p.lastName}`.trim() : m.user.email
+}
 
 const AUDIENCE_LABELS: Record<CampaignAudience, string> = {
   ALL_USERS: 'Todos os utilizadores',
@@ -485,30 +503,225 @@ function GroupList({ groups, onChange }: { groups: Group[]; onChange: () => void
       </Card>
 
       {groups.map((g) => (
-        <Card key={g.id}>
-          <CardContent className="flex items-center justify-between py-4">
-            <div>
-              <p className="font-medium text-gray-900">{g.name}</p>
-              {g.description && <p className="text-sm text-gray-500">{g.description}</p>}
-              <p className="mt-0.5 text-xs text-gray-400">{g._count.members} membro(s)</p>
-            </div>
-            <Button
-              onClick={async () => {
-                try {
-                  await adminApi.deleteNotificationGroup(g.id)
-                  toast.success('Grupo apagado')
-                  onChange()
-                } catch (err: any) {
-                  toast.error(err.message)
-                }
-              }}
-              className="bg-red-50 text-xs text-red-600 hover:bg-red-100"
-            >
-              <Trash2 className="h-3 w-3" />
-            </Button>
-          </CardContent>
-        </Card>
+        <GroupCard key={g.id} group={g} onChange={onChange} />
       ))}
+    </div>
+  )
+}
+
+/**
+ * Um grupo, com os membros a serem geridos no próprio cartão.
+ *
+ * Os membros só são carregados quando o grupo é aberto: a lista de grupos
+ * mostra apenas a contagem, e ir buscar todos os membros de todos os grupos
+ * seria trabalho desperdiçado na esmagadora maioria das visitas.
+ */
+function GroupCard({ group, onChange }: { group: Group; onChange: () => void }) {
+  const [open, setOpen] = useState(false)
+  const [members, setMembers] = useState<GroupMember[] | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  const loadMembers = useCallback(async () => {
+    try {
+      const detail = await adminApi.notificationGroup(group.id)
+      setMembers(detail?.members ?? [])
+    } catch (err: any) {
+      toast.error(err.message)
+      setMembers([])
+    }
+  }, [group.id])
+
+  async function toggle() {
+    const next = !open
+    setOpen(next)
+    if (next && members === null) await loadMembers()
+  }
+
+  async function add(userIds: string[]) {
+    setBusy(true)
+    try {
+      const r = await adminApi.addGroupMembers(group.id, userIds)
+      toast.success(r.added > 0 ? `${r.added} adicionado(s)` : 'Já pertencia ao grupo')
+      await loadMembers()
+      onChange()
+    } catch (err: any) {
+      toast.error(err.response?.data?.message ?? err.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function remove(userId: string) {
+    setBusy(true)
+    try {
+      await adminApi.removeGroupMembers(group.id, [userId])
+      await loadMembers()
+      onChange()
+    } catch (err: any) {
+      toast.error(err.response?.data?.message ?? err.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Card>
+      <CardContent className="py-4">
+        <div className="flex items-center justify-between">
+          <button onClick={toggle} className="flex-1 text-left">
+            <p className="font-medium text-gray-900">{group.name}</p>
+            {group.description && <p className="text-sm text-gray-500">{group.description}</p>}
+            <p className="mt-0.5 text-xs text-gray-400">
+              {group._count.members} membro(s) · {open ? 'fechar' : 'gerir membros'}
+            </p>
+          </button>
+          <Button
+            onClick={async () => {
+              if (!confirm(`Apagar o grupo "${group.name}"?`)) return
+              try {
+                await adminApi.deleteNotificationGroup(group.id)
+                toast.success('Grupo apagado')
+                onChange()
+              } catch (err: any) {
+                toast.error(err.message)
+              }
+            }}
+            className="bg-red-50 text-xs text-red-600 hover:bg-red-100"
+          >
+            <Trash2 className="h-3 w-3" />
+          </Button>
+        </div>
+
+        {open && (
+          <div className="mt-4 space-y-4 border-t border-gray-100 pt-4">
+            <UserPicker onPick={(ids) => add(ids)} disabled={busy} />
+
+            <div>
+              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500">
+                Membros
+              </p>
+              {members === null ? (
+                <p className="text-sm text-gray-400">A carregar…</p>
+              ) : members.length === 0 ? (
+                <p className="text-sm text-gray-400">
+                  Sem membros. Procure acima para acrescentar.
+                </p>
+              ) : (
+                <ul className="divide-y divide-gray-100">
+                  {members.map((m) => (
+                    <li key={m.id} className="flex items-center justify-between py-2">
+                      <div>
+                        <p className="text-sm text-gray-900">{memberName(m)}</p>
+                        <p className="text-xs text-gray-400">
+                          {m.user.email} · {m.user.role === 'TECHNICIAN' ? 'Técnico' : 'Cliente'}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => remove(m.user.id)}
+                        disabled={busy}
+                        className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-red-600 disabled:opacity-50"
+                        title="Remover do grupo"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+/** Pesquisa de utilizadores por nome ou email, para acrescentar ao grupo. */
+function UserPicker({
+  onPick,
+  disabled,
+}: {
+  onPick: (userIds: string[]) => void
+  disabled: boolean
+}) {
+  const [term, setTerm] = useState('')
+  const [role, setRole] = useState<'' | 'CLIENT' | 'TECHNICIAN'>('')
+  const [results, setResults] = useState<FoundUser[]>([])
+  const [searching, setSearching] = useState(false)
+
+  // Espera que a escrita pare antes de procurar: sem isto seria um pedido por
+  // cada tecla, e os resultados podiam chegar fora de ordem.
+  useEffect(() => {
+    if (term.trim().length < 2) {
+      setResults([])
+      return
+    }
+    let cancelled = false
+    setSearching(true)
+    const timer = setTimeout(async () => {
+      try {
+        const found = await adminApi.searchUsers(term.trim(), role || undefined)
+        if (!cancelled) setResults(found)
+      } catch {
+        if (!cancelled) setResults([])
+      } finally {
+        if (!cancelled) setSearching(false)
+      }
+    }, 300)
+
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [term, role])
+
+  return (
+    <div className="space-y-2">
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <Input
+            placeholder="Procurar por nome ou email…"
+            value={term}
+            onChange={(e) => setTerm(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Select
+          value={role}
+          onChange={(e) => setRole(e.target.value as typeof role)}
+          options={[
+            { value: '', label: 'Todos' },
+            { value: 'CLIENT', label: 'Clientes' },
+            { value: 'TECHNICIAN', label: 'Técnicos' },
+          ]}
+        />
+      </div>
+
+      {term.trim().length >= 2 && (
+        <div className="max-h-56 overflow-auto rounded-lg border border-gray-200">
+          {searching && <p className="p-3 text-sm text-gray-400">A procurar…</p>}
+          {!searching && results.length === 0 && (
+            <p className="p-3 text-sm text-gray-400">Ninguém encontrado.</p>
+          )}
+          {results.map((u) => (
+            <button
+              key={u.id}
+              onClick={() => onPick([u.id])}
+              disabled={disabled}
+              className="flex w-full items-center justify-between px-3 py-2 text-left hover:bg-gray-50 disabled:opacity-50"
+            >
+              <span>
+                <span className="block text-sm text-gray-900">{u.name}</span>
+                <span className="block text-xs text-gray-400">
+                  {u.email} · {u.role === 'TECHNICIAN' ? 'Técnico' : 'Cliente'}
+                </span>
+              </span>
+              <Plus className="h-4 w-4 shrink-0 text-brand-600" />
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
