@@ -1,13 +1,14 @@
 import { api } from './client'
+import type { PlanTier } from './types'
 
 export interface ServicePricesMap {
-  categories: Record<string, { basePrice: number; hidden: boolean }>
+  categories: Record<string, { basePrice: number; hidden: boolean; tier: PlanTier | null }>
   /** chave: `${categoryId}:${subcategoryId}:${itemId}` */
-  items: Record<string, { price: number; hidden: boolean; notes: string | null }>
+  items: Record<string, { price: number; hidden: boolean; notes: string | null; tier: PlanTier | null }>
 }
 
 export interface ServicePricesPayload {
-  categories: { categoryId: string; basePrice: number; hidden?: boolean }[]
+  categories: { categoryId: string; basePrice: number; hidden?: boolean; tier?: PlanTier | null }[]
   items: {
     categoryId: string
     subcategoryId: string
@@ -15,6 +16,7 @@ export interface ServicePricesPayload {
     price: number
     hidden?: boolean
     notes?: string | null
+    tier?: PlanTier | null
   }[]
 }
 

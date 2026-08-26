@@ -17,6 +17,7 @@ import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard';
 import { Roles } from '../../auth/presentation/decorators/roles.decorator';
 import { RolesGuard } from '../../auth/presentation/guards/roles.guard';
 import { PrismaService } from '@shared/infrastructure/database/prisma.service';
+import { DifficultyTier } from '@prisma/client';
 import { RabbitMQService } from '@shared/infrastructure/messaging/rabbitmq.service';
 import { AutoAssignUseCase } from '../../distribution/application/use-cases/auto-assign.use-case';
 import { CreateTechnicianUseCase } from '../../technicians/application/use-cases/create-technician.use-case';
@@ -485,7 +486,7 @@ export class AdminController {
       // aparecia no financeiro mesmo já tendo sido cobrados/ganhos.
       this.prisma.payment.findMany({
         where: { type: 'QUOTE', status: 'COMPLETED', paidAt: dateFilter },
-        include: { serviceRequest: true },
+        include: { serviceRequest: { include: { quote: true } } },
       }),
       this.prisma.subscription.findMany({
         where: { status: 'ACTIVE', startsAt: dateFilter },
@@ -548,8 +549,21 @@ export class AdminController {
     // deslocação já foi cobrada e contabilizada à parte, antes do
     // diagnóstico — por isso a comissão aqui é sobre o valor total pago.
     let quoteCommissionCount = 0;
+    let creditsCoveredTotal = 0;
+    let creditsCoveredCount = 0;
     for (const p of quotePayments) {
       const amount = Number(p.amount);
+
+      // Orçamentos pagos com créditos do plano não são receita nova — o
+      // cliente já pagou pela cobertura na assinatura anual. Contá-los aqui
+      // duplicaria essa receita. Ficam só numa contagem separada, para o
+      // admin ver quanto trabalho está "coberto pelo plano".
+      if (p.serviceRequest?.quote?.paymentMethod === 'CREDITS') {
+        creditsCoveredTotal += amount;
+        creditsCoveredCount += 1;
+        continue;
+      }
+
       const commission = amount * commissionRate;
 
       commissionsTotal += commission;
@@ -633,6 +647,9 @@ export class AdminController {
         toTechnicians: round(payoutsToTechnicians),
         platformCommission: round(commissionsTotal),
       },
+      // Trabalho pago com créditos do plano — não é receita nova (já paga na
+      // assinatura), mas o admin quer ver o volume coberto pelos planos.
+      creditsCovered: { total: round(creditsCoveredTotal), count: creditsCoveredCount },
     };
   }
 
@@ -1038,6 +1055,8 @@ export class AdminController {
     if (d.yearlyPrice !== undefined) out.yearlyPrice = Number(d.yearlyPrice);
     if (d.displacementDiscountPct !== undefined) out.displacementDiscountPct = Number(d.displacementDiscountPct);
     if (d.freeVisitsCount !== undefined) out.freeVisitsCount = Math.trunc(Number(d.freeVisitsCount));
+    if (d.creditsPerYear !== undefined) out.creditsPerYear = Math.trunc(Number(d.creditsPerYear)) || 0;
+    if (d.maxTier !== undefined && ['GREEN', 'YELLOW', 'RED'].includes(d.maxTier)) out.maxTier = d.maxTier;
     if (d.quoteExpiryDays !== undefined) {
       out.quoteExpiryDays =
         d.quoteExpiryDays === null || d.quoteExpiryDays === '' || Number.isNaN(Number(d.quoteExpiryDays))
@@ -1102,12 +1121,12 @@ export class AdminController {
     ]);
     return {
       categories: Object.fromEntries(
-        categories.map((c) => [c.categoryId, { basePrice: Number(c.basePrice), hidden: c.hidden }]),
+        categories.map((c) => [c.categoryId, { basePrice: Number(c.basePrice), hidden: c.hidden, tier: c.tier }]),
       ),
       items: Object.fromEntries(
         items.map((i) => [
           `${i.categoryId}:${i.subcategoryId}:${i.itemId}`,
-          { price: Number(i.price), hidden: i.hidden, notes: i.notes ?? null },
+          { price: Number(i.price), hidden: i.hidden, notes: i.notes ?? null, tier: i.tier },
         ]),
       ),
     };
@@ -1117,7 +1136,7 @@ export class AdminController {
   async saveServicePrices(
     @Body()
     body: {
-      categories?: { categoryId: string; basePrice: number; hidden?: boolean }[];
+      categories?: { categoryId: string; basePrice: number; hidden?: boolean; tier?: DifficultyTier | null }[];
       items?: {
         categoryId: string;
         subcategoryId: string;
@@ -1125,6 +1144,7 @@ export class AdminController {
         price: number;
         hidden?: boolean;
         notes?: string | null;
+        tier?: DifficultyTier | null;
       }[];
     },
   ) {
@@ -1135,8 +1155,8 @@ export class AdminController {
       ...categories.map((c) =>
         this.prisma.serviceCategoryPrice.upsert({
           where: { categoryId: c.categoryId },
-          create: { categoryId: c.categoryId, basePrice: c.basePrice, hidden: c.hidden ?? false },
-          update: { basePrice: c.basePrice, hidden: c.hidden ?? false },
+          create: { categoryId: c.categoryId, basePrice: c.basePrice, hidden: c.hidden ?? false, tier: c.tier ?? null },
+          update: { basePrice: c.basePrice, hidden: c.hidden ?? false, tier: c.tier ?? null },
         }),
       ),
       ...items.map((i) =>
@@ -1155,8 +1175,9 @@ export class AdminController {
             price: i.price,
             hidden: i.hidden ?? false,
             notes: i.notes ?? null,
+            tier: i.tier ?? null,
           },
-          update: { price: i.price, hidden: i.hidden ?? false, notes: i.notes ?? null },
+          update: { price: i.price, hidden: i.hidden ?? false, notes: i.notes ?? null, tier: i.tier ?? null },
         }),
       ),
     ]);

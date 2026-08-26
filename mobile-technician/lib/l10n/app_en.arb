@@ -239,5 +239,13 @@
   "thisWeekSection": "This week",
   "completedSection": "Completed",
   "noDateScheduled": "No date scheduled",
-  "earningsBySpecialty": "By specialty"
+  "earningsBySpecialty": "By specialty",
+
+  "difficultyTierGreen": "Green",
+  "difficultyTierYellow": "Yellow",
+  "difficultyTierRed": "Red",
+  "creditsPaymentTitle": "Pay with plan credits",
+  "creditsPaymentSubtitle": "This will use {cost} (you have {remaining})",
+  "creditsCost": "{cost, plural, =1{1 credit} other{{cost} credits}}",
+  "creditsRemaining": "{remaining, plural, =0{0 left} =1{1 left} other{{remaining} left}}"
 }

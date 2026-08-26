@@ -247,5 +247,16 @@
   "thisWeekSection": "Esta semana",
   "completedSection": "Concluídos",
   "noDateScheduled": "Sem data agendada",
-  "earningsBySpecialty": "Por especialidade"
+  "earningsBySpecialty": "Por especialidade",
+
+  "difficultyTierGreen": "Verde",
+  "difficultyTierYellow": "Amarelo",
+  "difficultyTierRed": "Vermelho",
+  "creditsPaymentTitle": "Pagar com créditos do plano",
+  "creditsPaymentSubtitle": "Vai usar {cost} (tens {remaining})",
+  "@creditsPaymentSubtitle": { "placeholders": { "cost": { "type": "String" }, "remaining": { "type": "String" } } },
+  "creditsCost": "{cost, plural, =1{1 crédito} other{{cost} créditos}}",
+  "@creditsCost": { "placeholders": { "cost": { "type": "int" } } },
+  "creditsRemaining": "{remaining, plural, =0{0 disponíveis} =1{1 disponível} other{{remaining} disponíveis}}",
+  "@creditsRemaining": { "placeholders": { "remaining": { "type": "int" } } }
 }

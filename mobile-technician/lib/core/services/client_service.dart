@@ -178,7 +178,12 @@ class ClientService {
   /// indicar a forma de pagamento: 'ONLINE' cobra de imediato via Stripe (a
   /// resposta pode trazer `clientSecret` para apresentar a PaymentSheet, ou
   /// `simulated: true` em modo de teste); 'CASH' só cria o registo de
-  /// pagamento para efeitos de contabilidade, sem nada a fazer no cliente.
+  /// pagamento para efeitos de contabilidade, sem nada a fazer no cliente;
+  /// 'CREDITS' debita os créditos do plano do cliente no servidor e devolve
+  /// de imediato (sem `clientSecret`) — se o cliente não for elegível (sem
+  /// assinatura ativa, tier fora do `maxTier` do plano, ou créditos
+  /// insuficientes), o pedido falha com 400 e uma mensagem em português para
+  /// mostrar ao utilizador.
   Future<Map<String, dynamic>> approveQuote(String id, {required String paymentMethod}) async {
     final r = await _dio.post('/service-requests/$id/quote/approve', data: {
       'paymentMethod': paymentMethod,
@@ -414,6 +419,10 @@ final catalogPricesLoadedProvider = FutureProvider<bool>((ref) async {
         if (basePrice is num) cat.basePrice = basePrice.toDouble();
         final hidden = catOverride['hidden'];
         if (hidden is bool) cat.hidden = hidden;
+        // tier: override do admin (quando não-nulo) tem prioridade sobre a
+        // sugestão estática do catálogo já presente em cat.tier.
+        final tier = catOverride['tier'];
+        if (tier is String && tier.isNotEmpty) cat.tier = tier;
       }
       for (final sub in cat.subcategories) {
         for (final item in sub.items) {
@@ -425,6 +434,8 @@ final catalogPricesLoadedProvider = FutureProvider<bool>((ref) async {
             if (hidden is bool) item.hidden = hidden;
             final notes = itemOverride['notes'];
             item.notes = notes is String && notes.isNotEmpty ? notes : null;
+            final tier = itemOverride['tier'];
+            if (tier is String && tier.isNotEmpty) item.tier = tier;
           }
         }
       }

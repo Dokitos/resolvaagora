@@ -152,6 +152,13 @@ class SubscriptionPlan {
   final double displacementDiscountPct;
   final int freeVisitsCount;
   final bool priorityScheduling;
+  // Créditos anuais do plano e o nível de dificuldade máximo que cobre —
+  // usados para pagar orçamentos com `paymentMethod: 'CREDITS'`
+  // (ver `service_request_detail_page.dart`). `maxTier` é 'GREEN' | 'YELLOW' | 'RED';
+  // por omissão fica no mais restritivo ('GREEN'/0 créditos) se o backend
+  // ainda não enviar estes campos, para nunca oferecer a opção indevidamente.
+  final int creditsPerYear;
+  final String maxTier;
 
   const SubscriptionPlan({
     required this.id,
@@ -163,6 +170,8 @@ class SubscriptionPlan {
     required this.displacementDiscountPct,
     required this.freeVisitsCount,
     required this.priorityScheduling,
+    this.creditsPerYear = 0,
+    this.maxTier = 'GREEN',
   });
 
   static double _d(dynamic v) => v == null ? 0 : double.parse(v.toString());
@@ -177,6 +186,8 @@ class SubscriptionPlan {
         displacementDiscountPct: _d(j['displacementDiscountPct']),
         freeVisitsCount: (j['freeVisitsCount'] as num?)?.toInt() ?? 0,
         priorityScheduling: j['priorityScheduling'] as bool? ?? false,
+        creditsPerYear: (j['creditsPerYear'] as num?)?.toInt() ?? 0,
+        maxTier: (j['maxTier'] as String?) ?? 'GREEN',
       );
 }
 
@@ -186,6 +197,9 @@ class ClientSubscription {
   final DateTime? startsAt;
   final DateTime? expiresAt;
   final int freeVisitsUsed;
+  // Créditos já usados este ano do plano — comparado com `plan.creditsPerYear`
+  // para saber quantos ainda restam ao pagar um orçamento com créditos.
+  final int creditsUsed;
   final SubscriptionPlan? plan;
 
   const ClientSubscription({
@@ -194,6 +208,7 @@ class ClientSubscription {
     this.startsAt,
     this.expiresAt,
     this.freeVisitsUsed = 0,
+    this.creditsUsed = 0,
     this.plan,
   });
 
@@ -205,6 +220,7 @@ class ClientSubscription {
         startsAt: j['startsAt'] != null ? DateTime.parse(j['startsAt'] as String) : null,
         expiresAt: j['expiresAt'] != null ? DateTime.parse(j['expiresAt'] as String) : null,
         freeVisitsUsed: (j['freeVisitsUsed'] as num?)?.toInt() ?? 0,
+        creditsUsed: (j['creditsUsed'] as num?)?.toInt() ?? 0,
         plan: j['plan'] != null ? SubscriptionPlan.fromJson(j['plan'] as Map<String, dynamic>) : null,
       );
 }

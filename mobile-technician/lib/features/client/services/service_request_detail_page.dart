@@ -1,8 +1,11 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:moura_technician/l10n/generated/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../../core/models/client_profile.dart';
 import '../../../core/models/service_request.dart';
 import '../../../core/services/client_service.dart';
 import '../../../core/services/settings_service.dart';
@@ -10,6 +13,48 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/shimmer.dart';
 import 'service_status_ui.dart';
+
+/// Ordem de dificuldade GREEN < YELLOW < RED — espelha `tierCost`/`maxTier`
+/// no backend (`POST /service-requests/:id/quote/approve`).
+const _tierOrder = {'GREEN': 0, 'YELLOW': 1, 'RED': 2};
+
+/// Custo em créditos de cada nível de dificuldade (regra espelhada do backend).
+const _tierCreditCost = {'GREEN': 1, 'YELLOW': 2, 'RED': 3};
+
+/// Verifica se o cliente pode pagar este orçamento com os créditos do seu
+/// plano de subscrição, replicando as 3 condições do backend: (a) assinatura
+/// ativa, (b) `quote.difficultyTier` dentro do `maxTier` do plano, (c)
+/// créditos suficientes por usar este ano. Devolve `null` quando não é
+/// elegível — trata qualquer campo em falta/nulo como não elegível, sem
+/// nunca rebentar (ex.: orçamento sem `difficultyTier`, sem plano, etc.).
+({int cost, int remaining})? _creditsEligibility(Quote quote, ClientSubscription? sub) {
+  if (sub == null || !sub.isActive) return null;
+  final plan = sub.plan;
+  if (plan == null) return null;
+  final tier = quote.difficultyTier;
+  if (tier == null) return null;
+  final tierIdx = _tierOrder[tier];
+  final maxIdx = _tierOrder[plan.maxTier];
+  if (tierIdx == null || maxIdx == null || tierIdx > maxIdx) return null;
+  final cost = _tierCreditCost[tier];
+  if (cost == null) return null;
+  final remaining = plan.creditsPerYear - sub.creditsUsed;
+  if (remaining < cost) return null;
+  return (cost: cost, remaining: remaining);
+}
+
+/// Extrai uma mensagem amigável do erro (ex.: "O seu plano não cobre este
+/// nível de dificuldade" devolvido pelo backend em 400 ao aprovar com
+/// créditos), evitando expor detalhes técnicos ao utilizador — mesmo padrão
+/// usado em `job_detail_screen.dart` / `auth_service.dart`.
+String _friendlyError(Object e, String fallback) {
+  if (e is DioException) {
+    final msg = e.response?.data is Map ? e.response?.data['message'] : null;
+    if (msg == null) return fallback;
+    return msg is List ? msg.join(', ') : msg.toString();
+  }
+  return fallback;
+}
 
 class ServiceRequestDetailPage extends ConsumerWidget {
   final String id;
@@ -193,6 +238,13 @@ class _Detail extends ConsumerWidget {
           child: Column(
             children: [
               if (request.quote != null) ...[
+                if (request.quote!.difficultyTier != null) ...[
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: _DifficultyTierBadge(tier: request.quote!.difficultyTier!),
+                  ),
+                  const SizedBox(height: 10),
+                ],
                 _PriceRow('Mão de obra', fmt.format(request.quote!.laborCost)),
                 _PriceRow('Materiais', fmt.format(request.quote!.materialsCost)),
                 const Divider(height: 18),
@@ -405,24 +457,68 @@ class _Detail extends ConsumerWidget {
   Future<void> _respondQuote(BuildContext context, WidgetRef ref, {required bool approve}) async {
     String? reason;
     if (approve) {
+      // Vai buscar a subscrição ativa (mesmo provider de `subscription_page.dart`,
+      // para os dois ecrãs ficarem sempre em sincronia) para decidir se mostra
+      // a opção de pagar com créditos do plano.
+      ClientSubscription? sub;
+      try {
+        sub = await ref.read(mySubscriptionProvider.future);
+      } catch (_) {
+        sub = null; // sem subscrição / falha a obter → simplesmente não oferece créditos.
+      }
+      if (!context.mounted) return;
+      final quote = request.quote;
+      final credits = quote != null ? _creditsEligibility(quote, sub) : null;
+
       final method = await showDialog<String>(
         context: context,
-        builder: (_) => AlertDialog(
-          title: const Text('Como queres pagar?'),
-          content: const Text(
-              'Ao aceitar, autorizas o técnico a avançar com o serviço pelo valor apresentado. Escolhe a forma de pagamento:'),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Voltar')),
-            TextButton(
-              onPressed: () => Navigator.pop(context, 'CASH'),
-              child: const Text('Dinheiro no final'),
+        builder: (dialogContext) {
+          final l = AppLocalizations.of(dialogContext);
+          return AlertDialog(
+            title: const Text('Como queres pagar?'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Ao aceitar, autorizas o técnico a avançar com o serviço pelo valor apresentado. Escolhe a forma de pagamento:',
+                  ),
+                  const SizedBox(height: 16),
+                  // Opção mais vantajosa para um cliente elegível — destacada
+                  // e listada primeiro, mas sem impedir escolher outra forma.
+                  if (credits != null) ...[
+                    _PaymentOptionButton(
+                      icon: Icons.workspace_premium_outlined,
+                      title: l.creditsPaymentTitle,
+                      subtitle: l.creditsPaymentSubtitle(
+                        l.creditsCost(credits.cost),
+                        l.creditsRemaining(credits.remaining),
+                      ),
+                      highlighted: true,
+                      onTap: () => Navigator.pop(dialogContext, 'CREDITS'),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+                  _PaymentOptionButton(
+                    icon: Icons.payments_outlined,
+                    title: 'Dinheiro no final',
+                    onTap: () => Navigator.pop(dialogContext, 'CASH'),
+                  ),
+                  const SizedBox(height: 10),
+                  _PaymentOptionButton(
+                    icon: Icons.credit_card_outlined,
+                    title: 'Pagar agora online',
+                    onTap: () => Navigator.pop(dialogContext, 'ONLINE'),
+                  ),
+                ],
+              ),
             ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, 'ONLINE'),
-              child: const Text('Pagar agora online', style: TextStyle(color: Color(0xFF16A34A), fontWeight: FontWeight.bold)),
-            ),
-          ],
-        ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Voltar')),
+            ],
+          );
+        },
       );
       if (method == null) return;
       if (!context.mounted) return;
@@ -488,13 +584,25 @@ class _Detail extends ConsumerWidget {
   Future<void> _approveQuote(BuildContext context, WidgetRef ref, {required String paymentMethod}) async {
     try {
       final res = await ref.read(clientServiceProvider).approveQuote(request.id, paymentMethod: paymentMethod);
+      // Os créditos usados mudaram no servidor — refresca para que a próxima
+      // vez que a elegibilidade for calculada (aqui e em `subscription_page.dart`)
+      // reflita o valor atual.
+      if (paymentMethod == 'CREDITS') ref.invalidate(mySubscriptionProvider);
       if (!context.mounted) return;
       await _handleQuotePaymentResult(context, ref, res);
-    } catch (_) {
+    } catch (e) {
+      // Falha em CREDITS (ex.: 400 por elegibilidade entretanto desatualizada,
+      // como créditos gastos noutro pedido em simultâneo) também refresca a
+      // subscrição, para que uma nova tentativa não repita a mesma opção inválida.
+      if (paymentMethod == 'CREDITS') ref.invalidate(mySubscriptionProvider);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Não foi possível responder ao orçamento. O prazo pode ter terminado.')),
+          SnackBar(
+            content: Text(_friendlyError(
+              e,
+              'Não foi possível responder ao orçamento. O prazo pode ter terminado.',
+            )),
+          ),
         );
       }
     }
@@ -755,6 +863,113 @@ class _PriceRow extends StatelessWidget {
           Expanded(child: Text(label, style: TextStyle(fontSize: bold ? 16 : 14, fontWeight: bold ? FontWeight.bold : FontWeight.normal))),
           Text(value, style: style),
         ],
+      ),
+    );
+  }
+}
+
+/// Pequeno selo colorido com o nível de dificuldade do orçamento (definido
+/// pelo técnico ao enviar), mostrado junto ao detalhe de preço. Mesmo idioma
+/// visual de `statusChip` em `service_status_ui.dart`.
+class _DifficultyTierBadge extends StatelessWidget {
+  final String tier; // 'GREEN' | 'YELLOW' | 'RED'
+  const _DifficultyTierBadge({required this.tier});
+
+  static const _colors = {
+    'GREEN': Color(0xFF16A34A),
+    'YELLOW': Color(0xFFD97706),
+    'RED': Color(0xFFDC2626),
+  };
+
+  String _label(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    switch (tier) {
+      case 'GREEN':
+        return l.difficultyTierGreen;
+      case 'YELLOW':
+        return l.difficultyTierYellow;
+      case 'RED':
+        return l.difficultyTierRed;
+      default:
+        return tier;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _colors[tier] ?? Colors.grey;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(20)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.circle, size: 10, color: color),
+          const SizedBox(width: 6),
+          Text(_label(context), style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Linha de opção de pagamento no diálogo "Como queres pagar?" — quando
+/// [highlighted] é `true` (usado para a opção de créditos, quando elegível),
+/// ganha destaque visual (fundo/borda a dourado) para sugerir que é
+/// normalmente a melhor escolha, sem impedir escolher outra forma.
+class _PaymentOptionButton extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+  final bool highlighted;
+  final VoidCallback onTap;
+  const _PaymentOptionButton({
+    required this.icon,
+    required this.title,
+    this.subtitle,
+    this.highlighted = false,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final borderColor = highlighted ? AppTheme.brandYellowDark : Colors.grey.shade300;
+    final bgColor = highlighted ? AppTheme.brandYellowSoft : Colors.white;
+    final fgColor = highlighted ? AppTheme.brandYellowDark : Colors.black87;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: borderColor, width: highlighted ? 1.5 : 1),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, size: 22, color: highlighted ? AppTheme.brandYellowDark : Colors.grey[700]),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: fgColor)),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 2),
+                      Text(subtitle!, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 4),
+              Icon(Icons.chevron_right, color: Colors.grey[400]),
+            ],
+          ),
+        ),
       ),
     );
   }

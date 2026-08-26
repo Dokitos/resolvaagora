@@ -91,7 +91,8 @@ class Quote {
   final String status;
   final DateTime expiresAt;
   final DateTime createdAt;
-  final String? paymentMethod; // 'ONLINE' | 'CASH' | null (antes de aprovado)
+  final String? paymentMethod; // 'ONLINE' | 'CASH' | 'CREDITS' | null (antes de aprovado)
+  final String? difficultyTier; // 'GREEN' | 'YELLOW' | 'RED' — definido pelo técnico ao enviar o orçamento
 
   const Quote({
     required this.id,
@@ -104,6 +105,7 @@ class Quote {
     required this.expiresAt,
     required this.createdAt,
     this.paymentMethod,
+    this.difficultyTier,
   });
 
   factory Quote.fromJson(Map<String, dynamic> j) => Quote(
@@ -117,6 +119,7 @@ class Quote {
     expiresAt: DateTime.parse(j['expiresAt'] as String),
     createdAt: DateTime.parse(j['createdAt'] as String),
     paymentMethod: j['paymentMethod'] as String?,
+    difficultyTier: j['difficultyTier'] as String?,
   );
 }
 

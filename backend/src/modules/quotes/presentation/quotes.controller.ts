@@ -70,7 +70,7 @@ export class QuotesController {
   approve(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
-    @Body('paymentMethod') paymentMethod: 'ONLINE' | 'CASH',
+    @Body('paymentMethod') paymentMethod: 'ONLINE' | 'CASH' | 'CREDITS',
   ) {
     return this.respondQuote.approve(user.id, id, paymentMethod);
   }

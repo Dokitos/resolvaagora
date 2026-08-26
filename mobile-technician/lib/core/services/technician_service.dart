@@ -26,15 +26,21 @@ class TechnicianService {
     return ServiceRequest.fromJson(r.data);
   }
 
+  /// [difficultyTier] é opcional: 'GREEN' | 'YELLOW' | 'RED'. Permite ao
+  /// técnico classificar a dificuldade do trabalho, para que clientes com
+  /// plano possam optar por pagar com créditos. Se omitido, o backend
+  /// infere o nível a partir do preço total.
   Future<void> sendQuote(String serviceRequestId, {
     required String description,
     required double laborCost,
     double materialsCost = 0,
+    String? difficultyTier,
   }) async {
     await _dio.post('/technician/service-requests/$serviceRequestId/quote', data: {
       'description': description,
       'laborCost': laborCost,
       'materialsCost': materialsCost,
+      if (difficultyTier != null) 'difficultyTier': difficultyTier,
     });
   }
 

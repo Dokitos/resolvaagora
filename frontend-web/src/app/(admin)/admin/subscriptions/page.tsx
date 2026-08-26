@@ -3,11 +3,11 @@
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { adminApi } from '@/lib/api/admin'
-import type { Subscription, SubscriptionPlan } from '@/lib/api/types'
+import type { Subscription, SubscriptionPlan, PlanTier } from '@/lib/api/types'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { StatCard } from '@/components/ui/stat-card'
-import { formatCurrency, formatDate } from '@/lib/utils'
+import { cn, formatCurrency, formatDate, TIER_LABELS, TIER_COVERAGE_LABELS, TIER_COLORS, TIER_ORDER } from '@/lib/utils'
 import { Users, Star, CheckCircle } from 'lucide-react'
 
 interface SubscriptionRow extends Subscription {
@@ -118,6 +118,8 @@ export default function AdminSubscriptionsPage() {
                   <th className="text-right px-6 py-3 font-medium text-gray-500">Preço/ano</th>
                   <th className="text-right px-6 py-3 font-medium text-gray-500">Desc. deslocação</th>
                   <th className="text-right px-6 py-3 font-medium text-gray-500">Visitas grátis</th>
+                  <th className="text-right px-6 py-3 font-medium text-gray-500">Créditos/ano</th>
+                  <th className="text-left px-6 py-3 font-medium text-gray-500">Nível máx.</th>
                   <th className="text-left px-6 py-3 font-medium text-gray-500">Estado</th>
                   <th className="text-right px-6 py-3 font-medium text-gray-500">Ações</th>
                 </tr>
@@ -134,6 +136,10 @@ export default function AdminSubscriptionsPage() {
                       <td className="px-6 py-4 text-right text-gray-700">{formatCurrency(plan.yearlyPrice)}</td>
                       <td className="px-6 py-4 text-right text-gray-700">{plan.displacementDiscountPct}%</td>
                       <td className="px-6 py-4 text-right text-gray-700">{plan.freeVisitsCount}</td>
+                      <td className="px-6 py-4 text-right text-gray-700">{plan.creditsPerYear}</td>
+                      <td className="px-6 py-4">
+                        <Badge className={TIER_COLORS[plan.maxTier]}>{TIER_LABELS[plan.maxTier]}</Badge>
+                      </td>
                       <td className="px-6 py-4">
                         <Badge variant={plan.isActive ? 'success' : 'warning'}>
                           {plan.isActive ? 'Ativo' : 'Oculto'}
@@ -166,7 +172,7 @@ export default function AdminSubscriptionsPage() {
                 })}
                 {plans.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-6 py-8 text-center text-gray-400">
+                    <td colSpan={8} className="px-6 py-8 text-center text-gray-400">
                       Sem planos criados
                     </td>
                   </tr>
@@ -209,6 +215,7 @@ export default function AdminSubscriptionsPage() {
                     <th className="text-left px-6 py-3 font-medium text-gray-500">Início</th>
                     <th className="text-left px-6 py-3 font-medium text-gray-500">Expiração</th>
                     <th className="text-right px-6 py-3 font-medium text-gray-500">Visitas Usadas</th>
+                    <th className="text-right px-6 py-3 font-medium text-gray-500">Créditos Usados</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
@@ -231,12 +238,15 @@ export default function AdminSubscriptionsPage() {
                         <td className="px-6 py-4 text-right text-gray-600">
                           {sub.freeVisitsUsed} / {sub.plan.freeVisitsCount}
                         </td>
+                        <td className="px-6 py-4 text-right text-gray-600">
+                          {sub.creditsUsed} / {sub.plan.creditsPerYear}
+                        </td>
                       </tr>
                     )
                   })}
                   {filtered.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="px-6 py-8 text-center text-gray-400">
+                      <td colSpan={7} className="px-6 py-8 text-center text-gray-400">
                         Sem assinaturas
                       </td>
                     </tr>
@@ -276,6 +286,8 @@ function PlanEditor({ plan, onClose, onSaved }: { plan: SubscriptionPlan | null;
   const [yearlyPrice, setYearlyPrice] = useState(plan ? String(plan.yearlyPrice) : '')
   const [discount, setDiscount] = useState(plan ? String(plan.displacementDiscountPct) : '0')
   const [freeVisits, setFreeVisits] = useState(plan ? String(plan.freeVisitsCount) : '0')
+  const [creditsPerYear, setCreditsPerYear] = useState(plan ? String(plan.creditsPerYear) : '0')
+  const [maxTier, setMaxTier] = useState<PlanTier>(plan?.maxTier ?? 'GREEN')
   const [quoteExpiryDays, setQuoteExpiryDays] = useState(
     plan?.quoteExpiryDays != null ? String(plan.quoteExpiryDays) : '',
   )
@@ -320,6 +332,8 @@ function PlanEditor({ plan, onClose, onSaved }: { plan: SubscriptionPlan | null;
       yearlyPrice: Number(yearlyPrice),
       displacementDiscountPct: Number(discount),
       freeVisitsCount: Number(freeVisits),
+      creditsPerYear: Number(creditsPerYear),
+      maxTier,
       quoteExpiryDays: quoteExpiryDays.trim() === '' ? null : Number(quoteExpiryDays),
       priorityScheduling: priority,
     }
@@ -406,6 +420,40 @@ function PlanEditor({ plan, onClose, onSaved }: { plan: SubscriptionPlan | null;
             <div>
               <label className={label}>Visitas grátis</label>
               <input className={field} type="number" value={freeVisits} onChange={(e) => setFreeVisits(e.target.value)} />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={label}>Créditos incluídos/ano</label>
+              <input className={field} type="number" min="0" value={creditsPerYear} onChange={(e) => setCreditsPerYear(e.target.value)} />
+              <p className="text-xs text-gray-400 mt-1">
+                Consumidos ao pagar um orçamento com o plano — Verde = 1, Amarelo = 2, Vermelho = 3 créditos.
+              </p>
+            </div>
+            <div>
+              <label className={label}>Nível máximo coberto</label>
+              <div className="space-y-1.5">
+                {TIER_ORDER.map((t) => (
+                  <label
+                    key={t}
+                    className={cn(
+                      'flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs cursor-pointer',
+                      maxTier === t ? cn(TIER_COLORS[t], 'border-transparent') : 'border-gray-300 text-gray-600 hover:bg-gray-50',
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      name="maxTier"
+                      checked={maxTier === t}
+                      onChange={() => setMaxTier(t)}
+                    />
+                    {TIER_COVERAGE_LABELS[t]}
+                  </label>
+                ))}
+              </div>
+              <p className="text-xs text-gray-400 mt-1">
+                O plano cobre este nível e todos os anteriores (Vermelho = todos os níveis, não só trabalhos especializados).
+              </p>
             </div>
           </div>
           <div>

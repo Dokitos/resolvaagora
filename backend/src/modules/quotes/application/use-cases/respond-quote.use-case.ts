@@ -7,6 +7,13 @@ import {
 import { PrismaService } from '@shared/infrastructure/database/prisma.service';
 import { RabbitMQService } from '@shared/infrastructure/messaging/rabbitmq.service';
 import { PayQuoteUseCase } from '../../../payments/application/use-cases/pay-quote.use-case';
+import { DifficultyTier, Subscription, SubscriptionPlan } from '@prisma/client';
+
+// Ordem de dificuldade (para comparar com o maxTier do plano) e nº de
+// créditos que cada nível consome — únicas constantes fonte-da-verdade,
+// espelhadas nos frontends (web/app) só para efeitos de label/UI.
+const TIER_RANK: Record<DifficultyTier, number> = { GREEN: 0, YELLOW: 1, RED: 2 };
+const TIER_CREDIT_COST: Record<DifficultyTier, number> = { GREEN: 1, YELLOW: 2, RED: 3 };
 
 @Injectable()
 export class RespondQuoteUseCase {
@@ -16,9 +23,9 @@ export class RespondQuoteUseCase {
     private readonly payQuote: PayQuoteUseCase,
   ) {}
 
-  async approve(userId: string, serviceRequestId: string, paymentMethod: 'ONLINE' | 'CASH') {
-    if (paymentMethod !== 'ONLINE' && paymentMethod !== 'CASH') {
-      throw new BadRequestException('paymentMethod deve ser ONLINE ou CASH');
+  async approve(userId: string, serviceRequestId: string, paymentMethod: 'ONLINE' | 'CASH' | 'CREDITS') {
+    if (paymentMethod !== 'ONLINE' && paymentMethod !== 'CASH' && paymentMethod !== 'CREDITS') {
+      throw new BadRequestException('paymentMethod deve ser ONLINE, CASH ou CREDITS');
     }
     return this.respond(userId, serviceRequestId, 'APPROVED', undefined, paymentMethod);
   }
@@ -82,7 +89,7 @@ export class RespondQuoteUseCase {
     serviceRequestId: string,
     action: 'APPROVED' | 'REJECTED',
     reason?: string,
-    paymentMethod?: 'ONLINE' | 'CASH',
+    paymentMethod?: 'ONLINE' | 'CASH' | 'CREDITS',
   ) {
     const clientUser = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -103,6 +110,30 @@ export class RespondQuoteUseCase {
 
     if (sr.quote.expiresAt < new Date()) {
       throw new BadRequestException('Quote has expired');
+    }
+
+    // Pagar com créditos exige validar, ANTES de comitar nada, que o cliente
+    // tem um plano ativo cujo maxTier cobre a dificuldade deste orçamento e
+    // que ainda tem créditos suficientes — evita descontar créditos a mais
+    // ou aceitar um orçamento sem cobertura real.
+    let activeSubscription: (Subscription & { plan: SubscriptionPlan }) | null = null;
+    let creditsCost = 0;
+    if (action === 'APPROVED' && paymentMethod === 'CREDITS') {
+      const tier = sr.quote.difficultyTier;
+      if (!tier) {
+        throw new BadRequestException('Este orçamento ainda não tem uma classificação de dificuldade');
+      }
+      activeSubscription = await this.findActiveSubscription(clientUser.client.id);
+      if (!activeSubscription) {
+        throw new BadRequestException('Não tem um plano de assinatura ativo');
+      }
+      if (TIER_RANK[tier] > TIER_RANK[activeSubscription.plan.maxTier]) {
+        throw new BadRequestException('O seu plano não cobre este nível de dificuldade');
+      }
+      creditsCost = TIER_CREDIT_COST[tier];
+      if (activeSubscription.creditsUsed + creditsCost > activeSubscription.plan.creditsPerYear) {
+        throw new BadRequestException('Não tem créditos suficientes no seu plano para este orçamento');
+      }
     }
 
     const newServiceStatus = action === 'APPROVED' ? 'QUOTE_APPROVED' : 'QUOTE_REJECTED';
@@ -143,6 +174,27 @@ export class RespondQuoteUseCase {
           },
         });
       }
+
+      if (action === 'APPROVED' && paymentMethod === 'CREDITS' && activeSubscription) {
+        // Créditos são um recurso já pago (a assinatura anual) — ao contrário
+        // do dinheiro (só cobrado no fim) ou do cartão (pode falhar), a
+        // cobertura é garantida agora, por isso o Payment já nasce COMPLETED
+        // e sem stripePaymentIntentId (não há cobrança real).
+        await tx.payment.create({
+          data: {
+            serviceRequestId,
+            type: 'QUOTE',
+            amount: sr.quote!.totalCost,
+            currency: 'EUR',
+            status: 'COMPLETED',
+            paidAt: new Date(),
+          },
+        });
+        await tx.subscription.update({
+          where: { id: activeSubscription.id },
+          data: { creditsUsed: { increment: creditsCost } },
+        });
+      }
     });
 
     const event = action === 'APPROVED' ? 'quote.approved' : 'quote.rejected';
@@ -159,5 +211,12 @@ export class RespondQuoteUseCase {
     }
 
     return { success: true, action, paymentMethod };
+  }
+
+  private async findActiveSubscription(clientId: string) {
+    return this.prisma.subscription.findFirst({
+      where: { clientId, status: 'ACTIVE' },
+      include: { plan: true },
+    });
   }
 }

@@ -8,6 +8,15 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '@shared/infrastructure/database/prisma.service';
 import { RabbitMQService } from '@shared/infrastructure/messaging/rabbitmq.service';
 import { SendQuoteDto } from '../dto/send-quote.dto';
+import { DifficultyTier } from '@prisma/client';
+
+/** Fallback quando o técnico não indica a dificuldade — mesma faixa usada
+ * para sugerir a dificuldade por defeito no catálogo de preços fixos. */
+function inferDifficultyTier(totalCost: number): DifficultyTier {
+  if (totalCost < 40) return 'GREEN';
+  if (totalCost < 100) return 'YELLOW';
+  return 'RED';
+}
 
 @Injectable()
 export class SendQuoteUseCase {
@@ -56,6 +65,7 @@ export class SendQuoteUseCase {
     const materials = dto.materialsCost ?? 0;
     const subtotal = labor + materials;
     const totalCost = subtotal * (1 + VAT_RATE);
+    const difficultyTier = dto.difficultyTier ?? inferDifficultyTier(totalCost);
 
     const quote = await this.prisma.$transaction(async (tx) => {
       const q = await tx.quote.create({
@@ -67,6 +77,7 @@ export class SendQuoteUseCase {
           materialsCost: materials,
           vatRate: VAT_RATE,
           totalCost,
+          difficultyTier,
           expiresAt,
         },
       });

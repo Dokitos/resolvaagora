@@ -7,8 +7,8 @@ import type { Subscription, SubscriptionPlan } from '@/lib/api/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { formatCurrency, formatDate } from '@/lib/utils'
-import { Star, CheckCircle, Zap, Gift, AlertTriangle } from 'lucide-react'
+import { formatCurrency, formatDate, TIER_LABELS, TIER_COLORS } from '@/lib/utils'
+import { Star, CheckCircle, Zap, Gift, AlertTriangle, Coins } from 'lucide-react'
 import { Dialog } from '@/components/ui/modal'
 import { StripeCheckout } from '@/components/payment/stripe-checkout'
 
@@ -97,7 +97,12 @@ export default function SubscriptionPage() {
                   <Star className="h-5 w-5 text-accent-600" />
                 </div>
                 <div>
-                  <p className="font-semibold text-accent-900">{current.plan.name}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold text-accent-900">{current.plan.name}</p>
+                    <Badge className={TIER_COLORS[current.plan.maxTier]}>
+                      Cobre até: {TIER_LABELS[current.plan.maxTier]}
+                    </Badge>
+                  </div>
                   <p className="text-sm text-accent-700">Válida até {formatDate(current.expiresAt)}</p>
                 </div>
               </div>
@@ -107,6 +112,12 @@ export default function SubscriptionPage() {
                     {current.plan.freeVisitsCount - current.freeVisitsUsed}
                   </p>
                   <p className="text-xs text-accent-600">visitas grátis restantes</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-accent-900">
+                    {current.plan.creditsPerYear - current.creditsUsed}
+                  </p>
+                  <p className="text-xs text-accent-600">créditos restantes</p>
                 </div>
                 <Button
                   variant="outline"
@@ -181,6 +192,13 @@ export default function SubscriptionPage() {
                     <span className={plan.priorityScheduling ? '' : 'text-gray-400 line-through'}>
                       Agendamento prioritário
                     </span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Coins className="h-4 w-4 text-accent-500 shrink-0" />
+                    {plan.creditsPerYear} créditos/ano
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Badge className={TIER_COLORS[plan.maxTier]}>Cobre até: {TIER_LABELS[plan.maxTier]}</Badge>
                   </li>
                 </ul>
 

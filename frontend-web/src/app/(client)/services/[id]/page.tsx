@@ -4,9 +4,11 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { serviceRequestsApi } from '@/lib/api/service-requests'
-import type { ServiceRequest } from '@/lib/api/types'
+import { subscriptionsApi } from '@/lib/api/subscriptions'
+import type { ServiceRequest, Subscription, DifficultyTier } from '@/lib/api/types'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { formatDate, formatCurrency, SPECIALTY_LABELS, SPECIALTY_ICONS, STATUS_LABELS } from '@/lib/utils'
 import { ArrowLeft, MapPin, Wrench, Clock, CheckCircle, XCircle, AlertTriangle, Star, Phone, Mail, Ban } from 'lucide-react'
@@ -30,6 +32,32 @@ function cancelTier(status: string): CancelTier {
   return null
 }
 
+// Ordem crescente de dificuldade — um plano com maxTier YELLOW cobre GREEN e YELLOW, mas não RED.
+const TIER_RANK: Record<DifficultyTier, number> = { GREEN: 0, YELLOW: 1, RED: 2 }
+const TIER_CREDIT_COST: Record<DifficultyTier, number> = { GREEN: 1, YELLOW: 2, RED: 3 }
+const TIER_LABELS: Record<DifficultyTier, string> = { GREEN: 'Verde', YELLOW: 'Amarelo', RED: 'Vermelho' }
+const TIER_BADGE_VARIANT: Record<DifficultyTier, 'success' | 'warning' | 'danger'> = { GREEN: 'success', YELLOW: 'warning', RED: 'danger' }
+
+/** Elegibilidade para pagar o orçamento com créditos do plano de assinatura do cliente. */
+function creditsEligibility(tier: DifficultyTier | null | undefined, subscription: Subscription | null) {
+  if (!tier || !subscription || subscription.status !== 'ACTIVE') {
+    return { eligible: false, cost: null as number | null, remaining: null as number | null }
+  }
+  const { plan } = subscription
+  const cost = TIER_CREDIT_COST[tier]
+  if (
+    !plan.maxTier ||
+    TIER_RANK[tier] > TIER_RANK[plan.maxTier] ||
+    typeof plan.creditsPerYear !== 'number' ||
+    typeof subscription.creditsUsed !== 'number'
+  ) {
+    return { eligible: false, cost, remaining: null as number | null }
+  }
+  const remaining = plan.creditsPerYear - subscription.creditsUsed
+  const eligible = subscription.creditsUsed + cost <= plan.creditsPerYear
+  return { eligible, cost, remaining }
+}
+
 export default function ServiceDetailPage({ params }: { params: { id: string } }) {
   const { id } = params
   const router = useRouter()
@@ -40,6 +68,7 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
   const [cancelModal, setCancelModal] = useState(false)
   const [paymentMethodModal, setPaymentMethodModal] = useState(false)
   const [checkout, setCheckout] = useState<{ clientSecret: string; amount: number; forQuote?: boolean } | null>(null)
+  const [subscription, setSubscription] = useState<Subscription | null>(null)
 
   async function load() {
     try {
@@ -52,7 +81,18 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
     }
   }
 
+  async function loadSubscription() {
+    try {
+      const data = await subscriptionsApi.current()
+      setSubscription(data)
+    } catch {
+      // sem assinatura ativa é um estado normal, não um erro (404 ou null)
+      setSubscription(null)
+    }
+  }
+
   useEffect(() => { load() }, [id])
+  useEffect(() => { loadSubscription() }, [])
 
   useNotificationsSocket({
     onServiceStatusUpdated: (data) => { if (data.serviceRequestId === id) load() },
@@ -85,7 +125,7 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
     await load()
   }
 
-  async function handleChoosePaymentMethod(method: 'ONLINE' | 'CASH') {
+  async function handleChoosePaymentMethod(method: 'ONLINE' | 'CASH' | 'CREDITS') {
     setPaymentMethodModal(false)
     setActionLoading(true)
     try {
@@ -97,11 +137,20 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
       toast.success(
         method === 'ONLINE'
           ? 'Orçamento aprovado e pagamento confirmado!'
-          : 'Orçamento aprovado! Pague em dinheiro quando o serviço terminar.',
+          : method === 'CREDITS'
+            ? 'Orçamento aprovado! Pago com os créditos do seu plano.'
+            : 'Orçamento aprovado! Pague em dinheiro quando o serviço terminar.',
       )
       await load()
+      if (method === 'CREDITS') await loadSubscription()
     } catch (err: any) {
       toast.error(err.message)
+      if (method === 'CREDITS') {
+        // Reabre o diálogo (ex: outra sessão da mesma conta gastou os créditos entretanto)
+        // para o cliente poder escolher outro método em vez de ficar sem feedback nenhum.
+        await loadSubscription()
+        setPaymentMethodModal(true)
+      }
     } finally {
       setActionLoading(false)
     }
@@ -188,6 +237,9 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
   const quoteExpiresIn = sr.quote?.expiresAt
     ? differenceInHours(parseISO(sr.quote.expiresAt), new Date())
     : null
+
+  const { eligible: creditsEligible, cost: creditsCost, remaining: creditsRemaining } =
+    creditsEligibility(sr.quote?.difficultyTier, subscription)
 
   return (
     <>
@@ -309,6 +361,11 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
             <CardTitle className="text-accent-900 flex items-center gap-2">
               <Wrench className="h-5 w-5" />
               Orçamento recebido
+              {sr.quote.difficultyTier && (
+                <Badge variant={TIER_BADGE_VARIANT[sr.quote.difficultyTier]}>
+                  {TIER_LABELS[sr.quote.difficultyTier]}
+                </Badge>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -516,6 +573,21 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
         <p className="text-sm text-gray-600">
           Total do orçamento: <span className="font-semibold text-gray-900">{sr.quote ? formatCurrency(Number(sr.quote.totalCost)) : ''}</span>
         </p>
+        {creditsEligible && creditsCost !== null && creditsRemaining !== null && (
+          <button
+            onClick={() => handleChoosePaymentMethod('CREDITS')}
+            disabled={actionLoading}
+            className="relative w-full text-left p-4 rounded-xl border-2 border-accent-500 bg-accent-50 hover:bg-accent-100 transition-colors"
+          >
+            <span className="absolute top-3 right-3 text-[10px] font-semibold uppercase tracking-wide text-accent-700 bg-accent-200 rounded-full px-2 py-0.5">
+              Melhor opção
+            </span>
+            <p className="font-medium text-gray-900">Pagar com créditos do plano</p>
+            <p className="text-xs text-gray-600 mt-0.5">
+              Vai usar {creditsCost} {creditsCost === 1 ? 'crédito' : 'créditos'} (tens {creditsRemaining} disponíveis). Sem custo adicional.
+            </p>
+          </button>
+        )}
         <button
           onClick={() => handleChoosePaymentMethod('ONLINE')}
           disabled={actionLoading}

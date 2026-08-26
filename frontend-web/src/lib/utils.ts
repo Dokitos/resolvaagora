@@ -1,6 +1,6 @@
 import { type ClassValue, clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
-import type { ServiceStatus, Specialty, AlertLevel } from './api/types'
+import type { ServiceStatus, Specialty, AlertLevel, PlanTier } from './api/types'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -103,3 +103,25 @@ export const SLA_METRIC_LABELS: Record<string, string> = {
   RESOLUTION: 'Resolução total',
   QUOTE_EXPIRY: 'Expiração de orçamento',
 }
+
+/** Nível de dificuldade de um trabalho — usado também como cobertura máxima de um plano. */
+export const TIER_LABELS: Record<PlanTier, string> = {
+  GREEN: 'Verde',
+  YELLOW: 'Amarelo',
+  RED: 'Vermelho',
+}
+
+/** Rótulos que deixam explícita a relação cumulativa (Vermelho cobre tudo, não só trabalhos "vermelhos"). */
+export const TIER_COVERAGE_LABELS: Record<PlanTier, string> = {
+  GREEN: 'Verde (trabalhos simples)',
+  YELLOW: 'Amarelo (+ intermédios)',
+  RED: 'Vermelho (+ especializados)',
+}
+
+export const TIER_COLORS: Record<PlanTier, string> = {
+  GREEN: 'bg-green-100 text-green-700',
+  YELLOW: 'bg-yellow-100 text-yellow-700',
+  RED: 'bg-red-100 text-red-700',
+}
+
+export const TIER_ORDER: PlanTier[] = ['GREEN', 'YELLOW', 'RED']

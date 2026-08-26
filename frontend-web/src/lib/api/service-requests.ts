@@ -32,7 +32,7 @@ export const serviceRequestsApi = {
   payFull: (id: string, itemsTotal: number) =>
     api.post<PayFullResult>(`/service-requests/${id}/pay`, { itemsTotal }).then((r) => r.data),
 
-  approveQuote: (id: string, paymentMethod: 'ONLINE' | 'CASH') =>
+  approveQuote: (id: string, paymentMethod: 'ONLINE' | 'CASH' | 'CREDITS') =>
     api.post<{ success: boolean; paymentMethod: string; clientSecret?: string; publishableKey?: string; simulated?: boolean; amount?: number }>(
       `/service-requests/${id}/quote/approve`,
       { paymentMethod },

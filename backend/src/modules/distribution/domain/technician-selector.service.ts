@@ -61,21 +61,25 @@ export class TechnicianSelectorService {
       return { technicianId: null, reason: 'All technicians at daily limit' };
     }
 
-    // Ordena: menor carga do dia primeiro; desempate por maior rating médio
+    const avgRating = (t: (typeof available)[number]) =>
+      t.reviews.length > 0 ? t.reviews.reduce((s, r) => s + r.rating, 0) / t.reviews.length : 0;
+    const load = (t: (typeof available)[number]) => t.dailySchedules[0]?.serviceCount ?? 0;
+
+    // Ordena por carga do dia + rating — mas a ordem de desempate depende de
+    // `isPriority`: pedidos normais preferem o técnico menos ocupado (resposta
+    // mais rápida); pedidos prioritários (cliente com plano que inclui
+    // "Prioridade Alta/Máxima") preferem o técnico com melhor avaliação, ainda
+    // que ligeiramente mais ocupado — era o único sítio onde este campo,
+    // definido no plano de assinatura, não tinha qualquer efeito real.
     const ranked = available.sort((a, b) => {
-      const loadA = a.dailySchedules[0]?.serviceCount ?? 0;
-      const loadB = b.dailySchedules[0]?.serviceCount ?? 0;
-
-      if (loadA !== loadB) return loadA - loadB;
-
-      const ratingA = a.reviews.length > 0
-        ? a.reviews.reduce((s, r) => s + r.rating, 0) / a.reviews.length
-        : 0;
-      const ratingB = b.reviews.length > 0
-        ? b.reviews.reduce((s, r) => s + r.rating, 0) / b.reviews.length
-        : 0;
-
-      return ratingB - ratingA;
+      if (isPriority) {
+        const ratingDiff = avgRating(b) - avgRating(a);
+        if (ratingDiff !== 0) return ratingDiff;
+        return load(a) - load(b);
+      }
+      const loadDiff = load(a) - load(b);
+      if (loadDiff !== 0) return loadDiff;
+      return avgRating(b) - avgRating(a);
     });
 
     return { technicianId: ranked[0].id };

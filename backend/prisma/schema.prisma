@@ -90,6 +90,16 @@ enum PaymentStatus {
 enum PaymentMethod {
   ONLINE
   CASH
+  CREDITS
+}
+
+/// Nível de dificuldade de uma intervenção — usado pelo sistema de créditos
+/// dos planos de assinatura (Essencial/Conforto/Total): cada plano só cobre
+/// até um certo nível, e cada nível "pesa" um número diferente de créditos.
+enum DifficultyTier {
+  GREEN
+  YELLOW
+  RED
 }
 
 enum SubscriptionStatus {
@@ -356,21 +366,24 @@ model ServiceStatusHistory {
 // ─── QUOTE ────────────────────────────────────────────────────────────────────
 
 model Quote {
-  id               String         @id @default(uuid())
-  serviceRequestId String         @unique @map("service_request_id")
-  technicianId     String         @map("technician_id")
-  description      String         @db.Text
-  laborCost        Decimal        @map("labor_cost") @db.Decimal(10, 2)
-  materialsCost    Decimal        @default(0) @map("materials_cost") @db.Decimal(10, 2)
-  vatRate          Decimal        @default(0.23) @map("vat_rate") @db.Decimal(4, 2)
-  totalCost        Decimal        @map("total_cost") @db.Decimal(10, 2)
-  status           QuoteStatus    @default(PENDING)
-  paymentMethod    PaymentMethod? @map("payment_method")
-  expiresAt        DateTime       @map("expires_at")
-  respondedAt      DateTime?      @map("responded_at")
-  rejectionReason  String?        @map("rejection_reason") @db.Text
-  createdAt        DateTime       @default(now()) @map("created_at")
-  updatedAt        DateTime       @updatedAt @map("updated_at")
+  id               String          @id @default(uuid())
+  serviceRequestId String          @unique @map("service_request_id")
+  technicianId     String          @map("technician_id")
+  description      String          @db.Text
+  laborCost        Decimal         @map("labor_cost") @db.Decimal(10, 2)
+  materialsCost    Decimal         @default(0) @map("materials_cost") @db.Decimal(10, 2)
+  vatRate          Decimal         @default(0.23) @map("vat_rate") @db.Decimal(4, 2)
+  totalCost        Decimal         @map("total_cost") @db.Decimal(10, 2)
+  status           QuoteStatus     @default(PENDING)
+  paymentMethod    PaymentMethod?  @map("payment_method")
+  /// Classificação de dificuldade dada pelo técnico ao enviar o orçamento —
+  /// determina se (e quantos) créditos do plano do cliente podem cobrir isto.
+  difficultyTier   DifficultyTier? @map("difficulty_tier")
+  expiresAt        DateTime        @map("expires_at")
+  respondedAt      DateTime?       @map("responded_at")
+  rejectionReason  String?         @map("rejection_reason") @db.Text
+  createdAt        DateTime        @default(now()) @map("created_at")
+  updatedAt        DateTime        @updatedAt @map("updated_at")
 
   serviceRequest ServiceRequest @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
   technician     Technician     @relation(fields: [technicianId], references: [id])
@@ -407,20 +420,27 @@ model Payment {
 // ─── SUBSCRIPTION ─────────────────────────────────────────────────────────────
 
 model SubscriptionPlan {
-  id                      String   @id @default(uuid())
+  id                      String         @id @default(uuid())
   name                    String
-  description             String?  @db.Text
-  imageUrl                String?  @map("image_url")
-  benefits                String[] @default([])
-  yearlyPrice             Decimal  @map("yearly_price") @db.Decimal(10, 2)
-  displacementDiscountPct Decimal  @map("displacement_discount_pct") @db.Decimal(5, 2)
-  freeVisitsCount         Int      @map("free_visits_count")
-  priorityScheduling      Boolean  @default(true) @map("priority_scheduling")
+  description             String?        @db.Text
+  imageUrl                String?        @map("image_url")
+  benefits                String[]       @default([])
+  yearlyPrice             Decimal        @map("yearly_price") @db.Decimal(10, 2)
+  displacementDiscountPct Decimal        @map("displacement_discount_pct") @db.Decimal(5, 2)
+  /// "Deslocações incluídas" — nº de deslocações/ano com taxa de deslocação
+  /// zerada (mesmo mecanismo que já existia como "visitas grátis").
+  freeVisitsCount         Int            @map("free_visits_count")
+  /// Créditos/ano para pagar a execução de trabalhos (mão-de-obra), consumidos
+  /// conforme o nível de dificuldade do orçamento (GREEN=1, YELLOW=2, RED=3).
+  creditsPerYear          Int            @default(0) @map("credits_per_year")
+  /// Nível de dificuldade máximo que este plano cobre com créditos.
+  maxTier                 DifficultyTier @default(GREEN) @map("max_tier")
+  priorityScheduling      Boolean        @default(true) @map("priority_scheduling")
   /// Prazo (dias) para o cliente responder a orçamentos. Null = usa o padrão (2 dias).
-  quoteExpiryDays         Int?     @map("quote_expiry_days")
-  isActive                Boolean  @default(true) @map("is_active")
-  createdAt               DateTime @default(now()) @map("created_at")
-  updatedAt               DateTime @updatedAt @map("updated_at")
+  quoteExpiryDays         Int?           @map("quote_expiry_days")
+  isActive                Boolean        @default(true) @map("is_active")
+  createdAt               DateTime       @default(now()) @map("created_at")
+  updatedAt               DateTime       @updatedAt @map("updated_at")
 
   subscriptions Subscription[]
 
@@ -468,6 +488,7 @@ model Subscription {
   startsAt             DateTime           @map("starts_at")
   expiresAt            DateTime           @map("expires_at")
   freeVisitsUsed       Int                @default(0) @map("free_visits_used")
+  creditsUsed          Int                @default(0) @map("credits_used")
   createdAt            DateTime           @default(now()) @map("created_at")
   updatedAt            DateTime           @updatedAt @map("updated_at")
 
@@ -754,26 +775,26 @@ model Referral {
 // ─── APP SETTINGS (feature flags / maintenance) ───────────────────────────────
 
 model AppSetting {
-  id                     String   @id @default("app")
-  maintenanceMode        Boolean  @default(false) @map("maintenance_mode")
-  maintenanceMessage     String?  @map("maintenance_message")
-  registrationEnabled    Boolean  @default(true) @map("registration_enabled")
-  paymentsEnabled        Boolean  @default(true) @map("payments_enabled")
-  paymentsTestMode       Boolean  @default(true) @map("payments_test_mode")
-  smsVerificationEnabled Boolean  @default(false) @map("sms_verification_enabled")
+  id                      String   @id @default("app")
+  maintenanceMode         Boolean  @default(false) @map("maintenance_mode")
+  maintenanceMessage      String?  @map("maintenance_message")
+  registrationEnabled     Boolean  @default(true) @map("registration_enabled")
+  paymentsEnabled         Boolean  @default(true) @map("payments_enabled")
+  paymentsTestMode        Boolean  @default(true) @map("payments_test_mode")
+  smsVerificationEnabled  Boolean  @default(false) @map("sms_verification_enabled")
   // Distinto de smsVerificationEnabled (que só liga/desliga o OTP no registo/login):
   // controla se é enviado um SMS de confirmação quando um pedido fica com
   // técnico atribuído (paralelo ao email/push que já existem para isso).
-  smsNotificationsEnabled Boolean @default(true) @map("sms_notifications_enabled")
+  smsNotificationsEnabled Boolean  @default(true) @map("sms_notifications_enabled")
   // Origem e parâmetros do cálculo da taxa de deslocação por distância.
-  displacementOriginLat  Float?   @default(38.7169) @map("displacement_origin_lat")
-  displacementOriginLng  Float?   @default(-9.1395) @map("displacement_origin_lng")
-  displacementPerKm      Float    @default(1.10) @map("displacement_per_km")
-  displacementBaseFee    Float    @default(0) @map("displacement_base_fee")
-  displacementMinFee     Float    @default(0) @map("displacement_min_fee")
+  displacementOriginLat   Float?   @default(38.7169) @map("displacement_origin_lat")
+  displacementOriginLng   Float?   @default(-9.1395) @map("displacement_origin_lng")
+  displacementPerKm       Float    @default(1.10) @map("displacement_per_km")
+  displacementBaseFee     Float    @default(0) @map("displacement_base_fee")
+  displacementMinFee      Float    @default(0) @map("displacement_min_fee")
   // Percentagem retida pela plataforma sobre o valor do orçamento (0-1).
-  commissionRate         Float    @default(0.15) @map("commission_rate")
-  updatedAt              DateTime @updatedAt @map("updated_at")
+  commissionRate          Float    @default(0.15) @map("commission_rate")
+  updatedAt               DateTime @updatedAt @map("updated_at")
 
   @@map("app_settings")
 }
@@ -835,30 +856,36 @@ model EmailTemplate {
 /// esta tabela guarda só as edições de preço feitas no admin. Sem registo
 /// para uma categoria = usa-se o valor por omissão do catálogo em código.
 model ServiceCategoryPrice {
-  id         String   @id @default(uuid())
-  categoryId String   @unique @map("category_id")
-  basePrice  Decimal  @map("base_price") @db.Decimal(10, 2)
+  id         String          @id @default(uuid())
+  categoryId String          @unique @map("category_id")
+  basePrice  Decimal         @map("base_price") @db.Decimal(10, 2)
   // Oculta a categoria inteira do site/app (não remove o registo — os itens
   // já vendidos/históricos continuam a existir, só deixa de aparecer para
   // novos clientes escolherem).
-  hidden     Boolean  @default(false)
-  updatedAt  DateTime @updatedAt @map("updated_at")
+  hidden     Boolean         @default(false)
+  /// Substitui a dificuldade sugerida por preço vinda do catálogo estático —
+  /// null = usa a sugestão automática (ver seed-catalog-tiers.ts).
+  tier       DifficultyTier?
+  updatedAt  DateTime        @updatedAt @map("updated_at")
 
   @@map("service_category_prices")
 }
 
 /// Preço de um item de serviço — ver nota em ServiceCategoryPrice.
 model ServiceItemPrice {
-  id            String   @id @default(uuid())
-  categoryId    String   @map("category_id")
-  subcategoryId String   @map("subcategory_id")
-  itemId        String   @map("item_id")
-  price         Decimal  @db.Decimal(10, 2)
-  hidden        Boolean  @default(false)
+  id            String          @id @default(uuid())
+  categoryId    String          @map("category_id")
+  subcategoryId String          @map("subcategory_id")
+  itemId        String          @map("item_id")
+  price         Decimal         @db.Decimal(10, 2)
+  hidden        Boolean         @default(false)
   // Observação livre mostrada ao cliente junto ao item (ex.: "não inclui
   // material", "sujeito a visita técnica").
-  notes         String?  @db.Text
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  notes         String?         @db.Text
+  /// Substitui a dificuldade sugerida por preço vinda do catálogo estático —
+  /// null = usa a sugestão automática (ver seed-catalog-tiers.ts).
+  tier          DifficultyTier?
+  updatedAt     DateTime        @updatedAt @map("updated_at")
 
   @@unique([categoryId, subcategoryId, itemId])
   @@map("service_item_prices")

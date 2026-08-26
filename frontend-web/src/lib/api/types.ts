@@ -19,6 +19,9 @@ export type Specialty =
   | 'TV_ANTENNA'
 export type AlertLevel = 'WARNING' | 'CRITICAL'
 export type SlaMetric = 'FIRST_RESPONSE' | 'ARRIVAL' | 'RESOLUTION' | 'QUOTE_EXPIRY'
+export type DifficultyTier = 'GREEN' | 'YELLOW' | 'RED'
+/** Alias de DifficultyTier usado nas páginas de planos/preços do admin. */
+export type PlanTier = DifficultyTier
 
 export interface Address {
   id: string
@@ -113,7 +116,8 @@ export interface Quote {
   vatRate: number
   totalCost: number
   status: QuoteStatus
-  paymentMethod?: 'ONLINE' | 'CASH' | null
+  paymentMethod?: 'ONLINE' | 'CASH' | 'CREDITS' | null
+  difficultyTier?: DifficultyTier | null
   expiresAt: string
   respondedAt?: string
   rejectionReason?: string
@@ -151,6 +155,7 @@ export interface Subscription {
   startsAt: string
   expiresAt: string
   freeVisitsUsed: number
+  creditsUsed: number
   plan: SubscriptionPlan
 }
 
@@ -166,6 +171,8 @@ export interface SubscriptionPlan {
   quoteExpiryDays?: number | null
   priorityScheduling: boolean
   isActive: boolean
+  creditsPerYear: number
+  maxTier: DifficultyTier
 }
 
 export interface HomeBanner {

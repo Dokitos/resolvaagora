@@ -33,6 +33,11 @@ class _SendQuoteScreenState extends ConsumerState<SendQuoteScreen> {
   final _materialsCtrl = TextEditingController(text: '0');
   bool _submitting = false;
 
+  /// Nível de dificuldade escolhido pelo técnico ('GREEN' | 'YELLOW' | 'RED').
+  /// Começa em 'GREEN' (o caso mais comum) para não obrigar a um clique
+  /// extra em trabalhos simples, mas é fácil de mudar antes de enviar.
+  String _difficultyTier = 'GREEN';
+
   static const double _vatRate = 0.23;
 
   double get _labor => double.tryParse(_laborCtrl.text.replaceAll(',', '.')) ?? 0;
@@ -58,6 +63,7 @@ class _SendQuoteScreenState extends ConsumerState<SendQuoteScreen> {
         description: _descCtrl.text.trim(),
         laborCost: _labor,
         materialsCost: _materials,
+        difficultyTier: _difficultyTier,
       );
       ref.invalidate(jobDetailProvider(widget.jobId));
       ref.invalidate(assignedJobsProvider);
@@ -137,6 +143,37 @@ class _SendQuoteScreenState extends ConsumerState<SendQuoteScreen> {
               ],
             ),
             const SizedBox(height: 20),
+            const Text('Nível de dificuldade', style: TextStyle(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 4),
+            Text(
+              'Isto ajuda o cliente a saber se o orçamento pode ser pago com os créditos do plano dele.',
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 12),
+            _DifficultyOption(
+              label: 'Simples',
+              description: 'Trabalho simples e rápido',
+              color: AppTheme.success,
+              selected: _difficultyTier == 'GREEN',
+              onTap: () => setState(() => _difficultyTier = 'GREEN'),
+            ),
+            const SizedBox(height: 8),
+            _DifficultyOption(
+              label: 'Intermédio',
+              description: 'Dificuldade intermédia',
+              color: AppTheme.warning,
+              selected: _difficultyTier == 'YELLOW',
+              onTap: () => setState(() => _difficultyTier = 'YELLOW'),
+            ),
+            const SizedBox(height: 8),
+            _DifficultyOption(
+              label: 'Especializado',
+              description: 'Intervenção técnica ou especializada',
+              color: AppTheme.danger,
+              selected: _difficultyTier == 'RED',
+              onTap: () => setState(() => _difficultyTier = 'RED'),
+            ),
+            const SizedBox(height: 20),
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -178,6 +215,72 @@ class _SendQuoteScreenState extends ConsumerState<SendQuoteScreen> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Cartão selecionável para escolher o nível de dificuldade do trabalho
+/// (verde/amarelo/vermelho), reaproveitando as cores de estado do
+/// `AppTheme` (success/warning/danger).
+class _DifficultyOption extends StatelessWidget {
+  final String label;
+  final String description;
+  final Color color;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _DifficultyOption({
+    required this.label,
+    required this.description,
+    required this.color,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: '$label. $description',
+      child: Material(
+        color: selected ? color.withOpacity(0.08) : Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(10),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: selected ? color : AppTheme.border, width: selected ? 2 : 1),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 14,
+                  height: 14,
+                  decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        label,
+                        style: TextStyle(fontWeight: FontWeight.w600, color: selected ? color : Colors.black87),
+                      ),
+                      Text(description, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                    ],
+                  ),
+                ),
+                if (selected) Icon(Icons.check_circle, color: color, size: 20),
+              ],
+            ),
+          ),
         ),
       ),
     );

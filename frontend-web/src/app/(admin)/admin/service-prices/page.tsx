@@ -5,8 +5,56 @@ import toast from 'react-hot-toast'
 import { Tag, Save, EyeOff } from 'lucide-react'
 import { servicePricesApi } from '@/lib/api/service-prices'
 import { SERVICE_CATEGORIES, mergeServicePrices, type ServiceCategory } from '@/lib/data/services-catalog'
+import type { PlanTier } from '@/lib/api/types'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { cn, TIER_LABELS } from '@/lib/utils'
+
+const TIER_SELECT_STYLES: Record<'DEFAULT' | PlanTier, string> = {
+  DEFAULT: 'border-gray-300 bg-gray-50 text-gray-500',
+  GREEN: 'border-green-300 bg-green-50 text-green-700',
+  YELLOW: 'border-yellow-300 bg-yellow-50 text-yellow-700',
+  RED: 'border-red-300 bg-red-50 text-red-700',
+}
+
+const TIER_DOTS: Record<PlanTier, string> = {
+  GREEN: '🟢',
+  YELLOW: '🟡',
+  RED: '🔴',
+}
+
+/** Chip compacto para escolher o nível de dificuldade (ou usar a sugestão do catálogo). */
+function TierSelect({
+  value,
+  suggested,
+  onChange,
+}: {
+  value: PlanTier | null
+  suggested?: PlanTier
+  onChange: (tier: PlanTier | null) => void
+}) {
+  const defaultLabel = suggested ? `Catálogo: ${TIER_DOTS[suggested]} ${TIER_LABELS[suggested]}` : 'Sugestão do catálogo'
+  return (
+    <select
+      value={value ?? 'DEFAULT'}
+      onClick={(e) => e.stopPropagation()}
+      onChange={(e) => {
+        e.stopPropagation()
+        onChange(e.target.value === 'DEFAULT' ? null : (e.target.value as PlanTier))
+      }}
+      title="Nível de dificuldade coberto pelos planos de assinatura"
+      className={cn(
+        'rounded-full border px-2 py-1 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-brand-500 cursor-pointer',
+        TIER_SELECT_STYLES[value ?? 'DEFAULT'],
+      )}
+    >
+      <option value="DEFAULT">{defaultLabel}</option>
+      <option value="GREEN">{TIER_DOTS.GREEN} Verde</option>
+      <option value="YELLOW">{TIER_DOTS.YELLOW} Amarelo</option>
+      <option value="RED">{TIER_DOTS.RED} Vermelho</option>
+    </select>
+  )
+}
 
 export default function AdminServicePricesPage() {
   const [categories, setCategories] = useState<ServiceCategory[]>(SERVICE_CATEGORIES)
@@ -27,6 +75,10 @@ export default function AdminServicePricesPage() {
 
   function updateCategoryHidden(categoryId: string, hidden: boolean) {
     setCategories((prev) => prev.map((c) => (c.id === categoryId ? { ...c, hidden } : c)))
+  }
+
+  function updateCategoryTier(categoryId: string, tierOverride: PlanTier | null) {
+    setCategories((prev) => prev.map((c) => (c.id === categoryId ? { ...c, tierOverride } : c)))
   }
 
   function updateItemPrice(categoryId: string, subcategoryId: string, itemId: string, value: number) {
@@ -63,6 +115,23 @@ export default function AdminServicePricesPage() {
     )
   }
 
+  function updateItemTier(categoryId: string, subcategoryId: string, itemId: string, tierOverride: PlanTier | null) {
+    setCategories((prev) =>
+      prev.map((c) =>
+        c.id !== categoryId
+          ? c
+          : {
+              ...c,
+              subcategories: c.subcategories.map((s) =>
+                s.id !== subcategoryId
+                  ? s
+                  : { ...s, items: s.items.map((i) => (i.id !== itemId ? i : { ...i, tierOverride })) },
+              ),
+            },
+      ),
+    )
+  }
+
   function updateItemNotes(categoryId: string, subcategoryId: string, itemId: string, notes: string) {
     setCategories((prev) =>
       prev.map((c) =>
@@ -84,7 +153,12 @@ export default function AdminServicePricesPage() {
     setSaving(true)
     try {
       await servicePricesApi.save({
-        categories: categories.map((c) => ({ categoryId: c.id, basePrice: c.basePrice, hidden: !!c.hidden })),
+        categories: categories.map((c) => ({
+          categoryId: c.id,
+          basePrice: c.basePrice,
+          hidden: !!c.hidden,
+          tier: c.tierOverride ?? null,
+        })),
         items: categories.flatMap((c) =>
           c.subcategories.flatMap((s) =>
             s.items.map((i) => ({
@@ -94,6 +168,7 @@ export default function AdminServicePricesPage() {
               price: i.price,
               hidden: !!i.hidden,
               notes: i.notes?.trim() ? i.notes.trim() : null,
+              tier: i.tierOverride ?? null,
             })),
           ),
         ),
@@ -144,6 +219,13 @@ export default function AdminServicePricesPage() {
                   )}
                 </span>
                 <span className="flex items-center gap-3 text-sm">
+                  <span onClick={(e) => e.stopPropagation()}>
+                    <TierSelect
+                      value={cat.tierOverride ?? null}
+                      suggested={cat.tier}
+                      onChange={(tier) => updateCategoryTier(cat.id, tier)}
+                    />
+                  </span>
                   <label
                     className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer"
                     onClick={(e) => e.stopPropagation()}
@@ -194,6 +276,11 @@ export default function AdminServicePricesPage() {
                                 )}
                               </span>
                               <div className="flex items-center gap-3 flex-shrink-0">
+                                <TierSelect
+                                  value={item.tierOverride ?? null}
+                                  suggested={item.tier}
+                                  onChange={(tier) => updateItemTier(cat.id, sub.id, item.id, tier)}
+                                />
                                 <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer">
                                   <input
                                     type="checkbox"
