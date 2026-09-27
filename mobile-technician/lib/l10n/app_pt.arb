@@ -89,6 +89,9 @@
   "priceFrom": "Desde {price}",
   "@priceFrom": { "placeholders": { "price": { "type": "String" } } },
   "learnMore": "SABER MAIS",
+  "learnMorePrices": "Preços por item",
+  "learnMoreFinalPrice": "O valor final é confirmado pelo técnico no local, antes de começar o trabalho. Acresce a taxa de deslocação.",
+  "learnMoreCustomQuote": "Este serviço é orçamentado pelo técnico no local, depois de avaliar o trabalho.",
   "requestService": "PEDIR SERVIÇO",
 
   "subcategoryError": "Erro: subcategoria não seleccionada",

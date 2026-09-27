@@ -85,6 +85,9 @@
 
   "priceFrom": "From {price}",
   "learnMore": "LEARN MORE",
+  "learnMorePrices": "Price per item",
+  "learnMoreFinalPrice": "The final amount is confirmed by the technician on site, before work begins. A call-out fee applies.",
+  "learnMoreCustomQuote": "This service is quoted by the technician on site, after assessing the job.",
   "requestService": "REQUEST SERVICE",
 
   "subcategoryError": "Error: no subcategory selected",
