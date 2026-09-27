@@ -12,6 +12,8 @@ import {
   MaxLength,
 } from 'class-validator';
 import { Specialty } from '@prisma/client';
+import { IsCleanText } from '@shared/validation/text.validators';
+import { IsBookableDate } from '@shared/validation/date.validators';
 
 // Apenas URLs http(s) (fotos alojadas no R2 via POST /uploads/image).
 const SAFE_PHOTO_URL = /^https?:\/\//i;
@@ -24,11 +26,12 @@ export class CreateServiceRequestDto {
   specialty: Specialty;
 
   @IsString()
-  @MaxLength(2000)
+  @IsCleanText({ max: 2000, allowNewlines: true })
   description: string;
 
   @IsOptional()
   @IsDateString()
+  @IsBookableDate()
   scheduledDate?: string;
 
   @IsOptional()

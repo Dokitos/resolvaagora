@@ -1,24 +1,25 @@
 import { IsString, IsOptional, IsBoolean, Matches, MaxLength } from 'class-validator';
+import { IsNifPT, IsPersonName, IsPhone } from '@shared/validation/text.validators';
 
 export class UpdateProfileDto {
   @IsOptional()
   @IsString()
-  @MaxLength(100)
+  @IsPersonName()
   firstName?: string;
 
   @IsOptional()
   @IsString()
-  @MaxLength(100)
+  @IsPersonName()
   lastName?: string;
 
   @IsOptional()
   @IsString()
-  @Matches(/^\+?[0-9]{9,15}$/, { message: 'Invalid phone number' })
+  @IsPhone()
   phone?: string;
 
   @IsOptional()
   @IsString()
-  @MaxLength(20)
+  @IsNifPT()
   nif?: string;
 
   @IsOptional()

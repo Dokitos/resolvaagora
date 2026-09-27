@@ -1,8 +1,9 @@
-import { IsString, IsEmail, IsArray, IsEnum, IsOptional, IsInt, Min, Max, MinLength, MaxLength } from 'class-validator';
+import { IsString, IsArray, Matches, IsEnum, IsOptional, IsInt, Min, Max, MinLength, MaxLength } from 'class-validator';
 import { Specialty } from '@prisma/client';
+import { IsNifPT, IsPersonName, IsPhone, IsStrictEmail } from '@shared/validation/text.validators';
 
 export class CreateTechnicianDto {
-  @IsEmail()
+  @IsStrictEmail()
   email: string;
 
   @IsString()
@@ -10,20 +11,20 @@ export class CreateTechnicianDto {
   password: string;
 
   @IsString()
-  @MaxLength(100)
+  @IsPersonName()
   firstName: string;
 
   @IsString()
-  @MaxLength(100)
+  @IsPersonName()
   lastName: string;
 
   @IsString()
-  @MaxLength(20)
+  @IsPhone()
   phone: string;
 
   @IsOptional()
   @IsString()
-  @MaxLength(20)
+  @IsNifPT()
   nif?: string;
 
   @IsArray()
@@ -33,6 +34,7 @@ export class CreateTechnicianDto {
   @IsArray()
   @IsString({ each: true })
   @MaxLength(100, { each: true })
+  @Matches(/^\p{L}[\p{L}\p{M}' .-]*$/u, { each: true, message: 'Distrito inválido.' })
   coverageDistricts: string[];
 
   @IsOptional()

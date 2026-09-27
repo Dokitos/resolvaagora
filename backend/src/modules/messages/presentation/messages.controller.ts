@@ -14,11 +14,12 @@ import { JwtAuthGuard } from '../../auth/presentation/guards/jwt-auth.guard';
 import { CurrentUser } from '../../auth/presentation/decorators/current-user.decorator';
 import { AuthenticatedUser } from '../../auth/infrastructure/jwt.strategy';
 import { MessagesService } from '../application/messages.service';
+import { IsCleanText } from '@shared/validation/text.validators';
 
 export class SendMessageDto {
   @IsString()
   @MinLength(1)
-  @MaxLength(2000)
+  @IsCleanText({ max: 2000, allowNewlines: true })
   body: string;
 }
 

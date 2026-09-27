@@ -14,6 +14,7 @@ import {
   MinLength,
   ValidateNested,
 } from 'class-validator';
+import { IsCleanText } from '@shared/validation/text.validators';
 import { CampaignAudience } from '@prisma/client';
 
 /**
@@ -58,12 +59,12 @@ export class AudienceSegmentDto {
 export class CreateCampaignDto {
   @IsString()
   @MinLength(1)
-  @MaxLength(120)
+  @IsCleanText({ max: 120 })
   title: string;
 
   @IsString()
   @MinLength(1)
-  @MaxLength(500)
+  @IsCleanText({ max: 500, allowNewlines: true })
   body: string;
 
   @IsEnum(CampaignAudience)

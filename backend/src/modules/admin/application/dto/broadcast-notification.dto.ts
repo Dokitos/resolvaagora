@@ -1,4 +1,5 @@
 import { IsIn, IsOptional, IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
+import { IsCleanText } from '@shared/validation/text.validators';
 
 export class BroadcastNotificationDto {
   @IsIn(['USER', 'ALL_CLIENTS', 'ALL_TECHNICIANS'])
@@ -10,11 +11,11 @@ export class BroadcastNotificationDto {
 
   @IsString()
   @MinLength(1)
-  @MaxLength(120)
+  @IsCleanText({ max: 120 })
   title: string;
 
   @IsString()
   @MinLength(1)
-  @MaxLength(500)
+  @IsCleanText({ max: 500, allowNewlines: true })
   body: string;
 }

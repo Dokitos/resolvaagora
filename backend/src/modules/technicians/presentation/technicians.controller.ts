@@ -22,6 +22,7 @@ import { GetScheduleUseCase } from '../application/use-cases/get-schedule.use-ca
 import { UpdateAvailabilityUseCase } from '../application/use-cases/update-availability.use-case';
 import { GetEarningsUseCase } from '../application/use-cases/get-earnings.use-case';
 import { GetCommunicationsUseCase } from '../application/use-cases/get-communications.use-case';
+import { UpdateTechnicianProfileDto } from '../application/dto/update-technician-profile.dto';
 import { StorageService } from '../../storage/storage.service';
 import { PrismaService } from '@shared/infrastructure/database/prisma.service';
 
@@ -66,7 +67,7 @@ export class TechniciansController {
   @Patch('me')
   async updateProfile(
     @CurrentUser() user: AuthenticatedUser,
-    @Body() body: { firstName?: string; lastName?: string; phone?: string; email?: string },
+    @Body() body: UpdateTechnicianProfileDto,
   ) {
     const u = await this.prisma.user.findUnique({
       where: { id: user.id },

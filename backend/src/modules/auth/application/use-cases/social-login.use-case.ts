@@ -99,7 +99,13 @@ export class SocialLoginUseCase {
     // A Apple só envia o nome no primeiro início de sessão; se não vier, o
     // cliente manda o que recolheu, e em último caso fica um marcador que o
     // utilizador corrige no perfil.
-    const rawName = decoded.name ?? fallbackName ?? '';
+    // O nome vem do fornecedor, não é escrito aqui: não dá para o recusar sem
+    // bloquear o login. Limpa-se para as mesmas regras do registo normal —
+    // só letras, espaço, hífen e apóstrofo — em vez de gravar emojis ou
+    // símbolos que o utilizador pôs na conta Google.
+    const rawName = (decoded.name ?? fallbackName ?? '')
+      .replace(/[^\p{L}\p{M}' -]/gu, ' ')
+      .slice(0, 120);
     const [firstName, ...rest] = rawName.trim().split(/\s+/).filter(Boolean);
 
     // Sem email (possível na Apple com "esconder o meu email" nalguns casos)

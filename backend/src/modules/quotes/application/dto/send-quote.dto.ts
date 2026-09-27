@@ -1,9 +1,10 @@
 import { IsString, IsNumber, IsPositive, IsOptional, Min, MaxLength, IsIn } from 'class-validator';
 import { DifficultyTier } from '@prisma/client';
+import { IsCleanText } from '@shared/validation/text.validators';
 
 export class SendQuoteDto {
   @IsString()
-  @MaxLength(2000)
+  @IsCleanText({ max: 2000, allowNewlines: true })
   description: string;
 
   @IsNumber()

@@ -1,34 +1,35 @@
-import { IsString, IsOptional, IsBoolean, IsNumber, MaxLength } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsNumber } from 'class-validator';
 import { PartialType } from '@nestjs/mapped-types';
+import { IsAddressText, IsPostalCodePT } from '@shared/validation/text.validators';
 
 export class CreateAddressDto {
   @IsString()
-  @MaxLength(50)
+  @IsAddressText(50)
   label: string;
 
   @IsString()
-  @MaxLength(200)
+  @IsAddressText(200)
   street: string;
 
   @IsString()
-  @MaxLength(20)
+  @IsAddressText(20)
   number: string;
 
   @IsOptional()
   @IsString()
-  @MaxLength(20)
+  @IsAddressText(20)
   floor?: string;
 
   @IsString()
-  @MaxLength(20)
+  @IsPostalCodePT()
   postalCode: string;
 
   @IsString()
-  @MaxLength(100)
+  @IsAddressText(100)
   city: string;
 
   @IsString()
-  @MaxLength(100)
+  @IsAddressText(100)
   district: string;
 
   @IsOptional()
