@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/services/admin_service.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/input_formatters.dart';
 
 /// Ecrã admin para enviar uma notificação push personalizada
 /// para todos os clientes ou todos os técnicos.
@@ -112,6 +113,7 @@ class _AdminSendNotificationScreenState
             Column(children: [
               TextField(
                 controller: _titleCtrl,
+                inputFormatters: const [NoEmojiFormatter()],
                 maxLength: 80,
                 decoration: const InputDecoration(
                   labelText: 'Título',
@@ -121,6 +123,7 @@ class _AdminSendNotificationScreenState
               const SizedBox(height: 8),
               TextField(
                 controller: _bodyCtrl,
+                inputFormatters: const [NoEmojiFormatter()],
                 maxLines: 4,
                 maxLength: 240,
                 decoration: const InputDecoration(

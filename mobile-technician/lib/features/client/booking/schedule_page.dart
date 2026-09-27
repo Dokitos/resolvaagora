@@ -3,8 +3,15 @@ import 'package:moura_technician/l10n/generated/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:table_calendar/table_calendar.dart';
 import 'booking_provider.dart';
 import 'widgets/booking_footer_bar.dart';
+
+/// Até quantos meses à frente se pode marcar. Igual ao
+/// `BOOKING_WINDOW_MONTHS` do backend, que recusa datas fora da janela.
+const _windowMonths = 2;
+
+DateTime _day(DateTime d) => DateTime(d.year, d.month, d.day);
 
 class SchedulePage extends ConsumerStatefulWidget {
   const SchedulePage({super.key});
@@ -16,15 +23,26 @@ class SchedulePage extends ConsumerStatefulWidget {
 class _SchedulePageState extends ConsumerState<SchedulePage> {
   DateTime? _selectedDate;
   String? _selectedSlot;
+  late DateTime _focusedDay;
 
-  static List<DateTime> get _availableDays {
-    final days = <DateTime>[];
-    var d = DateTime.now().add(const Duration(days: 1));
-    while (days.length < 4) {
-      if (d.weekday != DateTime.sunday) days.add(d);
+  static DateTime get _firstDay => _day(DateTime.now()).add(const Duration(days: 1));
+
+  static DateTime get _lastDay {
+    final t = _day(DateTime.now());
+    return DateTime(t.year, t.month + _windowMonths, t.day);
+  }
+
+  static bool _isBookable(DateTime d) {
+    final day = _day(d);
+    return !day.isBefore(_firstDay) && !day.isAfter(_lastDay) && day.weekday != DateTime.sunday;
+  }
+
+  static DateTime get _firstBookable {
+    var d = _firstDay;
+    while (d.weekday == DateTime.sunday) {
       d = d.add(const Duration(days: 1));
     }
-    return days;
+    return d;
   }
 
   static const _slots = [
@@ -38,22 +56,21 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
   void initState() {
     super.initState();
     final prev = ref.read(bookingProvider);
-    _selectedDate = prev.scheduledDate;
-    _selectedSlot = prev.scheduledSlot;
-    _selectedDate ??= _availableDays.first;
-  }
-
-  String _dayLabel(DateTime d, AppLocalizations l) {
-    final diff = d.difference(DateTime.now()).inDays;
-    if (diff == 1) return l.tomorrow;
-    final fmt = DateFormat('EEE', 'pt_PT');
-    return fmt.format(d).replaceFirst(fmt.format(d)[0], fmt.format(d)[0].toUpperCase());
+    // Uma data guardada de uma reserva a meio pode já ter passado ou sair da
+    // janela — nesse caso recomeça no primeiro dia disponível.
+    final prevDate = prev.scheduledDate;
+    final keep = prevDate != null && _isBookable(prevDate);
+    _selectedDate = keep ? _day(prevDate) : _firstBookable;
+    _selectedSlot = keep ? prev.scheduledSlot : null;
+    _focusedDay = _selectedDate!;
   }
 
   @override
   Widget build(BuildContext context) {
-    final days = _availableDays;
     final l = AppLocalizations.of(context);
+    // Só o pt tem dados de formatação carregados no arranque (ver main.dart).
+    final locale = Localizations.localeOf(context).languageCode == 'pt' ? 'pt_PT' : 'en';
+    final selected = _selectedDate;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -77,74 +94,102 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
                   l.scheduleTitle,
                   style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, height: 1.3),
                 ),
-                const SizedBox(height: 24),
-                // Day picker
-                Row(
-                  children: days.map((d) {
-                    final selected = _selectedDate?.day == d.day;
-                    return Expanded(
-                      child: GestureDetector(
-                        onTap: () => setState(() { _selectedDate = d; _selectedSlot = null; }),
-                        child: Container(
-                          margin: const EdgeInsets.only(right: 8),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: selected ? Colors.black : Colors.grey.shade300, width: selected ? 2 : 1),
-                            borderRadius: BorderRadius.circular(8),
-                            color: selected ? Colors.white : Colors.grey[50],
-                          ),
-                          child: Column(
-                            children: [
-                              Text(_dayLabel(d, l), style: TextStyle(fontSize: 11, color: Colors.grey[600])),
-                              const SizedBox(height: 2),
-                              Text('${d.day}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: selected ? Colors.black : Colors.grey[600])),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 24),
-                // Time slots grid
-                GridView.builder(
-                  physics: const NeverScrollableScrollPhysics(),
-                  shrinkWrap: true,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    childAspectRatio: 3.5,
-                    crossAxisSpacing: 10,
-                    mainAxisSpacing: 10,
+                const SizedBox(height: 16),
+                Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade200),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  itemCount: _slots.length,
-                  itemBuilder: (_, i) {
-                    final slot = _slots[i];
-                    final selected = _selectedSlot == slot;
-                    return GestureDetector(
-                      onTap: () => setState(() => _selectedSlot = slot),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: selected ? Colors.black87 : Colors.grey.shade300,
-                            width: selected ? 2 : 1,
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: TableCalendar<void>(
+                    locale: locale,
+                    firstDay: _firstDay,
+                    lastDay: _lastDay,
+                    focusedDay: _focusedDay,
+                    startingDayOfWeek: StartingDayOfWeek.monday,
+                    availableCalendarFormats: const {CalendarFormat.month: ''},
+                    enabledDayPredicate: _isBookable,
+                    // Compara a data inteira: comparar só o dia do mês marcava
+                    // o dia 24 de setembro e o de outubro ao mesmo tempo.
+                    selectedDayPredicate: (d) => selected != null && isSameDay(selected, d),
+                    onDaySelected: (sel, foc) => setState(() {
+                      _selectedDate = _day(sel);
+                      _focusedDay = foc;
+                      _selectedSlot = null;
+                    }),
+                    onPageChanged: (foc) => _focusedDay = foc,
+                    headerStyle: HeaderStyle(
+                      formatButtonVisible: false,
+                      titleCentered: true,
+                      titleTextStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                      titleTextFormatter: (date, loc) {
+                        final t = DateFormat.yMMMM(loc).format(date);
+                        return t[0].toUpperCase() + t.substring(1);
+                      },
+                    ),
+                    calendarStyle: CalendarStyle(
+                      outsideDaysVisible: false,
+                      selectedDecoration: const BoxDecoration(color: Colors.black, shape: BoxShape.circle),
+                      todayDecoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.grey.shade400),
+                      ),
+                      todayTextStyle: const TextStyle(color: Colors.black54),
+                      disabledTextStyle: TextStyle(color: Colors.grey.shade300),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  l.scheduleWindowNote,
+                  style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                ),
+                if (selected != null) ...[
+                  const SizedBox(height: 20),
+                  Text(
+                    _capitalise(DateFormat('EEEE, d MMMM', locale).format(selected)),
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 12),
+                  GridView.builder(
+                    physics: const NeverScrollableScrollPhysics(),
+                    shrinkWrap: true,
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      childAspectRatio: 3.5,
+                      crossAxisSpacing: 10,
+                      mainAxisSpacing: 10,
+                    ),
+                    itemCount: _slots.length,
+                    itemBuilder: (_, i) {
+                      final slot = _slots[i];
+                      final on = _selectedSlot == slot;
+                      return GestureDetector(
+                        onTap: () => setState(() => _selectedSlot = slot),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: on ? Colors.black87 : Colors.grey.shade300,
+                              width: on ? 2 : 1,
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                            color: on ? Colors.black : Colors.white,
                           ),
-                          borderRadius: BorderRadius.circular(8),
-                          color: selected ? Colors.black : Colors.white,
-                        ),
-                        child: Center(
-                          child: Text(
-                            slot,
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-                              color: selected ? Colors.white : Colors.black87,
+                          child: Center(
+                            child: Text(
+                              slot,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: on ? FontWeight.bold : FontWeight.normal,
+                                color: on ? Colors.white : Colors.black87,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    );
-                  },
-                ),
+                      );
+                    },
+                  ),
+                ],
                 const SizedBox(height: 16),
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -160,7 +205,8 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(l.guaranteeDateTime, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                            Text(l.guaranteeDateTime,
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                             const SizedBox(height: 2),
                             Text(
                               l.paymentAfter2h,
@@ -189,4 +235,6 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
       ),
     );
   }
+
+  String _capitalise(String s) => s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
 }

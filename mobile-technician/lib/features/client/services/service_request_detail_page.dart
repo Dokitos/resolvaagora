@@ -13,6 +13,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/shimmer.dart';
 import 'service_status_ui.dart';
+import '../../../core/utils/input_formatters.dart';
 
 /// Ordem de dificuldade GREEN < YELLOW < RED — espelha `tierCost`/`maxTier`
 /// no backend (`POST /service-requests/:id/quote/approve`).
@@ -1086,6 +1087,7 @@ class _ReviewFormState extends ConsumerState<_ReviewForm> {
         const SizedBox(height: 8),
         TextField(
           controller: _commentCtrl,
+          inputFormatters: const [NoEmojiFormatter()],
           maxLines: 3,
           maxLength: 1000,
           enabled: !_submitting,

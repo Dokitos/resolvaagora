@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:moura_technician/l10n/generated/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,6 +9,7 @@ import '../../core/network/api_client.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/technician_service.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/input_formatters.dart';
 
 /// Ecrã para o técnico editar o próprio perfil (nome, contacto, email).
 /// A foto de perfil fica disponível quando o armazenamento (R2) estiver ligado.
@@ -157,13 +159,15 @@ class _EditTechnicianProfileScreenState extends ConsumerState<EditTechnicianProf
                   ),
                 ),
                 const SizedBox(height: 24),
-                _field(_firstCtrl, l.fieldFirstName, Icons.person_outline),
+                _field(_firstCtrl, l.fieldFirstName, Icons.person_outline, formatters: nameFormatters),
                 const SizedBox(height: 14),
-                _field(_lastCtrl, l.fieldLastName, Icons.person_outline),
+                _field(_lastCtrl, l.fieldLastName, Icons.person_outline, formatters: nameFormatters),
                 const SizedBox(height: 14),
-                _field(_phoneCtrl, l.fieldContact, Icons.phone_outlined, keyboard: TextInputType.phone),
+                _field(_phoneCtrl, l.fieldContact, Icons.phone_outlined,
+                    keyboard: TextInputType.phone, formatters: phoneFormatters),
                 const SizedBox(height: 14),
-                _field(_emailCtrl, l.fieldEmail, Icons.email_outlined, keyboard: TextInputType.emailAddress),
+                _field(_emailCtrl, l.fieldEmail, Icons.email_outlined,
+                    keyboard: TextInputType.emailAddress, formatters: emailFormatters),
                 const SizedBox(height: 28),
                 SizedBox(
                   height: 52,
@@ -185,10 +189,11 @@ class _EditTechnicianProfileScreenState extends ConsumerState<EditTechnicianProf
   }
 
   Widget _field(TextEditingController c, String label, IconData icon,
-          {TextInputType keyboard = TextInputType.text}) =>
+          {TextInputType keyboard = TextInputType.text, List<TextInputFormatter>? formatters}) =>
       TextField(
         controller: c,
         keyboardType: keyboard,
+        inputFormatters: formatters,
         decoration: InputDecoration(labelText: label, prefixIcon: Icon(icon)),
       );
 }

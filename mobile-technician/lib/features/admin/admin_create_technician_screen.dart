@@ -6,6 +6,7 @@ import '../../core/services/admin_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/models/service_request.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/utils/input_formatters.dart';
 
 /// Distritos de Portugal (continente + ilhas) para cobertura do técnico.
 const List<String> kPortugalDistricts = [
@@ -113,17 +114,19 @@ class _AdminCreateTechnicianScreenState
             _card(
               'Dados pessoais',
               Column(children: [
-                _text(_firstName, 'Nome próprio', required: true),
-                _text(_lastName, 'Apelido', required: true),
-                _text(_email, 'Email', required: true, keyboard: TextInputType.emailAddress, email: true),
-                _text(_phone, 'Telemóvel', required: true, keyboard: TextInputType.phone),
+                _text(_firstName, 'Nome próprio', required: true, inputFormatters: nameFormatters),
+                _text(_lastName, 'Apelido', required: true, inputFormatters: nameFormatters),
+                _text(_email, 'Email', required: true, keyboard: TextInputType.emailAddress, email: true,
+                    inputFormatters: emailFormatters),
+                _text(_phone, 'Telemóvel', required: true, keyboard: TextInputType.phone,
+                    inputFormatters: phoneFormatters),
               ]),
             ),
             const SizedBox(height: 12),
             _card(
               'Palavra-passe',
               Column(children: [
-                _text(_password, 'Password', required: true, minLen: 6),
+                _text(_password, 'Password', required: true, minLen: 8),
                 const SizedBox(height: 4),
                 Align(
                   alignment: Alignment.centerLeft,

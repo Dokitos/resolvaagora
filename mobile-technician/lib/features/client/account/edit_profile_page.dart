@@ -7,6 +7,7 @@ import '../../../core/models/client_profile.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/client_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/input_formatters.dart';
 
 class EditProfilePage extends ConsumerStatefulWidget {
   const EditProfilePage({super.key});
@@ -72,10 +73,14 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   }
 
   Future<void> _save() async {
-    if (_firstName.text.trim().isEmpty || _lastName.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Nome e apelido são obrigatórios')),
-      );
+    // Valida antes de enviar: um perfil gravado antes desta validação pode
+    // ainda ter emojis no nome, e a mensagem genérica de erro do servidor não
+    // diria à pessoa o que corrigir.
+    final problem = validatePersonName(_firstName.text, field: 'O nome') ??
+        validatePersonName(_lastName.text, field: 'O apelido') ??
+        validateNifOptional(_nif.text);
+    if (problem != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(problem)));
       return;
     }
     setState(() => _saving = true);
@@ -187,20 +192,20 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
               ),
               const SizedBox(height: 20),
               _label('Nome'),
-              _field(_firstName, 'O teu nome', Icons.person_outline),
+              _field(_firstName, 'O teu nome', Icons.person_outline, formatters: nameFormatters),
               const SizedBox(height: 16),
               _label('Apelido'),
-              _field(_lastName, 'O teu apelido', Icons.person_outline),
+              _field(_lastName, 'O teu apelido', Icons.person_outline, formatters: nameFormatters),
               const SizedBox(height: 16),
               _label('Telefone'),
               _field(_phone, '9XX XXX XXX', Icons.phone_outlined,
                   keyboard: TextInputType.phone,
-                  formatters: [FilteringTextInputFormatter.digitsOnly]),
+                  formatters: phoneFormatters),
               const SizedBox(height: 16),
               _label('NIF'),
               _field(_nif, 'Número de contribuinte', Icons.badge_outlined,
                   keyboard: TextInputType.number,
-                  formatters: [FilteringTextInputFormatter.digitsOnly]),
+                  formatters: nifFormatters),
               const SizedBox(height: 32),
               SizedBox(
                 height: 52,

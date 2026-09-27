@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'booking_provider.dart';
 import 'widgets/booking_footer_bar.dart';
+import '../../../core/utils/input_formatters.dart';
 
 class AddressDetailsPage extends ConsumerStatefulWidget {
   const AddressDetailsPage({super.key});
@@ -177,6 +178,7 @@ class _AddressDetailsPageState extends ConsumerState<AddressDetailsPage> {
       controller: ctrl,
       maxLines: maxLines,
       keyboardType: keyboardType,
+      inputFormatters: cleanTextFormatters(maxLines > 1 ? 500 : 200),
       // Rebuild the page (not just this field) so the footer's "SEGUINTE"
       // re-evaluates _isValid as the user types.
       onChanged: (_) => setState(() {}),

@@ -39,6 +39,12 @@ dependencies:
   timeago: ^3.6.1
   socket_io_client: ^3.1.6
   table_calendar: ^3.1.2
+
+  # Mapa da localização na reserva. Desenha os mapas do OpenStreetMap em Dart
+  # puro: sem código nativo (não mexe na compilação iOS/Android) e sem chave
+  # paga, ao contrário do google_maps_flutter.
+  flutter_map: ^8.1.1
+  latlong2: ^0.9.1
   flutter_stripe: ^11.5.0
 
   # Push notifications (Firebase Cloud Messaging)

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/services/technician_service.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/input_formatters.dart';
 
 /// Extrai uma mensagem amigável do erro, evitando expor detalhes técnicos
 /// diretamente ao utilizador — segue o mesmo padrão usado em
@@ -99,6 +100,7 @@ class _SendQuoteScreenState extends ConsumerState<SendQuoteScreen> {
           children: [
             TextFormField(
               controller: _descCtrl,
+              inputFormatters: cleanTextFormatters(2000),
               maxLines: 4,
               decoration: const InputDecoration(
                 labelText: 'Descrição do trabalho',

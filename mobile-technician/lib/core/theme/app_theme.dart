@@ -77,8 +77,12 @@ class AppTheme {
           foregroundColor: Color(0xFF111827),
           elevation: 0,
           scrolledUnderElevation: 1,
+          // Sem `color`: assim o título herda o `foregroundColor` da AppBar.
+          // Com a cor fixa aqui, um ecrã que ponha a barra escura e peça
+          // `foregroundColor: Colors.white` continuava a desenhar o título a
+          // quase-preto — invisível — porque um estilo explícito ganha ao
+          // foregroundColor.
           titleTextStyle: TextStyle(
-            color: Color(0xFF111827),
             fontSize: 18,
             fontWeight: FontWeight.w600,
           ),

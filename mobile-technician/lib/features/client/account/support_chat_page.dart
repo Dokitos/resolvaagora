@@ -6,6 +6,7 @@ import '../../../core/models/client_profile.dart';
 import '../../../core/services/client_service.dart';
 import '../../../core/services/realtime_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/input_formatters.dart';
 
 class SupportChatPage extends ConsumerStatefulWidget {
   const SupportChatPage({super.key});
@@ -122,6 +123,7 @@ class _SupportChatPageState extends ConsumerState<SupportChatPage> {
                   Expanded(
                     child: TextField(
                       controller: _ctrl,
+                      inputFormatters: cleanTextFormatters(2000),
                       minLines: 1,
                       maxLines: 4,
                       textCapitalization: TextCapitalization.sentences,

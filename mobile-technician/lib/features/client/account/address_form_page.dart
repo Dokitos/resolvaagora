@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/models/client_profile.dart';
 import '../../../core/services/client_service.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../core/utils/pt_postal.dart';
+import '../../../core/services/geo_service.dart';
+import '../../../core/utils/input_formatters.dart';
 
 class AddressFormPage extends ConsumerStatefulWidget {
   final ClientAddress? address;
@@ -49,13 +51,28 @@ class _AddressFormPageState extends ConsumerState<AddressFormPage> {
     super.dispose();
   }
 
-  void _onPostalChanged(String v) {
-    final parts = lookupPostalParts(v);
-    if (parts != null) {
+  /// Com o código completo, preenche localidade, distrito e rua a partir dos
+  /// dados dos CTT — só nos campos que o cliente ainda não escreveu.
+  ///
+  /// Antes vinha de uma tabela da app que, para códigos que não conhecia,
+  /// devolvia outra cidade (Viseu como Coimbra) e punha concelhos no lugar do
+  /// distrito ("Alcochete"), o que impedia a distribuição de técnicos.
+  Future<void> _onPostalChanged(String v) async {
+    if (!RegExp(r'^\d{4}-\d{3}$').hasMatch(v)) return;
+    try {
+      final info = await ref.read(geoServiceProvider).lookup(v);
+      if (!mounted || _postal.text != v) return;
       setState(() {
-        if (_city.text.isEmpty) _city.text = parts.city;
-        if (_district.text.isEmpty) _district.text = parts.district;
+        final city = info.municipality ?? info.locality;
+        if (_city.text.isEmpty && city != null) _city.text = city;
+        if (_district.text.isEmpty && info.district != null) _district.text = info.district!;
+        if (_street.text.isEmpty && info.isStreet && info.streets.length == 1) {
+          _street.text = info.streets.first;
+        }
       });
+    } catch (_) {
+      // Sem rede ou código inexistente: o cliente preenche à mão, e o backend
+      // corrige o distrito ao gravar.
     }
   }
 
@@ -150,7 +167,9 @@ class _AddressFormPageState extends ConsumerState<AddressFormPage> {
           ),
           const SizedBox(height: 16),
           _field(_postal, 'Código postal *', '0000-000', Icons.markunread_mailbox_outlined,
-              keyboard: TextInputType.text, onChanged: (v) { _onPostalChanged(v); setState(() {}); }),
+              keyboard: TextInputType.number,
+              formatters: postalCodeFormatters,
+              onChanged: (v) { _onPostalChanged(v); setState(() {}); }),
           const SizedBox(height: 16),
           Row(
             children: [
@@ -199,10 +218,12 @@ class _AddressFormPageState extends ConsumerState<AddressFormPage> {
   }
 
   Widget _field(TextEditingController ctrl, String label, String hint, IconData icon,
-      {TextInputType? keyboard, ValueChanged<String>? onChanged}) {
+      {TextInputType? keyboard, ValueChanged<String>? onChanged, List<TextInputFormatter>? formatters}) {
     return TextField(
       controller: ctrl,
       keyboardType: keyboard,
+      // Sem formatador próprio, qualquer campo de morada bloqueia emoji.
+      inputFormatters: formatters ?? cleanTextFormatters(200),
       onChanged: onChanged,
       decoration: InputDecoration(
         labelText: label,

@@ -6,6 +6,7 @@ import '../../core/services/messages_service.dart';
 import '../../core/services/realtime_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/utils/input_formatters.dart';
 
 /// Conversa de um pedido. Serve o cliente e o técnico — o que muda entre os
 /// dois é apenas de que lado da conversa fica cada mensagem.
@@ -247,6 +248,7 @@ class _Composer extends StatelessWidget {
             Expanded(
               child: TextField(
                 controller: controller,
+                inputFormatters: const [NoEmojiFormatter()],
                 minLines: 1,
                 maxLines: 4,
                 maxLength: 2000,

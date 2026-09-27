@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../core/services/admin_service.dart';
 import '../../core/services/realtime_service.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/input_formatters.dart';
 
 class AdminChatScreen extends ConsumerStatefulWidget {
   final String clientUserId;
@@ -114,7 +115,7 @@ class _AdminChatScreenState extends ConsumerState<AdminChatScreen> {
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 8), color: Colors.white,
           child: Row(children: [
             Expanded(child: TextField(
-              controller: _ctrl, minLines: 1, maxLines: 4, textCapitalization: TextCapitalization.sentences,
+              controller: _ctrl, inputFormatters: cleanTextFormatters(2000), minLines: 1, maxLines: 4, textCapitalization: TextCapitalization.sentences,
               decoration: InputDecoration(hintText: 'Mensagem...', filled: true, fillColor: Colors.grey[100], contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10), border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none)),
             )),
             const SizedBox(width: 8),

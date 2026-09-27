@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'booking_provider.dart';
 import 'widgets/booking_footer_bar.dart';
+import '../../../core/utils/input_formatters.dart';
 
 class BookingDetailsPage extends ConsumerStatefulWidget {
   const BookingDetailsPage({super.key});
@@ -58,6 +59,7 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
                 const SizedBox(height: 24),
                 TextField(
                   controller: _ctrl,
+                  inputFormatters: const [NoEmojiFormatter()],
                   maxLines: 5,
                   maxLength: 300,
                   onChanged: (v) {

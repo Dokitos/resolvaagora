@@ -8,6 +8,7 @@ import '../../../core/models/client_profile.dart';
 import '../../../core/services/client_service.dart';
 import '../../../core/theme/app_theme.dart';
 import 'booking_provider.dart';
+import '../../../core/utils/input_formatters.dart';
 
 class PaymentPage extends ConsumerStatefulWidget {
   const PaymentPage({super.key});
@@ -226,6 +227,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                         child: TextField(
                           controller: _promoCtrl,
                           textCapitalization: TextCapitalization.characters,
+                          inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9_-]'))],
                           decoration: _inputDecoration(l.promoCodeHint, Icons.local_offer_outlined),
                         ),
                       ),
@@ -276,7 +278,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                 TextField(
                   controller: _nifCtrl,
                   keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  inputFormatters: nifFormatters,
                   onChanged: notifier.setNif,
                   decoration: _inputDecoration(l.addNif, Icons.badge_outlined),
                 ),
@@ -295,6 +297,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                   const SizedBox(height: 4),
                   TextField(
                     controller: _billStreetCtrl,
+                    inputFormatters: cleanTextFormatters(200),
                     onChanged: (v) => notifier.setBillingAddress(street: v),
                     textCapitalization: TextCapitalization.words,
                     decoration: _inputDecoration(l.billStreet, Icons.location_on_outlined),
@@ -305,6 +308,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                       Expanded(
                         child: TextField(
                           controller: _billNumberCtrl,
+                          inputFormatters: cleanTextFormatters(20),
                           onChanged: (v) => notifier.setBillingAddress(number: v),
                           decoration: _inputDecoration(l.billNumber, Icons.tag),
                         ),
@@ -314,6 +318,9 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                         child: TextField(
                           controller: _billPostalCtrl,
                           keyboardType: TextInputType.number,
+                          // Mesmo bug da localização: o teclado numérico do
+                          // iOS não tem hífen, por isso ele entra sozinho.
+                          inputFormatters: postalCodeFormatters,
                           onChanged: (v) => notifier.setBillingAddress(postalCode: v),
                           decoration: _inputDecoration(l.billPostal, Icons.markunread_mailbox_outlined),
                         ),
@@ -323,6 +330,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                   const SizedBox(height: 12),
                   TextField(
                     controller: _billCityCtrl,
+                    inputFormatters: cleanTextFormatters(100),
                     onChanged: (v) => notifier.setBillingAddress(city: v),
                     textCapitalization: TextCapitalization.words,
                     decoration: _inputDecoration(l.billCity, Icons.location_city_outlined),

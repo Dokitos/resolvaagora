@@ -101,6 +101,11 @@
   "findProfessionalNear": "We'll find a professional near you",
   "postalHint": "Enter parish or postal code",
   "postalFormat": "Format: 0000-000 or just the first 4 digits",
+  "scheduleWindowNote": "Bookings from tomorrow up to 2 months ahead. No service on Sundays.",
+  "postalSearching": "Looking up the location…",
+  "postalNotFound": "Postal code not found. Please check the digits.",
+  "locationApproximate": "Approximate location",
+  "locationUnverified": "We couldn't confirm the area right now. You can continue.",
 
   "detailsTitle": "Share the relevant details for carrying out the service",
   "detailsHint": "e.g. I need to install 2 double sockets in the living room...",

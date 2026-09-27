@@ -210,6 +210,13 @@ class BookingNotifier extends StateNotifier<BookingState> {
         locationDescription: description,
       );
 
+  /// Rua identificada pelo código postal. Só preenche se o cliente ainda não
+  /// escreveu nenhuma — nunca substitui o que ele pôs à mão.
+  void suggestStreet(String street) {
+    if (state.street.trim().isNotEmpty) return;
+    state = state.copyWith(street: street);
+  }
+
   void setSchedule(DateTime date, String slot) =>
       state = state.copyWith(scheduledDate: date, scheduledSlot: slot);
 

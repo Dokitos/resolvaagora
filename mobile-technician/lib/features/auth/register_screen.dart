@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/password_strength_meter.dart';
+import '../../core/utils/input_formatters.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   final String? from;
@@ -95,24 +96,28 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               Row(
                 children: [
                   Expanded(child: _field(_firstName, 'Nome', Icons.person_outline,
-                      validator: (v) => (v?.trim().isNotEmpty ?? false) ? null : 'Obrigatório')),
+                      formatters: nameFormatters,
+                      validator: (v) => validatePersonName(v, field: 'O nome'))),
                   const SizedBox(width: 12),
                   Expanded(child: _field(_lastName, 'Apelido', Icons.person_outline,
-                      validator: (v) => (v?.trim().isNotEmpty ?? false) ? null : 'Obrigatório')),
+                      formatters: nameFormatters,
+                      validator: (v) => validatePersonName(v, field: 'O apelido'))),
                 ],
               ),
               const SizedBox(height: 16),
               _field(_email, 'Email', Icons.email_outlined,
                   keyboard: TextInputType.emailAddress,
-                  validator: (v) => (v?.contains('@') ?? false) ? null : 'Email inválido'),
+                  formatters: emailFormatters,
+                  validator: validateEmail),
               const SizedBox(height: 16),
               _field(_phone, 'Telefone (opcional)', Icons.phone_outlined,
                   keyboard: TextInputType.phone,
-                  formatters: [FilteringTextInputFormatter.digitsOnly]),
+                  formatters: phoneFormatters),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _password,
                 obscureText: _obscure,
+                inputFormatters: const [NoEmojiFormatter()],
                 decoration: InputDecoration(
                   labelText: 'Password',
                   prefixIcon: const Icon(Icons.lock_outline),
@@ -126,7 +131,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               PasswordStrengthMeter(password: _password.text),
               const SizedBox(height: 16),
               _field(_referral, 'Código de referência (opcional)', Icons.card_giftcard_outlined,
-                  keyboard: TextInputType.text),
+                  keyboard: TextInputType.text,
+                  formatters: [FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9_-]'))]),
               const SizedBox(height: 28),
               SizedBox(
                 height: 52,

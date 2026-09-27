@@ -107,6 +107,11 @@
   "findProfessionalNear": "Vamos encontrar um profissional perto de ti",
   "postalHint": "Introduzir freguesia ou código postal",
   "postalFormat": "Formato: 0000-000 ou apenas os primeiros 4 dígitos",
+  "scheduleWindowNote": "Marcações de amanhã até 2 meses. Aos domingos não há serviço.",
+  "postalSearching": "A procurar a localização…",
+  "postalNotFound": "Código postal não encontrado. Confirme os números.",
+  "locationApproximate": "Localização aproximada",
+  "locationUnverified": "Não foi possível confirmar a localidade agora. Pode continuar.",
 
   "detailsTitle": "Partilha os detalhes relevantes para a realização do serviço",
   "detailsHint": "Ex: Preciso de instalar 2 tomadas duplas na sala...",
