@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '@shared/infrastructure/database/prisma.service';
 import { GeocodingService } from '../../../geocoding/geocoding.service';
+import { PostalCodeService } from '../../../geocoding/postal-code.service';
+import { normalizeDistrict } from '../../../geocoding/districts';
 import { CreateAddressDto, UpdateAddressDto } from '../dto/address.dto';
 
 @Injectable()
@@ -8,7 +10,24 @@ export class ManageAddressUseCase {
   constructor(
     private readonly prisma: PrismaService,
     private readonly geocoding: GeocodingService,
+    private readonly postalCodes: PostalCodeService,
   ) {}
+
+  /**
+   * Garante que o distrito gravado é um dos 20 que os técnicos usam na
+   * cobertura, porque a distribuição automática compara-os por igualdade.
+   *
+   * A app enviava o distrito tirado de uma tabela que devolvia concelhos
+   * ("Alcochete") ou cidades erradas para códigos que não conhecia — e esses
+   * pedidos nunca eram atribuídos a ninguém. Corrigir aqui protege também as
+   * versões antigas da app já instaladas e o site.
+   */
+  private async resolveDistrict(postalCode: string, sent: string): Promise<string> {
+    const recognised = normalizeDistrict(sent);
+    if (recognised) return recognised;
+    const info = await this.postalCodes.lookup(postalCode);
+    return info?.district ?? sent;
+  }
 
   /** Geocodifica a morada; devolve null se falhar (nunca bloqueia a gravação). */
   private async geocodeCoords(a: {
@@ -50,6 +69,7 @@ export class ManageAddressUseCase {
     }
 
     const data: any = { ...dto, clientId };
+    data.district = await this.resolveDistrict(dto.postalCode, dto.district);
     // Preenche coordenadas via geocoding quando o cliente não as forneceu.
     if (data.latitude == null || data.longitude == null) {
       const coords = await this.geocodeCoords(dto);
@@ -78,6 +98,12 @@ export class ManageAddressUseCase {
     }
 
     const data: any = { ...dto };
+    if (dto.postalCode != null || dto.district != null) {
+      data.district = await this.resolveDistrict(
+        dto.postalCode ?? address.postalCode,
+        dto.district ?? address.district,
+      );
+    }
     // Se a morada mudou (e o cliente não enviou coordenadas), re-geocodifica.
     const touchesLocation =
       dto.street != null || dto.number != null || dto.postalCode != null || dto.city != null;
