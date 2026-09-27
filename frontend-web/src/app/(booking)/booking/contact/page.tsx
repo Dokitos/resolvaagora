@@ -57,7 +57,7 @@ export default function ContactPage() {
           className="flex-1"
           placeholder="912 345 678"
           value={localPhone}
-          onChange={(e) => setLocalPhone(e.target.value)}
+          onChange={(e) => setLocalPhone(e.target.value.replace(/[^0-9+]/g, ''))}
         />
       </div>
 

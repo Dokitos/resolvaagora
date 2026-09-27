@@ -8,6 +8,8 @@ import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { MapPin, Plus, Pencil, Trash2, Star } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { stripEmoji } from '@/lib/validation/text'
+import { formatPostalInput } from '@/lib/booking/postal-lookup'
 
 const DISTRICTS = [
   'Aveiro', 'Beja', 'Braga', 'Bragança', 'Castelo Branco', 'Coimbra',
@@ -118,29 +120,30 @@ export default function AddressesPage() {
             <Input
               id="label" label="Designação (ex: Casa, Escritório)"
               placeholder="Casa" value={form.label} required
-              onChange={(e) => setForm((f) => ({ ...f, label: e.target.value }))}
+              onChange={(e) => setForm((f) => ({ ...f, label: stripEmoji(e.target.value) }))}
             />
             <div className="grid grid-cols-3 gap-3">
               <div className="col-span-2">
                 <Input id="street" label="Rua" value={form.street} required
-                  onChange={(e) => setForm((f) => ({ ...f, street: e.target.value }))}
+                  onChange={(e) => setForm((f) => ({ ...f, street: stripEmoji(e.target.value) }))}
                 />
               </div>
               <Input id="number" label="Nº" value={form.number} required
-                onChange={(e) => setForm((f) => ({ ...f, number: e.target.value }))}
+                onChange={(e) => setForm((f) => ({ ...f, number: stripEmoji(e.target.value) }))}
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <Input id="floor" label="Andar / Fracção (opcional)" value={form.floor}
-                onChange={(e) => setForm((f) => ({ ...f, floor: e.target.value }))}
+                onChange={(e) => setForm((f) => ({ ...f, floor: stripEmoji(e.target.value) }))}
               />
               <Input id="postalCode" label="Código postal" placeholder="1200-001" value={form.postalCode} required
-                onChange={(e) => setForm((f) => ({ ...f, postalCode: e.target.value }))}
+                inputMode="numeric"
+                onChange={(e) => setForm((f) => ({ ...f, postalCode: formatPostalInput(e.target.value) }))}
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <Input id="city" label="Cidade" value={form.city} required
-                onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
+                onChange={(e) => setForm((f) => ({ ...f, city: stripEmoji(e.target.value) }))}
               />
               <div className="flex flex-col gap-1">
                 <label htmlFor="district" className="text-sm font-medium text-gray-700">Distrito</label>

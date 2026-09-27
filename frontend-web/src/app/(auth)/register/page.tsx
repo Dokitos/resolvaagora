@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { personName, phone, strictEmail } from '@/lib/validation/text'
 import { signIn } from 'next-auth/react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
@@ -15,11 +16,11 @@ import { api } from '@/lib/api/client'
 import { Wrench } from 'lucide-react'
 
 const schema = z.object({
-  firstName: z.string().min(2, 'Nome obrigatório'),
-  lastName: z.string().min(2, 'Apelido obrigatório'),
-  email: z.string().email('Email inválido'),
+  firstName: personName('Nome'),
+  lastName: personName('Apelido'),
+  email: strictEmail,
   password: z.string().min(8, 'Mínimo 8 caracteres'),
-  phone: z.string().optional(),
+  phone: phone.optional(),
 })
 
 type FormData = z.infer<typeof schema>

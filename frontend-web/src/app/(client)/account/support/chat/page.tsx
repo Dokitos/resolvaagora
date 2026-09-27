@@ -8,6 +8,7 @@ import type { SupportMessage } from '@/lib/api/types'
 import { Button } from '@/components/ui/button'
 import { cn, formatDate } from '@/lib/utils'
 import { useNotificationsSocket } from '@/lib/hooks/use-notifications-socket'
+import { stripEmoji } from '@/lib/validation/text'
 
 const POLL_INTERVAL_MS = 15000
 
@@ -89,7 +90,7 @@ export default function SupportChatPage() {
       <div className="flex items-center gap-2 pt-3 border-t border-gray-200">
         <input
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => setText(stripEmoji(e.target.value))}
           onKeyDown={(e) => e.key === 'Enter' && handleSend()}
           placeholder="Escreva uma mensagem..."
           className="flex-1 rounded-full border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500"

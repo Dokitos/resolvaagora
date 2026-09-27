@@ -19,6 +19,8 @@ import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Button } from '@/components/ui/button'
 import { PriceSummaryBar } from '@/components/ui/price-summary-bar'
+import { stripEmoji } from '@/lib/validation/text'
+import { formatPostalInput } from '@/lib/booking/postal-lookup'
 
 export default function SummaryPage() {
   const router = useRouter()
@@ -195,12 +197,12 @@ export default function SummaryPage() {
           />
           {billingDifferent && (
             <div className="space-y-2 pt-1">
-              <Input label="Rua" value={billingStreet} onChange={(e) => setBillingStreet(e.target.value)} />
+              <Input label="Rua" value={billingStreet} onChange={(e) => setBillingStreet(stripEmoji(e.target.value))} />
               <div className="grid grid-cols-2 gap-3">
-                <Input label="Número" value={billingNumber} onChange={(e) => setBillingNumber(e.target.value)} />
-                <Input label="Código postal" value={billingPostalCode} onChange={(e) => setBillingPostalCode(e.target.value)} />
+                <Input label="Número" value={billingNumber} onChange={(e) => setBillingNumber(stripEmoji(e.target.value))} />
+                <Input label="Código postal" value={billingPostalCode} inputMode="numeric" onChange={(e) => setBillingPostalCode(formatPostalInput(e.target.value))} />
               </div>
-              <Input label="Cidade" value={billingCity} onChange={(e) => setBillingCity(e.target.value)} />
+              <Input label="Cidade" value={billingCity} onChange={(e) => setBillingCity(stripEmoji(e.target.value))} />
             </div>
           )}
         </CardContent>

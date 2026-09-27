@@ -7,6 +7,7 @@ import { usePublicSettings } from '@/lib/hooks/use-public-settings'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
+import { stripEmoji } from '@/lib/validation/text'
 
 export default function AddressPage() {
   const router = useRouter()
@@ -66,17 +67,17 @@ export default function AddressPage() {
         </div>
       </div>
 
-      <Input label="Rua *" value={street} onChange={(e) => setStreet(e.target.value)} />
+      <Input label="Rua *" value={street} onChange={(e) => setStreet(stripEmoji(e.target.value))} />
       <div className="grid grid-cols-2 gap-3">
-        <Input label="Número da porta *" value={number} onChange={(e) => setNumber(e.target.value)} />
-        <Input label="Andar" value={floor} onChange={(e) => setFloor(e.target.value)} />
+        <Input label="Número da porta *" value={number} onChange={(e) => setNumber(stripEmoji(e.target.value))} />
+        <Input label="Andar" value={floor} onChange={(e) => setFloor(stripEmoji(e.target.value))} />
       </div>
       <Textarea
         label="Observações"
         rows={3}
         placeholder="Ex: código de acesso, referência do prédio..."
         value={observations}
-        onChange={(e) => setObservations(e.target.value)}
+        onChange={(e) => setObservations(stripEmoji(e.target.value))}
       />
 
       <Button className="w-full" size="lg" disabled={!valid} onClick={handleContinue}>

@@ -8,6 +8,7 @@ import { findSubcategory } from '@/lib/data/services-catalog'
 import { Textarea } from '@/components/ui/textarea'
 import { PhotoUpload } from '@/components/ui/photo-upload'
 import { Button } from '@/components/ui/button'
+import { stripEmoji } from '@/lib/validation/text'
 
 const MAX_CHARS = 300
 const MIN_CHARS = 10
@@ -55,7 +56,7 @@ export default function DetailsPage() {
         maxLength={MAX_CHARS}
         rows={6}
         placeholder="Ex: A torneira da cozinha está a pingar e não consigo fechar completamente..."
-        onChange={(e) => setDetails(e.target.value, photos)}
+        onChange={(e) => setDetails(stripEmoji(e.target.value), photos)}
       />
       <p className="text-xs text-gray-400 text-right -mt-2">{description.length}/{MAX_CHARS}</p>
 

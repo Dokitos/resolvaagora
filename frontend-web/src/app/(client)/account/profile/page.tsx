@@ -8,6 +8,7 @@ import { ArrowLeft, Mail, Lock, Camera } from 'lucide-react'
 import { clientApi } from '@/lib/api/client-api'
 import type { ClientProfile } from '@/lib/api/types'
 import { isValidNif } from '@/lib/utils/nif'
+import { sanitizeName, validateName } from '@/lib/validation/text'
 import { Avatar } from '@/components/ui/avatar'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -60,8 +61,11 @@ export default function ProfilePage() {
   const nifError = nif.trim() && !isValidNif(nif) ? 'NIF inválido.' : undefined
 
   async function handleSave() {
-    if (!firstName.trim() || !lastName.trim()) {
-      toast.error('Nome e apelido são obrigatórios')
+    // Um perfil gravado antes desta validação pode ainda ter emojis no nome;
+    // sem isto, o servidor recusava com uma mensagem que não dizia o quê.
+    const nameProblem = validateName(firstName, 'O nome') ?? validateName(lastName, 'O apelido')
+    if (nameProblem) {
+      toast.error(nameProblem)
       return
     }
     if (nifError) {
@@ -121,8 +125,8 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <Input label="Nome" placeholder="O teu nome" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
-      <Input label="Apelido" placeholder="O teu apelido" value={lastName} onChange={(e) => setLastName(e.target.value)} />
+      <Input label="Nome" placeholder="O teu nome" value={firstName} onChange={(e) => setFirstName(sanitizeName(e.target.value))} />
+      <Input label="Apelido" placeholder="O teu apelido" value={lastName} onChange={(e) => setLastName(sanitizeName(e.target.value))} />
       <Input label="Telefone" placeholder="9XX XXX XXX" value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))} />
       <Input
         label="NIF"

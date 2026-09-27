@@ -8,6 +8,7 @@ import { serviceRequestsApi } from '@/lib/api/service-requests'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { ArrowLeft, Star } from 'lucide-react'
+import { stripEmoji } from '@/lib/validation/text'
 
 export default function ReviewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -80,7 +81,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
             </label>
             <textarea
               value={comment}
-              onChange={(e) => setComment(e.target.value)}
+              onChange={(e) => setComment(stripEmoji(e.target.value))}
               placeholder="Partilhe a sua experiência com o técnico..."
               rows={4}
               maxLength={500}
