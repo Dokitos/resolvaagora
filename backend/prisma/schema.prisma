@@ -855,6 +855,33 @@ model EmailTemplate {
 /// frontend (services-catalog.ts, espelho do services_data.dart da app);
 /// esta tabela guarda só as edições de preço feitas no admin. Sem registo
 /// para uma categoria = usa-se o valor por omissão do catálogo em código.
+/// Conteúdo de apresentação do catálogo: fotografia, selo e "Inclui / Não
+/// inclui". Separado dos preços porque é editado por outras razões e noutro
+/// ecrã do painel, e porque um serviço sem linha aqui continua a mostrar os
+/// textos por omissão (catalog-content.defaults.ts).
+///
+/// `subcategoryId` vazio = a própria categoria (onde vive a fotografia do
+/// cartão da página inicial).
+model ServiceCatalogContent {
+  id            String   @id @default(uuid())
+  categoryId    String   @map("category_id")
+  subcategoryId String   @default("") @map("subcategory_id")
+  imageUrl      String?  @map("image_url")
+  /// Selo curto no cartão ("Popular", "Promoção"); null = sem selo.
+  badge         String?
+  /// Só contam com `customized = true`; aí, uma lista vazia esconde o
+  /// separador respetivo.
+  includes      String[]
+  excludes      String[]
+  /// As listas do Prisma não podem ser null, por isso é isto que distingue
+  /// "nunca editado" (usa o rascunho por omissão) de "editado e esvaziado".
+  customized    Boolean  @default(false)
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@unique([categoryId, subcategoryId])
+  @@map("service_catalog_content")
+}
+
 model ServiceCategoryPrice {
   id         String          @id @default(uuid())
   categoryId String          @unique @map("category_id")
