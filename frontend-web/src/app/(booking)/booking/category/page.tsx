@@ -1,21 +1,25 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
-import { ChevronRight } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { findCategory } from '@/lib/data/services-catalog'
 import { useBookingStore } from '@/lib/store/booking-store'
 import { useCatalogStore } from '@/lib/store/catalog-store'
-import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import { catalogContentApi, contentFor, type CatalogContentMap } from '@/lib/api/catalog-content'
+import { ServiceCard } from '@/components/catalog/service-card'
+import { ServicePhoto, categoryIcon } from '@/components/catalog/service-photo'
 
 export default function CategoryPage() {
-  const router = useRouter()
   const categoryId = useBookingStore((s) => s.categoryId)
   const setCategory = useBookingStore((s) => s.setCategory)
-  const setSubcategory = useBookingStore((s) => s.setSubcategory)
+  const [content, setContent] = useState<CatalogContentMap>({})
 
   const categories = useCatalogStore((s) => s.categories)
   const category = categoryId ? findCategory(categoryId, categories) : null
+
+  useEffect(() => {
+    // Só apresentação (fotografia, "Inclui / Não inclui") — a reserva segue sem ele.
+    catalogContentApi.get().then(setContent).catch(() => {})
+  }, [])
 
   if (!category) {
     return (
@@ -26,17 +30,24 @@ export default function CategoryPage() {
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          {categories.filter((cat) => !cat.hidden).map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => setCategory(cat.id)}
-              className="text-left rounded-xl border border-gray-200 bg-white p-4 hover:border-blue-400 hover:shadow-sm transition-all"
-            >
-              <span className="text-2xl">{cat.emoji}</span>
-              <p className="mt-2 font-semibold text-sm text-gray-900">{cat.name}</p>
-              <p className="text-xs text-gray-500 mt-0.5">desde {cat.basePrice}€</p>
-            </button>
-          ))}
+          {categories.filter((cat) => !cat.hidden).map((cat) => {
+            const Icon = categoryIcon(cat.id)
+            return (
+              <button
+                key={cat.id}
+                onClick={() => setCategory(cat.id)}
+                className="flex flex-col items-start gap-3 rounded-2xl border border-gray-200 bg-white p-4 text-left transition-all hover:border-accent-500 hover:shadow-sm"
+              >
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-50">
+                  <Icon className="h-5 w-5 text-brand-700" />
+                </span>
+                <span>
+                  <span className="block text-sm font-semibold text-gray-900">{cat.name}</span>
+                  <span className="mt-0.5 block text-xs text-gray-500">desde {cat.basePrice}€</span>
+                </span>
+              </button>
+            )
+          })}
         </div>
       </div>
     )
@@ -44,39 +55,26 @@ export default function CategoryPage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <button onClick={() => setCategory('')} className="text-xs text-blue-600 font-medium mb-2">
-          ← Mudar categoria
-        </button>
-        <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-          <span>{category.emoji}</span> {category.name}
-        </h1>
-        <p className="text-sm text-gray-500 mt-1">{category.description}</p>
+      <div className="overflow-hidden rounded-2xl bg-brand-900">
+        <ServicePhoto
+          categoryId={category.id}
+          imageUrl={contentFor(content, category.id).imageUrl}
+          alt={category.name}
+          className="h-32"
+          iconClassName="h-12 w-12"
+        />
+        <div className="p-4">
+          <button onClick={() => setCategory('')} className="mb-1 text-xs font-medium text-accent-500">
+            ← Mudar categoria
+          </button>
+          <h1 className="text-xl font-bold text-white">{category.name}</h1>
+          <p className="mt-1 text-sm text-white/70">{category.description}</p>
+        </div>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-3">
         {category.subcategories.map((sub) => (
-          <Card key={sub.id} className="hover:border-blue-300 transition-colors">
-            <CardContent className="p-4 flex items-center justify-between gap-3">
-              <div>
-                <p className="font-medium text-sm text-gray-900">{sub.name}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{sub.description}</p>
-                {sub.hasCustomQuote && (
-                  <p className="text-[11px] text-blue-600 mt-1">Orçamento feito no local</p>
-                )}
-              </div>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  setSubcategory(sub.id)
-                  router.push(sub.hasCustomQuote ? '/booking/details' : '/booking/items')
-                }}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </CardContent>
-          </Card>
+          <ServiceCard key={sub.id} category={category} sub={sub} content={contentFor(content, category.id, sub.id)} />
         ))}
       </div>
     </div>

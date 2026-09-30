@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
 import {
   LayoutDashboard, ClipboardList, Users, AlertTriangle,
-  BarChart2, CreditCard, Star, LogOut, MessageSquare, Tag, Settings, Image as ImageIcon, Mail, Bell, DollarSign,
+  BarChart2, CreditCard, Star, LogOut, MessageSquare, Tag, Settings, Image as ImageIcon, Mail, Bell, DollarSign, LayoutTemplate,
   Menu, X,
 } from 'lucide-react'
 import { AdminNotificationBell } from '@/components/layout/admin-notification-bell'
@@ -25,6 +25,7 @@ const nav = [
   { href: '/admin/banners',          label: 'Banners',       icon: ImageIcon       },
   { href: '/admin/promo-codes',      label: 'Promoções',     icon: Tag             },
   { href: '/admin/service-prices',   label: 'Preços',        icon: DollarSign      },
+  { href: '/admin/service-content',  label: 'Apresentação',  icon: LayoutTemplate  },
   { href: '/admin/analytics',        label: 'Analytics',     icon: BarChart2       },
   { href: '/admin/settings',         label: 'Definições',    icon: Settings        },
 ]

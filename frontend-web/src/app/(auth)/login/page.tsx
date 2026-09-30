@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { signIn } from 'next-auth/react'
+import { getSession, signIn } from 'next-auth/react'
 import {
   isPopupCancelled,
   signInWithApple,
@@ -32,6 +32,23 @@ export default function LoginPage() {
     resolver: zodResolver(schema),
   })
 
+  /**
+   * Volta ao sítio de onde veio (`?from=`, posto pelo layout da reserva) se
+   * for um cliente — os outros papéis não têm acesso à reserva e ficavam num
+   * ciclo de volta ao login. Só caminhos internos, nunca outro domínio.
+   */
+  async function goAfterLogin() {
+    const from = new URLSearchParams(window.location.search).get('from')
+    if (from && from.startsWith('/') && !from.startsWith('//')) {
+      const session = await getSession()
+      if (session?.user.role === 'CLIENT') {
+        router.push(from)
+        return
+      }
+    }
+    router.push('/')
+  }
+
   async function onSubmit(data: FormData) {
     setLoading(true)
     const res = await signIn('credentials', { ...data, redirect: false })
@@ -44,7 +61,7 @@ export default function LoginPage() {
     }
 
     toast.success('Bem-vindo!')
-    router.push('/')
+    await goAfterLogin()
   }
 
   /**
@@ -66,7 +83,7 @@ export default function LoginPage() {
       }
 
       toast.success('Bem-vindo!')
-      router.push('/')
+      await goAfterLogin()
     } catch (err) {
       // Fechar a janela do fornecedor não é um erro a comunicar.
       if (!isPopupCancelled(err)) {

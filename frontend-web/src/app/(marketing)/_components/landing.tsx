@@ -12,15 +12,13 @@ import {
   ChevronRight,
   ArrowRight,
   Home as HomeIcon,
-  Wrench,
-  Settings2,
-  Sparkles,
-  Zap,
 } from 'lucide-react'
 import { useCatalogStore } from '@/lib/store/catalog-store'
 import { bannersApi } from '@/lib/api/banners'
+import { catalogContentApi, contentFor, type CatalogContentMap } from '@/lib/api/catalog-content'
 import type { HomeBanner } from '@/lib/api/types'
 import { BannerCarousel } from '@/components/layout/banner-carousel'
+import { ServicePhoto, categoryIcon } from '@/components/catalog/service-photo'
 import { SiteHeader } from './site-header'
 import { SiteFooter } from './site-footer'
 
@@ -39,46 +37,27 @@ const STEPS = [
   { icon: ShieldCheck, title: 'Confirma', desc: 'Paga online em segurança e deixa o resto connosco.' },
 ]
 
-const CATEGORY_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
-  ELECTRICITY: Zap,
-  PLUMBING: Settings2,
-  PAINTING: Sparkles,
-  FURNITURE: Wrench,
-  AC: Wind,
-  APPLIANCES: Wrench,
-  CLEANING: Sparkles,
-  LOCKSMITH: Lock,
-  GARDEN: Sparkles,
-  FLOORING: HomeIcon,
-  TV_ANTENNA: Settings2,
-}
-
-function Wind(props: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className={props.className}>
-      <path d="M9.59 4.59A2 2 0 1 1 11 8H2" />
-      <path d="M17.59 20.59A2 2 0 1 0 19 17H2" />
-      <path d="M12.59 12.59A2 2 0 1 1 14 16H2" />
-    </svg>
-  )
-}
-
 export function Landing() {
   const router = useRouter()
   const [query, setQuery] = useState('')
   const categories = useCatalogStore((s) => s.categories)
-  const FEATURED = FEATURED_IDS.map((id) => categories.find((c) => c.id === id)!)
+  const visible = categories.filter((c) => !c.hidden)
+  const FEATURED = FEATURED_IDS.flatMap((id) => visible.filter((c) => c.id === id))
   const [banners, setBanners] = useState<HomeBanner[]>([])
+  const [content, setContent] = useState<CatalogContentMap>({})
 
   useEffect(() => {
     // Banners de parceiros são conteúdo promocional secundário — uma falha
     // aqui não deve afetar o resto da landing page, só fica registada.
     bannersApi.list().then(setBanners).catch((err) => console.error('Erro ao carregar banners:', err))
+    // Fotografias e selos: sem eles os cartões ficam com o fundo da marca.
+    catalogContentApi.get().then(setContent).catch((err) => console.error('Erro ao carregar conteúdo do catálogo:', err))
   }, [])
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault()
-    router.push('/login?from=/booking/category')
+    const q = query.trim()
+    router.push(q ? `/servicos?q=${encodeURIComponent(q)}` : '/servicos')
   }
 
   function handleBannerClick(banner: HomeBanner) {
@@ -180,29 +159,61 @@ export function Landing() {
           </div>
 
           <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {FEATURED.map((cat, i) => {
-              const Icon = CATEGORY_ICONS[cat.id] ?? Wrench
+            {FEATURED.map((cat) => {
+              const c = contentFor(content, cat.id)
               return (
                 <Link
                   key={cat.id}
-                  href="/login?from=/booking/category"
-                  className="group overflow-hidden rounded-2xl border border-gray-200 bg-white transition-all hover:-translate-y-1 hover:shadow-xl"
+                  href={`/servicos#${cat.id}`}
+                  className="group overflow-hidden rounded-2xl bg-white shadow-[0_4px_18px_rgba(0,0,0,0.07)] transition-all hover:-translate-y-1 hover:shadow-xl"
                 >
-                  <div className="relative flex h-40 items-center justify-center bg-gradient-to-br from-brand-700 to-brand-900">
-                    {i < 2 && (
-                      <span className="absolute left-3 top-3 rounded-full bg-accent-500 px-2.5 py-1 text-[11px] font-bold text-brand-900">
-                        Popular
+                  <div className="relative">
+                    <ServicePhoto
+                      categoryId={cat.id}
+                      imageUrl={c.imageUrl}
+                      alt={cat.name}
+                      className="h-48 transition-transform duration-300 group-hover:scale-[1.03]"
+                    />
+                    {c.badge && (
+                      <span className="absolute left-3 top-3 rounded-full bg-accent-500 px-3 py-1 text-xs font-bold text-brand-900">
+                        {c.badge}
                       </span>
                     )}
-                    <Icon className="h-14 w-14 text-accent-500/80 transition-transform group-hover:scale-110" />
-                    <span className="absolute bottom-3 right-3 rounded-full bg-white px-3 py-1 text-xs font-bold text-brand-700 shadow">
-                      desde {cat.basePrice}€
-                    </span>
                   </div>
-                  <div className="p-4">
-                    <h3 className="font-bold text-brand-700">{cat.name}</h3>
-                    <p className="mt-1 text-sm text-brand-500 line-clamp-2">{cat.description}</p>
+                  <div className="p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <h3 className="text-lg font-bold leading-tight text-brand-700">{cat.name}</h3>
+                      <span className="flex-shrink-0 rounded-full bg-brand-900 px-3 py-1 text-xs text-white">
+                        desde <span className="font-extrabold text-accent-500">{cat.basePrice}€</span>
+                      </span>
+                    </div>
+                    <p className="mt-1.5 text-sm text-brand-500 line-clamp-2">{cat.description}</p>
                   </div>
+                </Link>
+              )
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* TODAS AS CATEGORIAS */}
+      <section className="pb-16 sm:pb-20">
+        <div className="mx-auto max-w-7xl px-5 sm:px-8">
+          <h2 className="text-2xl font-extrabold tracking-tight text-brand-700 sm:text-3xl">Serviços por categoria</h2>
+          <p className="mt-2 text-brand-500">Tudo o que a tua casa precisa, organizado por área.</p>
+          <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+            {visible.map((cat) => {
+              const Icon = categoryIcon(cat.id)
+              return (
+                <Link
+                  key={cat.id}
+                  href={`/servicos#${cat.id}`}
+                  className="group flex flex-col gap-4 rounded-2xl border border-gray-200 bg-white p-4 transition-all hover:-translate-y-0.5 hover:border-accent-500 hover:shadow-md"
+                >
+                  <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent-50 transition-colors group-hover:bg-accent-500">
+                    <Icon className="h-5 w-5 text-brand-700" />
+                  </span>
+                  <span className="text-sm font-bold leading-tight text-brand-700">{cat.name}</span>
                 </Link>
               )
             })}
