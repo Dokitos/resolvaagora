@@ -41,10 +41,6 @@ class _BookingDetailsPageState extends ConsumerState<BookingDetailsPage> {
         foregroundColor: Colors.white,
         title: const Text(''),
         leading: const SizedBox.shrink(),
-        actions: [
-          IconButton(icon: const Icon(Icons.search), onPressed: () {}),
-          IconButton(icon: const Icon(Icons.share_outlined), onPressed: () {}),
-        ],
       ),
       body: Column(
         children: [

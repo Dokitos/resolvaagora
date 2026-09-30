@@ -59,10 +59,6 @@ class _AddressDetailsPageState extends ConsumerState<AddressDetailsPage> {
         foregroundColor: Colors.white,
         leading: const SizedBox.shrink(),
         title: const SizedBox.shrink(),
-        actions: [
-          IconButton(icon: const Icon(Icons.search), onPressed: () {}),
-          IconButton(icon: const Icon(Icons.share_outlined), onPressed: () {}),
-        ],
       ),
       body: Column(
         children: [

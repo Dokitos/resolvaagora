@@ -746,7 +746,7 @@ class _JoinProviderBanner extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: () {},
+              onPressed: () => _applyAsProvider(context),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.brandYellow,
                 foregroundColor: Colors.black,
@@ -758,6 +758,42 @@ class _JoinProviderBanner extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Endereço para onde vão as candidaturas de técnicos. Provisório: quando
+/// houver um formulário de candidatura no painel, o botão passa a abri-lo.
+const _providerApplicationEmail = 'geral@resolvaagora.pt';
+
+/// Abre o email com o assunto e um guião do que a candidatura deve trazer —
+/// sem isto chegavam mensagens soltas e era preciso pedir tudo de volta.
+Future<void> _applyAsProvider(BuildContext context) async {
+  final uri = Uri(
+    scheme: 'mailto',
+    path: _providerApplicationEmail,
+    // `query` à mão em vez de `queryParameters`: este último codifica os
+    // espaços como "+", que a maioria das apps de email mostra literalmente.
+    query: [
+      'subject=${Uri.encodeComponent('Candidatura a técnico ResolvaAgora')}',
+      'body=${Uri.encodeComponent('Olá,\n\n'
+          'Gostaria de prestar serviços com a ResolvaAgora.\n\n'
+          'Nome:\n'
+          'Telemóvel:\n'
+          'Especialidade(s):\n'
+          'Distrito(s) onde trabalho:\n'
+          'Anos de experiência:\n'
+          'Tenho atividade aberta nas Finanças (sim/não):\n')}',
+    ].join('&'),
+  );
+
+  // Sem `canLaunchUrl`: no iOS exigia declarar "mailto" no Info.plist e
+  // devolvia falso mesmo com o Mail instalado.
+  final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+  if (!opened && context.mounted) {
+    // Sem app de email configurada: mostra o endereço para copiar à mão.
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Envie a sua candidatura para $_providerApplicationEmail')),
     );
   }
 }

@@ -26,10 +26,6 @@ class ItemsPickerPage extends ConsumerWidget {
         foregroundColor: Colors.white,
         title: Text(booking.category?.localizedName(locale) ?? ''),
         leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.pop()),
-        actions: [
-          IconButton(icon: const Icon(Icons.search), onPressed: () {}),
-          IconButton(icon: const Icon(Icons.share_outlined), onPressed: () {}),
-        ],
       ),
       body: Column(
         children: [

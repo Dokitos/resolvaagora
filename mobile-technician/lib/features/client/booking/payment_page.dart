@@ -97,10 +97,6 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
         foregroundColor: Colors.white,
         leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.pop()),
         title: const SizedBox.shrink(),
-        actions: [
-          IconButton(icon: const Icon(Icons.search), onPressed: () {}),
-          IconButton(icon: const Icon(Icons.share_outlined), onPressed: () {}),
-        ],
       ),
       body: Column(
         children: [
