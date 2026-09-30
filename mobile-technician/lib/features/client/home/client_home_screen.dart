@@ -9,6 +9,8 @@ import '../../../core/services/auth_service.dart';
 import '../../../core/services/client_service.dart';
 import '../../../core/services/settings_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/services/catalog_content_service.dart';
+import '../../../core/widgets/service_photo.dart';
 import '../../../core/widgets/pressable.dart';
 import '../../../data/services_data.dart';
 import '../../../data/catalog_i18n.dart';
@@ -183,7 +185,13 @@ class _HeroSection extends ConsumerWidget {
                 fillColor: Colors.white,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
               ),
-              onSubmitted: (_) {},
+              textInputAction: TextInputAction.search,
+              // Antes tinha `onSubmitted: (_) {}` e não fazia nada.
+              onSubmitted: (q) {
+                final query = q.trim();
+                if (query.isEmpty) return;
+                context.push('/booking/search?q=${Uri.encodeQueryComponent(query)}');
+              },
             ),
           ),
         ],
@@ -365,7 +373,7 @@ class _SubscriptionBanner extends ConsumerWidget {
   }
 }
 
-// ── Stats chips ───────────────────────────────────────────────────────────────
+// ── Faixa de confiança ────────────────────────────────────────────────────────
 class _StatsChips extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -377,128 +385,94 @@ class _StatsChips extends StatelessWidget {
       (Icons.bolt_outlined, l.statOnline),
       (Icons.people_outline, l.statTechs),
     ];
-    return Container(
-      color: Colors.white,
-      height: 56,
+    return SizedBox(
+      height: 76,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
         itemCount: items.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (_, i) => _Chip(icon: items[i].$1, label: items[i].$2),
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        itemBuilder: (_, i) => _TrustCard(icon: items[i].$1, label: items[i].$2),
       ),
     );
   }
 }
 
-class _Chip extends StatelessWidget {
+class _TrustCard extends StatelessWidget {
   final IconData icon;
   final String label;
-  const _Chip({required this.icon, required this.label});
+  const _TrustCard({required this.icon, required this.label});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.fromLTRB(10, 8, 14, 8),
       decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey.shade200),
-        borderRadius: BorderRadius.circular(20),
-        color: Colors.grey[50],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: _blue),
-          const SizedBox(width: 6),
-          Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: AppTheme.brandYellowSoft,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, size: 19, color: AppTheme.brandBlack),
+          ),
+          const SizedBox(width: 10),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 120),
+            child: Text(
+              label,
+              maxLines: 2,
+              style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, height: 1.2),
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-// ── Featured services (horizontal scroll) ────────────────────────────────────
+// ── Destaques com fotografia ─────────────────────────────────────────────────
 class _FeaturedServices extends ConsumerWidget {
-  // `id` tem de corresponder a ServiceCategory.id em services_data.dart — usado
-  // para encontrar a categoria real (preço e navegação), em vez de comparar
-  // por nome (frágil: já esteve dessincronizado, ex. "Montagem Móveis" vs
-  // "Montagem de Móveis", o que fazia cair sempre na 1ª categoria da lista).
-  static const _featured = [
-    (id: 'ELECTRICITY', color: Color(0xFFFFF3E0), icon: Icons.electrical_services, name: 'Eletricidade', sub: 'Reparações, instalações e substituições'),
-    (id: 'AC', color: Color(0xFFE3F2FD), icon: Icons.ac_unit, name: 'Ar Condicionado', sub: 'Instalação, manutenção e recarga de gás'),
-    (id: 'PLUMBING', color: Color(0xFFE8F5E9), icon: Icons.plumbing, name: 'Canalização', sub: 'Fugas, entupimentos e instalações'),
-    (id: 'FURNITURE', color: Color(0xFFFCE4EC), icon: Icons.chair, name: 'Montagem de Móveis', sub: 'IKEA, Leroy Merlin e outras marcas'),
-    (id: 'CLEANING', color: Color(0xFFF3E5F5), icon: Icons.cleaning_services, name: 'Limpeza', sub: 'Geral, pós-obra e vidros'),
-  ];
+  // `id` tem de corresponder a ServiceCategory.id em services_data.dart — a
+  // categoria real dá o nome, a descrição e o preço, sempre sincronizados.
+  static const _featuredIds = ['APPLIANCES', 'PLUMBING', 'AC', 'ELECTRICITY', 'FURNITURE', 'CLEANING'];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(catalogPricesLoadedProvider); // rebuild quando os preços do admin chegarem
+    final content = ref.watch(catalogContentProvider).valueOrNull ?? const {};
     final l = AppLocalizations.of(context);
-    final visibleFeatured = _featured.where((f) {
-      final cat = kServiceCategories.firstWhere(
-        (c) => c.id == f.id,
-        orElse: () => kServiceCategories.first,
-      );
-      return !cat.hidden;
-    }).toList();
+    final featured = [
+      for (final id in _featuredIds)
+        ...kServiceCategories.where((c) => c.id == id && !c.hidden),
+    ];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
-          child: Text(
-            l.exploreServices,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
+          child: Text(l.exploreServices, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         ),
         SizedBox(
-          height: 200,
+          height: 262,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            itemCount: visibleFeatured.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
-            itemBuilder: (context, i) {
-              final f = visibleFeatured[i];
-              final cat = kServiceCategories.firstWhere(
-                (c) => c.id == f.id,
-                orElse: () => kServiceCategories.first,
-              );
-              return Pressable(
-                onTap: () => context.push('/booking/category/${cat.id}'),
-                child: Container(
-                  width: 200,
-                  decoration: BoxDecoration(
-                    color: f.color,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(f.icon, size: 36, color: _blue),
-                      const Spacer(),
-                      Text(f.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                      const SizedBox(height: 4),
-                      Text(f.sub, style: const TextStyle(fontSize: 12, color: Colors.black54), maxLines: 2),
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.black87,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          'desde €${cat.basePrice.toStringAsFixed(2)}',
-                          style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
+            itemCount: featured.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 14),
+            itemBuilder: (context, i) => _PhotoServiceCard(
+              category: featured[i],
+              content: content.category(featured[i].id),
+            ),
           ),
         ),
       ],
@@ -506,11 +480,123 @@ class _FeaturedServices extends ConsumerWidget {
   }
 }
 
-// ── Category grid ──────────────────────────────────────────────────────────────
+/// Cartão de serviço com fotografia, selo e preço — o formato principal do
+/// novo visual.
+class _PhotoServiceCard extends StatelessWidget {
+  final ServiceCategory category;
+  final CatalogContent content;
+  const _PhotoServiceCard({required this.category, required this.content});
+
+  @override
+  Widget build(BuildContext context) {
+    final locale = Localizations.localeOf(context);
+    final badge = content.badge;
+
+    return Pressable(
+      onTap: () => context.push('/booking/category/${category.id}'),
+      child: Container(
+        width: 250,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.07), blurRadius: 14, offset: const Offset(0, 4)),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              height: 140,
+              width: double.infinity,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  ServicePhoto(categoryId: category.id, imageUrl: content.imageUrl),
+                  if (badge != null && badge.isNotEmpty)
+                    Positioned(
+                      left: 10,
+                      top: 10,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppTheme.brandYellow,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          badge,
+                          style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Colors.black),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(
+                      category.localizedName(locale),
+                      maxLines: 2,
+                      style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w700, height: 1.2),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  _PricePill(price: category.basePrice),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 6, 14, 12),
+              child: Text(
+                category.localizedDescription(locale),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 12.5, color: Colors.grey[600], height: 1.3),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PricePill extends StatelessWidget {
+  final double price;
+  const _PricePill({required this.price});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(color: AppTheme.brandBlack, borderRadius: BorderRadius.circular(20)),
+      child: Text.rich(
+        TextSpan(
+          children: [
+            const TextSpan(text: 'desde ', style: TextStyle(fontWeight: FontWeight.w400)),
+            TextSpan(
+              text: '€${price.toStringAsFixed(2)}',
+              style: const TextStyle(fontWeight: FontWeight.w800, color: AppTheme.brandYellow),
+            ),
+          ],
+        ),
+        style: const TextStyle(color: Colors.white, fontSize: 11.5),
+      ),
+    );
+  }
+}
+
+// ── Grelha de categorias ──────────────────────────────────────────────────────
 class _CategoryGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final visible = kServiceCategories.where((c) => !c.hidden).toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -519,30 +605,23 @@ class _CategoryGrid extends StatelessWidget {
           child: Text(l.servicesByCategory, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-          child: Text(l.servicesByCategorySub,
-              style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+          child: Text(l.servicesByCategorySub, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
         ),
-        const SizedBox(height: 16),
-        Builder(builder: (context) {
-          final visibleCategories = kServiceCategories.where((c) => !c.hidden).toList();
-          return GridView.builder(
-            physics: const NeverScrollableScrollPhysics(),
-            shrinkWrap: true,
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              childAspectRatio: 1.2,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-            ),
-            itemCount: visibleCategories.length,
-            itemBuilder: (context, i) {
-              final cat = visibleCategories[i];
-              return _CategoryCard(category: cat);
-            },
-          );
-        }),
+        const SizedBox(height: 14),
+        GridView.builder(
+          physics: const NeverScrollableScrollPhysics(),
+          shrinkWrap: true,
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            childAspectRatio: 0.95,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
+          ),
+          itemCount: visible.length,
+          itemBuilder: (context, i) => _CategoryCard(category: visible[i]),
+        ),
       ],
     );
   }
@@ -554,7 +633,6 @@ class _CategoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (accent, tint) = AppTheme.categoryColors(category.id);
     return Pressable(
       onTap: () => context.push('/booking/category/${category.id}'),
       child: Container(
@@ -562,43 +640,25 @@ class _CategoryCard extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: Colors.grey.shade200),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
         ),
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(12, 14, 12, 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              width: 46,
-              height: 46,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
-                color: tint,
+                color: AppTheme.brandYellowSoft,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Center(
-                child: Text(category.emoji, style: const TextStyle(fontSize: 22)),
-              ),
+              child: Icon(categoryIcon(category.id), color: AppTheme.brandBlack, size: 23),
             ),
             const Spacer(),
             Text(
               category.localizedName(Localizations.localeOf(context)),
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
               maxLines: 2,
-            ),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                Text(AppLocalizations.of(context).viewServices,
-                    style: TextStyle(color: accent, fontSize: 12, fontWeight: FontWeight.w600)),
-                const SizedBox(width: 2),
-                Icon(Icons.arrow_forward, size: 13, color: accent),
-              ],
+              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, height: 1.2),
             ),
           ],
         ),

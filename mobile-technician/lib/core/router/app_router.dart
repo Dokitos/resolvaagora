@@ -19,6 +19,7 @@ import '../../features/profile/push_diagnostics_page.dart';
 import '../../features/profile/delete_account_screen.dart';
 import '../../features/communications/communications_screen.dart';
 import '../../features/messages/chat_screen.dart';
+import '../../features/client/search/search_page.dart';
 import '../../features/shell/app_shell.dart';
 // Admin screens
 import '../../features/admin/admin_shell.dart';
@@ -84,7 +85,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // Routes any visitor can see without an account (browse the catalogue).
       final isPublic = isAuthRoute ||
           loc == '/client/home' ||
-          loc.startsWith('/booking/category');
+          loc.startsWith('/booking/category') ||
+          // Pesquisa no catálogo: tem de funcionar antes de haver conta, como
+          // a navegação pelas categorias.
+          loc == '/booking/search';
 
       if (isAuth) {
         // Each role stays inside its own area.
@@ -273,6 +277,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/client/account/terms', builder: (_, __) => const TermsPage()),
 
       // ── Booking flow (outside shell — full screen) ────────────
+      GoRoute(
+        path: '/booking/search',
+        builder: (_, state) => SearchPage(initialQuery: state.uri.queryParameters['q'] ?? ''),
+      ),
       GoRoute(
         path: '/booking/category/:id',
         // Guarda de existência: corre ANTES do builder, por isso um id
