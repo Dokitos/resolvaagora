@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 
 const NAV = [
   { href: '/servicos', label: 'Serviços' },
+  { href: '/download', label: 'App' },
   { href: '/sobre', label: 'Sobre nós' },
   { href: '/contactos', label: 'Contactos' },
 ]
