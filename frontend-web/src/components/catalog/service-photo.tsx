@@ -54,15 +54,15 @@ export function ServicePhoto({
   const Icon = categoryIcon(categoryId)
 
   return (
-    <div className={cn('relative overflow-hidden bg-gradient-to-br from-[#1C1C1C] to-[#2E2E2E]', className)}>
+    <div className={cn('relative overflow-hidden bg-[#EEE9DD]', className)}>
       {imageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element -- URLs do armazenamento de uploads, sem domínio fixo para o next/image
         <img src={imageUrl} alt={alt} loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
       ) : (
         <>
-          <span className="pointer-events-none absolute -right-10 -top-8 h-16 w-44 -rotate-[28deg] bg-accent-500/20" />
+          <span className="pointer-events-none absolute -right-10 -top-8 h-16 w-44 -rotate-[28deg] bg-white/30" />
           <span className="absolute inset-0 flex items-center justify-center">
-            <Icon className={cn('text-accent-500', iconClassName)} />
+            <Icon className={cn('text-accent-700', iconClassName)} />
           </span>
         </>
       )}

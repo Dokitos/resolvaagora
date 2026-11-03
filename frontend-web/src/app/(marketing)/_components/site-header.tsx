@@ -2,54 +2,36 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useState } from 'react'
+import { Menu, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const NAV = [
   { href: '/servicos', label: 'Serviços' },
-  { href: '/download', label: 'App' },
+  { href: '/download', label: 'A app' },
   { href: '/sobre', label: 'Sobre nós' },
   { href: '/contactos', label: 'Contactos' },
 ]
 
 export function SiteHeader() {
   const pathname = usePathname()
-
+  const [open, setOpen] = useState(false)
   return (
-    <header className="sticky top-0 z-40 border-b border-gray-200 bg-white/95 backdrop-blur">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-3 sm:px-8">
-        <Link href="/" className="flex items-center gap-2">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="ResolvaAgora" className="h-12 w-auto object-contain" />
+    <header className="sticky top-0 z-40 border-b border-line bg-white/95 backdrop-blur">
+      <div className="mx-auto flex min-h-20 max-w-7xl items-center justify-between gap-3 px-5 sm:px-8">
+        <Link href="/" onClick={() => setOpen(false)} className="min-w-0" aria-label="ResolvaAgora, página inicial">
+          <span className="text-xl font-extrabold tracking-tight text-ink sm:text-2xl">Resolva<span className="text-accent-700">Agora</span></span>
         </Link>
-        <nav className="hidden items-center gap-8 text-sm font-semibold text-brand-600 md:flex">
-          {NAV.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                'transition-colors hover:text-accent-600',
-                pathname === item.href && 'text-accent-600',
-              )}
-            >
-              {item.label}
-            </Link>
-          ))}
+        <nav aria-label="Navegação principal" className="hidden items-center gap-7 text-sm font-medium md:flex">
+          {NAV.map(item => <Link key={item.href} href={item.href} aria-current={pathname === item.href ? 'page' : undefined} className={cn('py-3 text-muted transition-colors hover:text-ink', pathname === item.href && 'text-ink underline decoration-accent-500 underline-offset-8')}>{item.label}</Link>)}
         </nav>
         <div className="flex items-center gap-2">
-          <Link
-            href="/login"
-            className="rounded-full px-4 py-2 text-sm font-bold text-brand-700 transition-colors hover:bg-gray-100"
-          >
-            Entrar
-          </Link>
-          <Link
-            href="/register"
-            className="rounded-full bg-accent-500 px-4 py-2 text-sm font-bold text-brand-900 transition-colors hover:bg-accent-600"
-          >
-            Criar conta
-          </Link>
+          <Link href="/login" className="hidden min-h-11 items-center rounded-xl px-4 text-sm font-semibold hover:bg-canvas sm:inline-flex">Entrar</Link>
+          <Link href="/register" className="inline-flex min-h-11 items-center rounded-xl bg-accent-500 px-4 text-sm font-semibold text-ink transition-colors hover:bg-accent-600">Criar conta</Link>
+          <button type="button" aria-label={open ? 'Fechar menu' : 'Abrir menu'} aria-expanded={open} aria-controls="mobile-site-menu" onClick={() => setOpen(!open)} className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-line md:hidden">{open ? <X className="h-5 w-5"/> : <Menu className="h-5 w-5"/>}</button>
         </div>
       </div>
+      {open && <nav id="mobile-site-menu" aria-label="Navegação móvel" className="border-t border-line bg-white p-4 md:hidden">{[...NAV, {href:'/login',label:'Entrar'}].map(item => <Link key={item.href} href={item.href} onClick={() => setOpen(false)} className="block rounded-xl px-4 py-3 text-sm font-medium hover:bg-canvas" aria-current={pathname === item.href ? 'page' : undefined}>{item.label}</Link>)}</nav>}
     </header>
   )
 }

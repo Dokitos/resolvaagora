@@ -1,18 +1,10 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import {
-  Search,
-  ShieldCheck,
-  BadgeCheck,
-  Lock,
-  Headset,
-  ChevronRight,
-  ArrowRight,
-  Home as HomeIcon,
-} from 'lucide-react'
+import { Search, ShieldCheck, CalendarDays, MessageSquare, ArrowUpRight, ArrowRight } from 'lucide-react'
 import { useCatalogStore } from '@/lib/store/catalog-store'
 import { bannersApi } from '@/lib/api/banners'
 import { catalogContentApi, contentFor, type CatalogContentMap } from '@/lib/api/catalog-content'
@@ -21,284 +13,81 @@ import { BannerCarousel } from '@/components/layout/banner-carousel'
 import { ServicePhoto, categoryIcon } from '@/components/catalog/service-photo'
 import { SiteHeader } from './site-header'
 import { SiteFooter } from './site-footer'
+import { Reveal } from '@/components/layout/reveal'
+import { PromotionSpotlight } from '@/components/layout/promotion-spotlight'
 
-const FEATURED_IDS = ['ELECTRICITY', 'PLUMBING', 'AC', 'FURNITURE', 'CLEANING', 'PAINTING']
-
-const TRUST_ROW = [
-  { icon: BadgeCheck, label: 'Técnicos verificados' },
-  { icon: ShieldCheck, label: '6 meses de garantia' },
-  { icon: Lock, label: 'Pagamento 100% seguro' },
-  { icon: Headset, label: 'Suporte dedicado' },
+const FEATURED_IDS = ['PLUMBING', 'ELECTRICITY', 'AC', 'FURNITURE', 'CLEANING', 'PAINTING']
+const TRUST = [
+  { icon: ShieldCheck, label: 'Informação clara sobre o serviço' },
+  { icon: CalendarDays, label: 'Marcação simples' },
+  { icon: MessageSquare, label: 'Comunicação na app' },
 ]
-
 const STEPS = [
-  { icon: Search, title: 'Escolhe', desc: 'Encontra o serviço certo para ti, com preço à vista.' },
-  { icon: HomeIcon, title: 'Marca', desc: 'Indica a morada e escolhe o dia e a hora que preferes.' },
-  { icon: ShieldCheck, title: 'Confirma', desc: 'Paga online em segurança e deixa o resto connosco.' },
+  ['01', 'Encontre o serviço', 'Consulte os serviços e saiba o que está incluído antes de marcar.'],
+  ['02', 'Escolha o momento', 'Indique a morada e escolha o dia e o horário que lhe dão jeito.'],
+  ['03', 'Acompanhe cada passo', 'Veja o estado do pedido, receba o orçamento e fale com o técnico.'],
 ]
+const euro = (value: number) => new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(value)
 
 export function Landing() {
   const router = useRouter()
   const [query, setQuery] = useState('')
-  const categories = useCatalogStore((s) => s.categories)
-  const visible = categories.filter((c) => !c.hidden)
-  const FEATURED = FEATURED_IDS.flatMap((id) => visible.filter((c) => c.id === id))
+  const categories = useCatalogStore(s => s.categories)
+  const visible = categories.filter(c => !c.hidden)
+  const featured = FEATURED_IDS.flatMap(id => visible.filter(c => c.id === id))
   const [banners, setBanners] = useState<HomeBanner[]>([])
   const [content, setContent] = useState<CatalogContentMap>({})
-
   useEffect(() => {
-    // Banners de parceiros são conteúdo promocional secundário — uma falha
-    // aqui não deve afetar o resto da landing page, só fica registada.
-    bannersApi.list().then(setBanners).catch((err) => console.error('Erro ao carregar banners:', err))
-    // Fotografias e selos: sem eles os cartões ficam com o fundo da marca.
-    catalogContentApi.get().then(setContent).catch((err) => console.error('Erro ao carregar conteúdo do catálogo:', err))
+    let live = true
+    bannersApi.list().then(data => { if (live) setBanners(data) }).catch(() => {})
+    catalogContentApi.get().then(data => { if (live) setContent(data) }).catch(() => {})
+    return () => { live = false }
   }, [])
-
   function handleSearch(e: React.FormEvent) {
     e.preventDefault()
-    const q = query.trim()
-    router.push(q ? `/servicos?q=${encodeURIComponent(q)}` : '/servicos')
+    router.push(query.trim() ? `/servicos?q=${encodeURIComponent(query.trim())}` : '/servicos')
   }
-
   function handleBannerClick(banner: HomeBanner) {
     if (banner.actionType === 'category' && banner.actionTarget) router.push(`/servicos#${banner.actionTarget}`)
     else if (banner.actionType === 'subscription') router.push('/login?from=/account/subscription')
     else if (banner.actionType === 'url' && banner.actionTarget) {
-      if (banner.actionTarget.startsWith('/')) router.push(banner.actionTarget)
-      else window.open(banner.actionTarget, '_blank', 'noopener,noreferrer')
+      if (banner.actionTarget.startsWith('/') && !banner.actionTarget.startsWith('//')) router.push(banner.actionTarget)
+      else if (/^https?:\/\//i.test(banner.actionTarget)) window.open(banner.actionTarget, '_blank', 'noopener,noreferrer')
     }
   }
-
   return (
-    <div className="min-h-screen bg-white text-brand-700">
+    <div className="min-h-screen bg-canvas text-ink">
       <SiteHeader />
-
-      {/* HERO */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-brand-700 to-brand-900">
-        <svg
-          className="pointer-events-none absolute inset-y-0 right-0 h-full w-2/3 text-accent-500/10"
-          viewBox="0 0 600 600"
-          fill="none"
-          preserveAspectRatio="xMidYMid slice"
-        >
-          <path d="M0 500 L150 350 L300 480 L450 250 L600 400 L600 600 L0 600 Z" fill="currentColor" />
-          <path d="M0 380 L150 260 L300 370 L450 170 L600 300" stroke="currentColor" strokeWidth="3" fill="none" className="text-accent-500/20" />
-        </svg>
-        <div className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-accent-500/10 blur-3xl" />
-
-        <div className="relative mx-auto max-w-7xl px-5 py-16 sm:px-8 lg:py-24">
-          <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-accent-500">
-            <span className="h-1.5 w-1.5 rounded-full bg-accent-500" />
-            Serviços para casa, em Portugal
-          </span>
-          <h1 className="mt-5 max-w-2xl text-4xl font-extrabold leading-[1.05] tracking-tight text-white sm:text-5xl lg:text-6xl">
-            Num só sítio, <span className="text-accent-500">resolvemos</span> tudo.
-          </h1>
-          <p className="mt-5 max-w-xl text-lg text-white/70">
-            Reparações, instalações, manutenções, limpezas e muito mais —{' '}
-            <span className="font-semibold text-white">com garantia e técnicos especializados.</span>
-            <br />
-            Diz-nos o que precisas, nós ajudamos.
-          </p>
-
-          <form onSubmit={handleSearch} className="mt-8 flex max-w-xl items-center gap-2 rounded-full bg-white p-1.5 pl-5 shadow-xl">
-            <Search className="h-5 w-5 flex-shrink-0 text-gray-400" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Ex: Fuga de água na cozinha"
-              className="flex-1 bg-transparent py-2 text-sm text-brand-900 outline-none placeholder:text-gray-400"
-            />
-            <button
-              type="submit"
-              className="flex-shrink-0 rounded-full bg-brand-900 px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-black"
-            >
-              Procurar
-            </button>
+      <Reveal>
+      <section data-reveal className="premium-hero mx-auto grid max-w-[1440px] lg:min-h-[560px] lg:grid-cols-2">
+        <div className="flex flex-col justify-center px-5 py-12 sm:px-8 sm:py-16 lg:pl-[max(2rem,calc((100vw_-_1280px)/2))] lg:pr-12">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">Cuidar da casa pode ser simples</p>
+          <h1 className="mt-6 max-w-xl text-[42px] font-bold leading-[1.05] tracking-[-0.045em] sm:text-6xl xl:text-[68px]">A sua casa,<br/>em boas mãos.</h1>
+          <p className="mt-6 max-w-md text-base leading-7 text-muted">Encontre o serviço certo, escolha o dia e acompanhe cada passo. Nós ajudamos a tratar do resto.</p>
+          <form onSubmit={handleSearch} className="mt-8 flex w-full max-w-xl items-center gap-2 rounded-2xl border border-line bg-white p-2 pl-4 focus-within:ring-2 focus-within:ring-accent-700">
+            <Search className="h-5 w-5 shrink-0 text-muted" aria-hidden="true"/>
+            <input aria-label="Pesquisar serviços" value={query} onChange={e => setQuery(e.target.value)} placeholder="De que serviço precisa?" className="min-w-0 flex-1 bg-transparent py-3 text-base text-ink outline-none placeholder:text-muted"/>
+            <button type="submit" className="premium-button min-h-12 shrink-0 rounded-xl bg-accent-500 px-4 text-sm font-semibold text-ink transition-colors hover:bg-accent-600 sm:px-5">Pesquisar</button>
           </form>
         </div>
-
-        <div className="relative border-t border-white/10 bg-white/[0.04]">
-          <div className="mx-auto grid max-w-7xl grid-cols-2 gap-4 px-5 py-6 sm:px-8 md:grid-cols-4">
-            {TRUST_ROW.map((t) => (
-              <div key={t.label} className="flex items-center gap-3">
-                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-accent-500/15">
-                  <t.icon className="h-4.5 w-4.5 text-accent-500" />
-                </span>
-                <span className="text-sm font-medium text-white/90">{t.label}</span>
-              </div>
-            ))}
-          </div>
+        <div className="relative min-h-[320px] overflow-hidden sm:min-h-[420px] lg:min-h-[560px]">
+          <Image src="/images/home-technician.png" alt="Imagem ilustrativa de um técnico a reparar a canalização de uma cozinha" fill priority sizes="(min-width: 1024px) 50vw, 100vw" className="hero-photo object-cover object-[65%_center]"/>
+          <div className="auth-floating absolute bottom-6 left-6 right-6 w-fit max-w-[280px] rounded-2xl bg-white/95 p-5 shadow-sm"><p className="text-sm font-semibold">Menos tarefas por resolver.</p><p className="mt-1 text-xs leading-5 text-muted">Mais tempo para aproveitar a sua casa.</p></div>
         </div>
       </section>
-
-      {/* DESTAQUES / BANNERS DE PARCEIROS */}
-      {banners.length > 0 && (
-        <section className="py-10 sm:py-14">
-          <div className="mx-auto max-w-7xl px-5 sm:px-8">
-            <h2 className="text-xl font-extrabold tracking-tight text-brand-700 sm:text-2xl">Destaques</h2>
-            <BannerCarousel banners={banners} onBannerClick={handleBannerClick} size="lg" className="mt-5 -mx-5 px-5 sm:-mx-8 sm:px-8" />
-          </div>
-        </section>
-      )}
-
-      {/* EXPLORA SERVIÇOS */}
-      <section className="py-16 sm:py-20">
-        <div className="mx-auto max-w-7xl px-5 sm:px-8">
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <h2 className="text-2xl font-extrabold tracking-tight text-brand-700 sm:text-3xl">
-                Explora alguns dos nossos serviços
-              </h2>
-              <p className="mt-2 text-brand-500">Encontra rapidamente o serviço certo e faz já a tua reserva.</p>
-            </div>
-            <Link href="/servicos" className="flex items-center gap-1 text-sm font-bold text-accent-700 hover:text-accent-800">
-              Ver todos os serviços
-              <ChevronRight className="h-4 w-4" />
-            </Link>
-          </div>
-
-          <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {FEATURED.map((cat) => {
-              const c = contentFor(content, cat.id)
-              return (
-                <Link
-                  key={cat.id}
-                  href={`/servicos#${cat.id}`}
-                  className="group overflow-hidden rounded-2xl bg-white shadow-[0_4px_18px_rgba(0,0,0,0.07)] transition-all hover:-translate-y-1 hover:shadow-xl"
-                >
-                  <div className="relative">
-                    <ServicePhoto
-                      categoryId={cat.id}
-                      imageUrl={c.imageUrl}
-                      alt={cat.name}
-                      className="h-48 transition-transform duration-300 group-hover:scale-[1.03]"
-                    />
-                    {c.badge && (
-                      <span className="absolute left-3 top-3 rounded-full bg-accent-500 px-3 py-1 text-xs font-bold text-brand-900">
-                        {c.badge}
-                      </span>
-                    )}
-                  </div>
-                  <div className="p-5">
-                    <div className="flex items-start justify-between gap-3">
-                      <h3 className="text-lg font-bold leading-tight text-brand-700">{cat.name}</h3>
-                      <span className="flex-shrink-0 rounded-full bg-brand-900 px-3 py-1 text-xs text-white">
-                        desde <span className="font-extrabold text-accent-500">{cat.basePrice}€</span>
-                      </span>
-                    </div>
-                    <p className="mt-1.5 text-sm text-brand-500 line-clamp-2">{cat.description}</p>
-                  </div>
-                </Link>
-              )
-            })}
-          </div>
-        </div>
+      <div className="border-y border-line bg-white"><div className="mx-auto flex max-w-7xl flex-wrap gap-x-10 gap-y-4 px-5 py-5 sm:px-8">{TRUST.map(t => <div key={t.label} className="flex items-center gap-3 text-xs font-medium sm:text-sm"><t.icon className="h-5 w-5 text-ink" aria-hidden="true"/>{t.label}</div>)}</div></div>
+      <section data-reveal className="mx-auto max-w-7xl px-5 py-12 sm:px-8 sm:py-16">
+        <div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">Serviços para o seu dia a dia</p><h2 className="mt-3 text-3xl font-bold sm:text-4xl">O que precisa de resolver?</h2></div><Link href="/servicos" className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold">Ver todos os serviços <ArrowRight className="h-4 w-4"/></Link></div>
+        <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">{featured.map(cat => { const c = contentFor(content, cat.id); return <Link key={cat.id} href={`/servicos#${cat.id}`} className="premium-card group overflow-hidden rounded-2xl border border-line bg-white hover:border-accent-600"><div className="relative"><ServicePhoto categoryId={cat.id} imageUrl={c.imageUrl} alt={cat.name} className="h-48"/>{c.badge && <span className="absolute left-4 top-4 rounded-lg bg-accent-500 px-3 py-1 text-xs font-semibold">{c.badge}</span>}</div><div className="p-6"><div className="flex items-center justify-between gap-3"><h3 className="text-lg font-semibold">{cat.name}</h3><ArrowUpRight className="h-5 w-5 shrink-0 transition-transform duration-300 group-hover:-translate-y-1 group-hover:translate-x-1"/></div><p className="mt-2 line-clamp-2 text-sm leading-6 text-muted">{cat.description}</p><p className="mt-4 text-sm text-muted">Desde <strong className="font-semibold text-ink">{euro(cat.basePrice)}</strong></p></div></Link> })}</div>
       </section>
-
-      {/* TODAS AS CATEGORIAS */}
-      <section className="pb-16 sm:pb-20">
-        <div className="mx-auto max-w-7xl px-5 sm:px-8">
-          <h2 className="text-2xl font-extrabold tracking-tight text-brand-700 sm:text-3xl">Serviços por categoria</h2>
-          <p className="mt-2 text-brand-500">Tudo o que a tua casa precisa, organizado por área.</p>
-          <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-            {visible.map((cat) => {
-              const Icon = categoryIcon(cat.id)
-              return (
-                <Link
-                  key={cat.id}
-                  href={`/servicos#${cat.id}`}
-                  className="group flex flex-col gap-4 rounded-2xl border border-gray-200 bg-white p-4 transition-all hover:-translate-y-0.5 hover:border-accent-500 hover:shadow-md"
-                >
-                  <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent-50 transition-colors group-hover:bg-accent-500">
-                    <Icon className="h-5 w-5 text-brand-700" />
-                  </span>
-                  <span className="text-sm font-bold leading-tight text-brand-700">{cat.name}</span>
-                </Link>
-              )
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* PROMO BANNER */}
-      <section className="py-4">
-        <div className="mx-auto max-w-7xl px-5 sm:px-8">
-          <Link
-            href="/register"
-            className="group flex flex-col items-start justify-between gap-4 overflow-hidden rounded-2xl bg-brand-900 px-8 py-8 sm:flex-row sm:items-center sm:px-12"
-          >
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wide text-accent-500">Plano Anual</p>
-              <h3 className="mt-1 text-xl font-extrabold text-white sm:text-2xl">
-                Poupa em cada deslocação com o Plano Premium
-              </h3>
-              <p className="mt-1 text-sm text-white/60">Visitas grátis por ano e desconto na deslocação em todos os serviços.</p>
-            </div>
-            <span className="inline-flex flex-shrink-0 items-center gap-2 rounded-full bg-accent-500 px-6 py-3 text-sm font-bold text-brand-900 transition-colors group-hover:bg-accent-600">
-              Conhecer o plano
-              <ChevronRight className="h-4 w-4" />
-            </span>
-          </Link>
-        </div>
-      </section>
-
-      {/* COMO FUNCIONA (resumo — versão completa em /sobre) */}
-      <section className="bg-gray-50 py-16 sm:py-20">
-        <div className="mx-auto max-w-7xl px-5 sm:px-8">
-          <h2 className="text-2xl font-extrabold tracking-tight text-brand-700 sm:text-3xl">Como funciona</h2>
-          <div className="mt-10 grid gap-10 sm:grid-cols-3">
-            {STEPS.map((step) => (
-              <div key={step.title}>
-                <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-white shadow-sm">
-                  <step.icon className="h-6 w-6 text-accent-600" />
-                </span>
-                <h3 className="mt-4 text-lg font-bold text-brand-700">{step.title}</h3>
-                <p className="mt-1 text-brand-500">{step.desc}</p>
-              </div>
-            ))}
-          </div>
-          <Link href="/sobre" className="mt-8 inline-flex items-center gap-1 text-sm font-bold text-accent-700 hover:text-accent-800">
-            Saber mais sobre nós
-            <ChevronRight className="h-4 w-4" />
-          </Link>
-        </div>
-      </section>
-
-      {/* CTA / APP */}
-      <section className="py-16">
-        <div className="mx-auto max-w-7xl px-5 sm:px-8">
-          <div className="relative overflow-hidden rounded-3xl bg-brand-900 px-8 py-14 text-center sm:px-16">
-            <div className="pointer-events-none absolute -left-16 -top-16 h-64 w-64 rounded-full bg-accent-500/20 blur-3xl" />
-            <div className="pointer-events-none absolute -bottom-20 -right-10 h-64 w-64 rounded-full bg-accent-500/10 blur-3xl" />
-            <h2 className="relative text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
-              Leva a <span className="text-accent-500">ResolvaAgora</span> no bolso
-            </h2>
-            <p className="relative mx-auto mt-3 max-w-xl text-white/60">
-              Cria a tua conta e pede um profissional de confiança em minutos, onde quer que estejas.
-            </p>
-            <div className="relative mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-              <Link
-                href="/register"
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-accent-500 px-6 py-3.5 text-base font-bold text-brand-900 transition-colors hover:bg-accent-600"
-              >
-                Criar conta grátis
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-              <Link
-                href="/login"
-                className="inline-flex items-center justify-center rounded-full border-2 border-white/30 px-6 py-3.5 text-base font-bold text-white transition-colors hover:bg-white/10"
-              >
-                Entrar no portal
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
+      <PromotionSpotlight />
+      <section data-reveal className="mx-auto max-w-7xl px-5 pb-14 sm:px-8"><h2 className="text-2xl font-bold">Encontre por categoria</h2><div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">{visible.map(cat => { const Icon=categoryIcon(cat.id);return <Link key={cat.id} href={`/servicos#${cat.id}`} className="premium-card flex min-h-[120px] flex-col items-start gap-4 rounded-2xl border border-line bg-white p-5 hover:border-accent-600"><Icon className="h-7 w-7 text-accent-700"/><span className="text-sm font-semibold">{cat.name}</span></Link> })}</div></section>
+      {banners.length > 0 && <section data-reveal className="mx-auto max-w-7xl px-5 pb-14 sm:px-8"><h2 className="mb-5 text-2xl font-bold">Destaques</h2><BannerCarousel banners={banners} onBannerClick={handleBannerClick} size="lg"/></section>}
+      <section data-reveal className="border-t border-line"><div className="mx-auto max-w-7xl px-5 py-14 sm:px-8"><p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">Da primeira dúvida ao serviço feito</p><h2 className="mt-3 text-3xl font-bold sm:text-4xl">Simples, do princípio ao fim.</h2><div className="mt-10 grid gap-8 md:grid-cols-3">{STEPS.map(([n,t,d])=><article key={n} className="premium-step rounded-2xl border border-line bg-white p-6"><span className="text-xs font-bold text-accent-700">{n}</span><h3 className="mt-4 text-xl font-semibold">{t}</h3><p className="mt-3 max-w-sm text-sm leading-6 text-muted">{d}</p></article>)}</div></div></section>
+      <section data-reveal className="mx-auto max-w-7xl px-5 pb-14 sm:px-8"><div className="flex flex-wrap items-center justify-between gap-6 rounded-3xl bg-ink p-8 text-white sm:p-12"><div><p className="text-xs font-semibold uppercase tracking-widest text-accent-500">Sempre à mão</p><h2 className="mt-3 text-3xl font-semibold">A sua casa resolvida, no bolso.</h2><p className="mt-3 text-sm text-white/70">Conheça a app e acompanhe os seus serviços onde estiver.</p></div><Link href="/download" className="premium-button inline-flex min-h-12 items-center gap-3 rounded-xl bg-accent-500 px-6 py-3 font-semibold text-ink hover:bg-accent-600">Conhecer a app <ArrowRight className="h-4 w-4"/></Link></div></section>
+      </Reveal>
       <SiteFooter />
     </div>
   )
 }
-
 export default Landing

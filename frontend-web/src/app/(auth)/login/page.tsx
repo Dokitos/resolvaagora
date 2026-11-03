@@ -16,7 +16,8 @@ import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Wrench } from 'lucide-react'
+import { Eye, EyeOff } from 'lucide-react'
+import { AuthExperience } from '@/components/layout/auth-experience'
 
 const schema = z.object({
   email: z.string().email('Email inválido'),
@@ -28,6 +29,7 @@ type FormData = z.infer<typeof schema>
 export default function LoginPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
   })
@@ -94,35 +96,28 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100 p-4">
-      <div className="w-full max-w-sm">
-        <div className="bg-white rounded-2xl shadow-lg p-8">
-          <div className="flex flex-col items-center mb-8">
-            <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center mb-3">
-              <Wrench className="h-6 w-6 text-white" />
-            </div>
-            <h1 className="text-xl font-bold text-gray-900">ResolvaAgora</h1>
-            <p className="text-sm text-gray-500 mt-1">Inicie sessão na sua conta</p>
-          </div>
-
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <AuthExperience mode="login">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" aria-busy={loading}>
             <Input
               id="email"
               label="Email"
               type="email"
               placeholder="nome@email.pt"
+              autoComplete="email"
               error={errors.email?.message}
               {...register('email')}
             />
             <Input
               id="password"
-              label="Password"
-              type="password"
-              placeholder="••••••••"
+              label="Palavra-passe"
+              type={showPassword ? "text" : "password"}
+              placeholder="A sua palavra-passe"
+              autoComplete="current-password"
               error={errors.password?.message}
               {...register('password')}
             />
-            <Button type="submit" className="w-full" loading={loading}>
+            <button type="button" onClick={() => setShowPassword(!showPassword)} aria-pressed={showPassword} aria-label={showPassword ? 'Ocultar palavra-passe' : 'Mostrar palavra-passe'} className="inline-flex min-h-11 items-center gap-2 text-xs font-medium text-muted hover:text-ink">{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}{showPassword ? 'Ocultar' : 'Mostrar'} palavra-passe</button>
+            <Button type="submit" className="premium-button w-full min-h-12" loading={loading}>
               Entrar
             </Button>
           </form>
@@ -140,7 +135,7 @@ export default function LoginPage() {
                   type="button"
                   onClick={() => onSocial('google')}
                   disabled={loading}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
+                  className="flex w-full items-center justify-center gap-2 premium-button min-h-12 rounded-xl border border-line bg-white px-4 py-3 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
                 >
                   Continuar com Google
                 </button>
@@ -148,7 +143,7 @@ export default function LoginPage() {
                   type="button"
                   onClick={() => onSocial('apple')}
                   disabled={loading}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-black px-4 py-2.5 text-sm font-medium text-white transition hover:bg-gray-900 disabled:opacity-50"
+                  className="flex w-full items-center justify-center gap-2 premium-button min-h-12 rounded-xl bg-ink px-4 py-3 text-sm font-medium text-white transition hover:bg-gray-900 disabled:opacity-50"
                 >
                   Continuar com Apple
                 </button>
@@ -158,12 +153,10 @@ export default function LoginPage() {
 
           <p className="text-center text-sm text-gray-500 mt-6">
             Não tem conta?{' '}
-            <Link href="/register" className="text-blue-600 font-medium hover:underline">
+            <Link href="/register" className="text-ink font-semibold underline decoration-accent-500 underline-offset-4 hover:text-accent-700">
               Registar
             </Link>
           </p>
-        </div>
-      </div>
-    </div>
+    </AuthExperience>
   )
 }

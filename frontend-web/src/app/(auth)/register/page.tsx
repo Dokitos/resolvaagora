@@ -13,7 +13,8 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { PasswordStrengthMeter } from '@/components/ui/password-strength'
 import { api } from '@/lib/api/client'
-import { Wrench } from 'lucide-react'
+import { Eye, EyeOff } from 'lucide-react'
+import { AuthExperience } from '@/components/layout/auth-experience'
 
 const schema = z.object({
   firstName: personName('Nome'),
@@ -28,6 +29,7 @@ type FormData = z.infer<typeof schema>
 export default function RegisterPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const { register, handleSubmit, watch, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
   })
@@ -48,41 +50,31 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100 p-4">
-      <div className="w-full max-w-sm">
-        <div className="bg-white rounded-2xl shadow-lg p-8">
-          <div className="flex flex-col items-center mb-8">
-            <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center mb-3">
-              <Wrench className="h-6 w-6 text-white" />
-            </div>
-            <h1 className="text-xl font-bold text-gray-900">Criar conta</h1>
-            <p className="text-sm text-gray-500 mt-1">Registe-se gratuitamente</p>
-          </div>
-
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <AuthExperience mode="register">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" aria-busy={loading}>
             <div className="grid grid-cols-2 gap-3">
-              <Input id="firstName" label="Nome" placeholder="Maria" error={errors.firstName?.message} {...register('firstName')} />
-              <Input id="lastName" label="Apelido" placeholder="Santos" error={errors.lastName?.message} {...register('lastName')} />
+              <Input id="firstName" label="Nome" placeholder="Maria" autoComplete="given-name" error={errors.firstName?.message} {...register('firstName')} />
+              <Input id="lastName" label="Apelido" placeholder="Santos" autoComplete="family-name" error={errors.lastName?.message} {...register('lastName')} />
             </div>
-            <Input id="email" label="Email" type="email" placeholder="nome@email.pt" error={errors.email?.message} {...register('email')} />
-            <Input id="phone" label="Telemóvel (opcional)" placeholder="+351 912 345 678" {...register('phone')} />
+            <Input id="email" label="Email" type="email" placeholder="nome@email.pt" autoComplete="email" error={errors.email?.message} {...register('email')} />
+            <Input id="phone" label="Telemóvel (opcional)" placeholder="+351 912 345 678" type="tel" autoComplete="tel" error={errors.phone?.message} {...register('phone')} />
             <div className="flex flex-col gap-2">
-              <Input id="password" label="Password" type="password" placeholder="••••••••" error={errors.password?.message} {...register('password')} />
+              <Input id="password" label="Palavra-passe" type={showPassword ? "text" : "password"} placeholder="Pelo menos 8 caracteres" autoComplete="new-password" error={errors.password?.message} {...register('password')} />
+              <button type="button" onClick={() => setShowPassword(!showPassword)} aria-pressed={showPassword} aria-label={showPassword ? 'Ocultar palavra-passe' : 'Mostrar palavra-passe'} className="inline-flex min-h-11 items-center gap-2 text-xs font-medium text-muted hover:text-ink">{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}{showPassword ? 'Ocultar' : 'Mostrar'} palavra-passe</button>
               <PasswordStrengthMeter password={password ?? ''} />
             </div>
-            <Button type="submit" className="w-full" loading={loading}>
+            <p className="text-xs leading-5 text-muted">Conheça os nossos <Link href="/termos" className="underline underline-offset-2">Termos</Link> e a <Link href="/privacidade" className="underline underline-offset-2">Política de Privacidade</Link>.</p>
+            <Button type="submit" className="premium-button w-full min-h-12" loading={loading}>
               Criar conta
             </Button>
           </form>
 
           <p className="text-center text-sm text-gray-500 mt-6">
             Já tem conta?{' '}
-            <Link href="/login" className="text-blue-600 font-medium hover:underline">
+            <Link href="/login" className="text-ink font-semibold underline decoration-accent-500 underline-offset-4 hover:text-accent-700">
               Entrar
             </Link>
           </p>
-        </div>
-      </div>
-    </div>
+    </AuthExperience>
   )
 }

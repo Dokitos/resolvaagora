@@ -27,7 +27,7 @@ export function BannerCarousel({ banners, onBannerClick, size = 'sm', className 
         <button
           key={banner.id}
           onClick={() => onBannerClick(banner)}
-          className={cn('relative flex-shrink-0 rounded-2xl overflow-hidden snap-start text-left', cardSize)}
+          className={cn('premium-card relative flex-shrink-0 rounded-2xl overflow-hidden snap-start text-left', cardSize)}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={banner.imageUrl} alt={banner.title ?? ''} className="absolute inset-0 w-full h-full object-cover" />

@@ -4,19 +4,58 @@
 
 @layer base {
   :root {
-    --radius: 0.5rem;
+    --radius: 0.875rem;
+    --ra-canvas: #F7F6F2;
+    --ra-ink: #191B1A;
+    --ra-muted: #62655F;
+    --ra-border: #E5E5DE;
   }
   body {
-    @apply bg-gray-50 text-gray-900 antialiased;
+    @apply antialiased;
+    background: var(--ra-canvas);
+    color: var(--ra-ink);
   }
 }
 
 @layer utilities {
+  .premium-button { transition: transform 220ms ease, box-shadow 220ms ease, background-color 220ms ease; }
+  .premium-button:active { transform: translateY(1px) scale(.985); }
+  .premium-card, .premium-step { transition: transform 300ms ease, box-shadow 300ms ease, border-color 300ms ease; }
+  .premium-card img { transition: transform 650ms cubic-bezier(.2,.7,.3,1); }
+  .auth-photo { z-index: -20; }
+  .auth-enter { animation: premium-enter 650ms cubic-bezier(.2,.7,.3,1) both; }
+  .premium-hero h1 { animation: premium-enter 750ms cubic-bezier(.2,.7,.3,1) both; }
+  .premium-hero form { animation: premium-enter 750ms 100ms cubic-bezier(.2,.7,.3,1) both; }
+  .hero-photo { animation: premium-photo 1.2s cubic-bezier(.2,.7,.3,1) both; }
+  .auth-floating { animation: premium-enter 900ms 200ms both; }
+  [data-reveal] { transition: opacity 650ms ease, transform 650ms cubic-bezier(.2,.7,.3,1); }
+  [data-reveal].reveal-pending { opacity: 0; transform: translateY(24px); }
+  .promo-copy { animation: premium-enter 450ms ease both; }
+  .promo-orbit { animation: premium-orbit 14s ease-in-out infinite alternate; }
+  @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+    .premium-button:hover { transform: translateY(-2px); box-shadow: 0 8px 24px #191b1a16; }
+    .premium-card:hover { transform: translateY(-6px); box-shadow: 0 18px 40px #191b1a0d; }
+    .premium-card:hover img { transform: scale(1.045); }
+    .premium-step:hover { transform: translateY(-4px); border-color: #F5B301; }
+  }
+  @keyframes premium-enter { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes premium-photo { from { opacity: .6; transform: scale(1.04); } to { opacity: 1; transform: scale(1); } }
+  @keyframes premium-orbit { from { transform: translateY(0) scale(1); } to { transform: translateY(40px) scale(1.14); } }
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+}
+
+@layer base {
+  h1, h2, h3 { letter-spacing: -0.025em; text-wrap: balance; }
+  :focus-visible { outline: 2px solid #876000; outline-offset: 4px; }
+  ::selection { background: #FDE9A8; color: #191B1A; }
+  @media (prefers-reduced-motion: reduce) {
+    [data-reveal].reveal-pending { opacity: 1; transform: none; }
+    *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
   }
 }

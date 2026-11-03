@@ -49,10 +49,10 @@ export function ClientShell({ children }: { children: React.ReactNode }) {
   })
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-canvas text-ink flex flex-col">
       {/* Top bar */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
-        <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
+      <header className="bg-white border-b border-line sticky top-0 z-40">
+        <div className="max-w-6xl mx-auto px-4 h-20 flex items-center justify-between">
           <Link href="/dashboard" className="flex items-center gap-3">
             <div className="w-8 h-8 bg-brand-700 rounded-lg flex items-center justify-center">
               <Wrench className="h-4 w-4 text-accent-500" />
@@ -66,9 +66,9 @@ export function ClientShell({ children }: { children: React.ReactNode }) {
                 key={href}
                 href={href}
                 className={cn(
-                  'relative flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                  'relative flex items-center gap-2 px-3 py-2 rounded-lg min-h-11 text-sm font-medium transition-colors',
                   pathname.startsWith(href)
-                    ? 'bg-accent-50 text-accent-700'
+                    ? 'bg-accent-50 text-ink'
                     : 'text-gray-600 hover:bg-gray-100',
                 )}
               >
@@ -93,10 +93,10 @@ export function ClientShell({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
-      <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-6 pb-24 md:pb-6">{children}</main>
+      <main className="flex-1 max-w-6xl w-full mx-auto px-5 py-8 pb-24 md:pb-6">{children}</main>
 
       {/* Bottom nav (mobile) */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-gray-200 z-40">
+      <nav className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-line z-40">
         <div className="grid grid-cols-3">
           {nav.map(({ href, label, icon: Icon }) => {
             const active = pathname.startsWith(href)

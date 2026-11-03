@@ -48,7 +48,7 @@ export function ServiceCard({
   const from = fromPrice(sub)
 
   return (
-    <div className="flex flex-col rounded-2xl border border-gray-200 bg-white p-5 transition-shadow hover:shadow-md">
+    <div className="flex flex-col rounded-2xl border border-line bg-white p-5 transition-colors hover:border-accent-500">
       <div className="flex items-start gap-4">
         <span className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-accent-50">
           <Icon className="h-6 w-6 text-brand-700" />
@@ -72,14 +72,14 @@ export function ServiceCard({
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="text-xs font-bold uppercase tracking-wide text-brand-700 underline underline-offset-4 hover:text-accent-700"
+          className="min-h-11 text-xs font-bold uppercase tracking-wide text-brand-700 underline underline-offset-4 hover:text-accent-700"
         >
           Saber mais
         </button>
         <button
           type="button"
           onClick={request}
-          className="rounded-full bg-brand-900 px-5 py-2.5 text-xs font-bold uppercase tracking-wide text-white transition-colors hover:bg-black"
+          className="min-h-11 rounded-xl bg-accent-500 px-5 py-2.5 text-sm font-semibold text-brand-900 transition-colors hover:bg-accent-600"
         >
           Pedir serviço
         </button>
@@ -207,7 +207,7 @@ function ServiceDetails({
           <button
             type="button"
             onClick={onRequest}
-            className="w-full rounded-full bg-brand-900 py-3.5 text-sm font-bold uppercase tracking-wide text-white transition-colors hover:bg-black"
+            className="w-full rounded-full bg-brand-900 py-3.5 text-sm font-bold uppercase tracking-wide text-white transition-colors hover:bg-accent-600"
           >
             Pedir serviço
           </button>
