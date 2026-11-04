@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/theme/app_theme.dart';
 import 'package:moura_technician/l10n/generated/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../data/catalog_i18n.dart';
@@ -21,7 +22,8 @@ class BookingFooterBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    ref.watch(catalogPricesLoadedProvider); // rebuild quando os preços do admin chegarem
+    ref.watch(
+        catalogPricesLoadedProvider); // rebuild quando os preços do admin chegarem
     final booking = ref.watch(bookingProvider);
     final l = AppLocalizations.of(context);
     final total = booking.total;
@@ -29,7 +31,9 @@ class BookingFooterBar extends ConsumerWidget {
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
-        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, -2))],
+        boxShadow: [
+          BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, -2))
+        ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -39,17 +43,22 @@ class BookingFooterBar extends ConsumerWidget {
               onTap: () => _showPriceSheet(context, ref),
               child: Container(
                 color: Colors.grey[50],
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                 child: Row(
                   children: [
                     Text(
                       '${total.toStringAsFixed(2)}€',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 16),
                     ),
                     const SizedBox(width: 8),
                     Text(
                       '${l.bookingSeeDetails} ↑',
-                      style: TextStyle(color: Colors.grey[700], fontWeight: FontWeight.w600, fontSize: 13),
+                      style: TextStyle(
+                          color: Colors.grey[700],
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13),
                     ),
                   ],
                 ),
@@ -65,11 +74,13 @@ class BookingFooterBar extends ConsumerWidget {
                       onPressed: onBack,
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
                         side: const BorderSide(color: Colors.black26),
                         foregroundColor: Colors.black,
                       ),
-                      child: Text(l.bookingBack.toUpperCase(), style: const TextStyle(fontWeight: FontWeight.bold)),
+                      child: Text(l.bookingBack.toUpperCase(),
+                          style: const TextStyle(fontWeight: FontWeight.bold)),
                     ),
                   ),
                 if (onBack != null) const SizedBox(width: 12),
@@ -77,14 +88,17 @@ class BookingFooterBar extends ConsumerWidget {
                   child: ElevatedButton(
                     onPressed: nextEnabled ? onNext : null,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF161616),
-                      foregroundColor: Colors.white,
+                      backgroundColor: AppTheme.brandYellow,
+                      foregroundColor: AppTheme.ink,
                       disabledBackgroundColor: Colors.grey[300],
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
                       elevation: 0,
                     ),
-                    child: Text((nextLabel ?? l.bookingNext).toUpperCase(), style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                    child: Text((nextLabel ?? l.bookingNext).toUpperCase(),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, letterSpacing: 0.5)),
                   ),
                 ),
               ],
@@ -120,23 +134,26 @@ class _PriceDetailsSheet extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            booking.subcategory?.localizedName(locale) ?? booking.category?.localizedName(locale) ?? l.priceService,
+            booking.subcategory?.localizedName(locale) ??
+                booking.category?.localizedName(locale) ??
+                l.priceService,
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           ),
           const SizedBox(height: 16),
           if (selected.isNotEmpty) ...[
-            Text(l.priceService, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+            Text(l.priceService,
+                style: const TextStyle(color: Colors.grey, fontSize: 13)),
             const SizedBox(height: 8),
             ...selected.map((bi) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              child: Row(
-                children: [
-                  Expanded(child: Text(bi.item.localizedName(locale))),
-                  Text('${(bi.item.price * bi.qty).toStringAsFixed(2)}€',
-                      style: const TextStyle(fontWeight: FontWeight.w500)),
-                ],
-              ),
-            )),
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(
+                    children: [
+                      Expanded(child: Text(bi.item.localizedName(locale))),
+                      Text('${(bi.item.price * bi.qty).toStringAsFixed(2)}€',
+                          style: const TextStyle(fontWeight: FontWeight.w500)),
+                    ],
+                  ),
+                )),
             const Divider(),
           ],
           Row(
@@ -149,20 +166,25 @@ class _PriceDetailsSheet extends StatelessWidget {
           const SizedBox(height: 8),
           Row(
             children: [
-              Text(l.priceTotal, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              Text(l.priceTotal,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 16)),
               const Spacer(),
               Text(
                 '${booking.total.toStringAsFixed(2)}€',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                style:
+                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
               ),
             ],
           ),
           const SizedBox(height: 16),
-          Text(l.serviceConditions, style: const TextStyle(fontWeight: FontWeight.bold)),
+          Text(l.serviceConditions,
+              style: const TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           Text(
             l.serviceConditionsText,
-            style: const TextStyle(fontSize: 13, color: Colors.black87, height: 1.5),
+            style: const TextStyle(
+                fontSize: 13, color: Colors.black87, height: 1.5),
           ),
           const SizedBox(height: 8),
         ],

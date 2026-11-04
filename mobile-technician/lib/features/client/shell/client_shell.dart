@@ -9,8 +9,16 @@ class ClientShell extends ConsumerWidget {
 
   static const _tabs = [
     (path: '/client/home', icon: Icons.home_outlined, activeIcon: Icons.home),
-    (path: '/client/services', icon: Icons.receipt_long_outlined, activeIcon: Icons.receipt_long),
-    (path: '/client/account', icon: Icons.person_outline, activeIcon: Icons.person),
+    (
+      path: '/client/services',
+      icon: Icons.receipt_long_outlined,
+      activeIcon: Icons.receipt_long
+    ),
+    (
+      path: '/client/account',
+      icon: Icons.person_outline,
+      activeIcon: Icons.person
+    ),
   ];
 
   int _indexOf(String location) {
@@ -35,6 +43,7 @@ class ClientShell extends ConsumerWidget {
         onDestinationSelected: (i) => context.go(_tabs[i].path),
         backgroundColor: Colors.white,
         elevation: 0,
+        height: 76,
         indicatorColor: const Color(0xFFFFF7E0),
         destinations: [
           for (var i = 0; i < _tabs.length; i++)

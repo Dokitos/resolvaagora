@@ -77,7 +77,7 @@ class _BrandFallback extends StatelessWidget {
     return DecoratedBox(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF1C1C1C), Color(0xFF2E2E2E)],
+          colors: [Color(0xFFF1EEE6), Color(0xFFE9E5DA)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -99,7 +99,8 @@ class _BrandFallback extends StatelessWidget {
             ),
           ),
           Center(
-            child: Icon(categoryIcon(categoryId), size: iconSize, color: AppTheme.brandYellow),
+            child: Icon(categoryIcon(categoryId),
+                size: iconSize, color: AppTheme.brandYellowDark),
           ),
         ],
       ),

@@ -16,12 +16,13 @@ class CategoryDetailPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    ref.watch(catalogPricesLoadedProvider); // rebuild quando os preços do admin chegarem
+    ref.watch(
+        catalogPricesLoadedProvider); // rebuild quando os preços do admin chegarem
     final locale = Localizations.localeOf(context);
     final content = ref.watch(catalogContentProvider).valueOrNull ?? const {};
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F7F8),
+      backgroundColor: AppTheme.surface,
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
@@ -29,12 +30,18 @@ class CategoryDetailPage extends ConsumerWidget {
             expandedHeight: 210,
             backgroundColor: AppTheme.brandBlack,
             foregroundColor: Colors.white,
-            leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.pop()),
+            leading: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => context.pop()),
             flexibleSpace: FlexibleSpaceBar(
-              titlePadding: const EdgeInsetsDirectional.only(start: 56, bottom: 14, end: 16),
+              titlePadding: const EdgeInsetsDirectional.only(
+                  start: 56, bottom: 14, end: 16),
               title: Text(
                 category.localizedName(locale),
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 18),
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 18),
               ),
               background: Stack(
                 fit: StackFit.expand,
@@ -68,17 +75,21 @@ class CategoryDetailPage extends ConsumerWidget {
                   Expanded(
                     child: Text(
                       category.localizedDescription(locale),
-                      style: TextStyle(color: Colors.grey[700], fontSize: 14, height: 1.45),
+                      style: TextStyle(
+                          color: Colors.grey[700], fontSize: 14, height: 1.45),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text('Desde', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+                      Text('Desde',
+                          style:
+                              TextStyle(fontSize: 12, color: Colors.grey[500])),
                       Text(
                         '€${category.basePrice.toStringAsFixed(2)}',
-                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+                        style: const TextStyle(
+                            fontSize: 22, fontWeight: FontWeight.w800),
                       ),
                     ],
                   ),
@@ -91,7 +102,8 @@ class CategoryDetailPage extends ConsumerWidget {
               (context, i) => _SubcategoryCard(
                 category: category,
                 sub: category.subcategories[i],
-                content: content.service(category.id, category.subcategories[i].id),
+                content:
+                    content.service(category.id, category.subcategories[i].id),
               ),
               childCount: category.subcategories.length,
             ),
@@ -109,7 +121,8 @@ class _SubcategoryCard extends ConsumerWidget {
   final ServiceCategory category;
   final ServiceSubcategory sub;
   final CatalogContent content;
-  const _SubcategoryCard({required this.category, required this.sub, required this.content});
+  const _SubcategoryCard(
+      {required this.category, required this.sub, required this.content});
 
   void _request(BuildContext context, WidgetRef ref) {
     ref.read(bookingProvider.notifier).selectCategory(category);
@@ -143,8 +156,10 @@ class _SubcategoryCard extends ConsumerWidget {
               Container(
                 width: 52,
                 height: 52,
-                decoration: const BoxDecoration(color: AppTheme.brandYellowSoft, shape: BoxShape.circle),
-                child: Icon(categoryIcon(category.id), color: AppTheme.brandBlack, size: 25),
+                decoration: const BoxDecoration(
+                    color: AppTheme.brandYellowSoft, shape: BoxShape.circle),
+                child: Icon(categoryIcon(category.id),
+                    color: AppTheme.brandBlack, size: 25),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -154,13 +169,17 @@ class _SubcategoryCard extends ConsumerWidget {
                     Text.rich(
                       TextSpan(children: [
                         TextSpan(
-                          text: sub.hasCustomQuote ? 'Orçamento no local' : 'Desde ',
+                          text: sub.hasCustomQuote
+                              ? 'Orçamento no local'
+                              : 'Desde ',
                           style: TextStyle(color: Colors.grey[600]),
                         ),
                         if (!sub.hasCustomQuote && from != null)
                           TextSpan(
                             text: '€${from.toStringAsFixed(2)}',
-                            style: const TextStyle(fontWeight: FontWeight.w800, color: AppTheme.brandBlack),
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                                color: AppTheme.brandBlack),
                           ),
                       ]),
                       style: const TextStyle(fontSize: 13),
@@ -168,12 +187,14 @@ class _SubcategoryCard extends ConsumerWidget {
                     const SizedBox(height: 3),
                     Text(
                       sub.localizedName(locale),
-                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w700, fontSize: 16),
                     ),
                     const SizedBox(height: 3),
                     Text(
                       sub.localizedDescription(locale),
-                      style: TextStyle(color: Colors.grey[600], fontSize: 13, height: 1.35),
+                      style: TextStyle(
+                          color: Colors.grey[600], fontSize: 13, height: 1.35),
                     ),
                   ],
                 ),
@@ -204,11 +225,15 @@ class _SubcategoryCard extends ConsumerWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.brandBlack,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24)),
                   elevation: 0,
                 ),
-                child: Text(l.requestService, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700)),
+                child: Text(l.requestService,
+                    style: const TextStyle(
+                        fontSize: 12.5, fontWeight: FontWeight.w700)),
               ),
             ],
           ),
@@ -218,13 +243,15 @@ class _SubcategoryCard extends ConsumerWidget {
   }
 
   /// "Saber mais": o que inclui, o que não inclui e o preço de cada item.
-  void _showDetails(BuildContext context, WidgetRef ref, List<ServiceItem> items) {
+  void _showDetails(
+      BuildContext context, WidgetRef ref, List<ServiceItem> items) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
       backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (sheetContext) => _DetailsSheet(
         sub: sub,
         items: items,
@@ -243,7 +270,11 @@ class _DetailsSheet extends StatefulWidget {
   final List<ServiceItem> items;
   final CatalogContent content;
   final VoidCallback onRequest;
-  const _DetailsSheet({required this.sub, required this.items, required this.content, required this.onRequest});
+  const _DetailsSheet(
+      {required this.sub,
+      required this.items,
+      required this.content,
+      required this.onRequest});
 
   @override
   State<_DetailsSheet> createState() => _DetailsSheetState();
@@ -258,7 +289,8 @@ class _DetailsSheetState extends State<_DetailsSheet> {
     super.initState();
     // Sem texto de "inclui" (serviço editado e esvaziado no painel), abre
     // diretamente nos preços em vez de num separador vazio.
-    if (widget.content.includes.isEmpty) _tab = widget.content.excludes.isEmpty ? 2 : 1;
+    if (widget.content.includes.isEmpty)
+      _tab = widget.content.excludes.isEmpty ? 2 : 1;
   }
 
   @override
@@ -285,11 +317,13 @@ class _DetailsSheetState extends State<_DetailsSheet> {
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
               children: [
                 Text(widget.sub.localizedName(locale),
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    style: const TextStyle(
+                        fontSize: 20, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 6),
                 Text(
                   widget.sub.localizedDescription(locale),
-                  style: TextStyle(fontSize: 14, color: Colors.grey[700], height: 1.4),
+                  style: TextStyle(
+                      fontSize: 14, color: Colors.grey[700], height: 1.4),
                 ),
                 const SizedBox(height: 18),
                 if (tabs.length > 1)
@@ -305,7 +339,9 @@ class _DetailsSheetState extends State<_DetailsSheet> {
                               decoration: BoxDecoration(
                                 border: Border(
                                   bottom: BorderSide(
-                                    color: _tab == id ? AppTheme.brandBlack : Colors.transparent,
+                                    color: _tab == id
+                                        ? AppTheme.brandBlack
+                                        : Colors.transparent,
                                     width: 2.5,
                                   ),
                                 ),
@@ -315,7 +351,9 @@ class _DetailsSheetState extends State<_DetailsSheet> {
                                 style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w700,
-                                  color: _tab == id ? AppTheme.brandBlack : Colors.grey[500],
+                                  color: _tab == id
+                                      ? AppTheme.brandBlack
+                                      : Colors.grey[500],
                                 ),
                               ),
                             ),
@@ -340,12 +378,18 @@ class _DetailsSheetState extends State<_DetailsSheet> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.info_outline, size: 18, color: Colors.orange),
+                      const Icon(Icons.info_outline,
+                          size: 18, color: Colors.orange),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          widget.sub.hasCustomQuote ? l.learnMoreCustomQuote : l.learnMoreFinalPrice,
-                          style: TextStyle(fontSize: 12, color: Colors.grey[800], height: 1.35),
+                          widget.sub.hasCustomQuote
+                              ? l.learnMoreCustomQuote
+                              : l.learnMoreFinalPrice,
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[800],
+                              height: 1.35),
                         ),
                       ),
                     ],
@@ -366,11 +410,13 @@ class _DetailsSheetState extends State<_DetailsSheet> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.brandBlack,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(25)),
                     elevation: 0,
                   ),
                   child: Text(l.requestService,
-                      style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, letterSpacing: 0.5)),
                 ),
               ),
             ),
@@ -399,7 +445,9 @@ class _Bullet extends StatelessWidget {
             color: included ? AppTheme.success : Colors.grey[500],
           ),
           const SizedBox(width: 10),
-          Expanded(child: Text(text, style: const TextStyle(fontSize: 14, height: 1.35))),
+          Expanded(
+              child: Text(text,
+                  style: const TextStyle(fontSize: 14, height: 1.35))),
         ],
       ),
     );
@@ -426,11 +474,14 @@ class _ItemPriceRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(item.localizedName(locale), style: const TextStyle(fontSize: 14)),
+                Text(item.localizedName(locale),
+                    style: const TextStyle(fontSize: 14)),
                 if (notes.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 2),
-                    child: Text(notes, style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+                    child: Text(notes,
+                        style:
+                            TextStyle(fontSize: 12, color: Colors.grey[500])),
                   ),
               ],
             ),
@@ -440,9 +491,11 @@ class _ItemPriceRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text('€${item.price.toStringAsFixed(2)}',
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                  style: const TextStyle(
+                      fontSize: 14, fontWeight: FontWeight.w600)),
               if (item.unit != null)
-                Text(l.perUnit(item.unit!), style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+                Text(l.perUnit(item.unit!),
+                    style: TextStyle(fontSize: 11, color: Colors.grey[500])),
             ],
           ),
         ],

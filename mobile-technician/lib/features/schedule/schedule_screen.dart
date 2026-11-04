@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../../core/services/technician_service.dart';
+import '../../core/services/auth_service.dart';
 import '../../core/models/service_request.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/theme/app_theme.dart';
@@ -50,7 +51,9 @@ DateTime _effectiveDate(ServiceRequest j) =>
 Map<DateTime, List<ServiceRequest>> _groupByDay(List<ServiceRequest> jobs) {
   final map = <DateTime, List<ServiceRequest>>{};
   for (final j in jobs) {
-    map.putIfAbsent(_dayKey(_effectiveDate(j)), () => <ServiceRequest>[]).add(j);
+    map
+        .putIfAbsent(_dayKey(_effectiveDate(j)), () => <ServiceRequest>[])
+        .add(j);
   }
   for (final list in map.values) {
     list.sort((a, b) => _effectiveDate(a).compareTo(_effectiveDate(b)));
@@ -78,7 +81,7 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(l.scheduleScreenTitle),
+        title: Text(l.premiumAgendaTitle),
         actions: [
           const OnboardingTrigger(role: OnboardingRole.technician),
           Padding(
@@ -104,7 +107,8 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
-                          color: isAvailable ? AppTheme.success : Colors.grey[500],
+                          color:
+                              isAvailable ? AppTheme.success : Colors.grey[500],
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -113,15 +117,22 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
                         activeColor: AppTheme.success,
                         onChanged: (v) async {
                           final previous = isAvailable;
-                          ref.read(_availabilityOverrideProvider.notifier).state = v;
+                          ref
+                              .read(_availabilityOverrideProvider.notifier)
+                              .state = v;
                           try {
-                            await ref.read(technicianServiceProvider).setAvailability(v);
+                            await ref
+                                .read(technicianServiceProvider)
+                                .setAvailability(v);
                           } catch (_) {
-                            ref.read(_availabilityOverrideProvider.notifier).state = previous;
+                            ref
+                                .read(_availabilityOverrideProvider.notifier)
+                                .state = previous;
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text('Não foi possível atualizar a disponibilidade.'),
+                                  content: Text(
+                                      'Não foi possível atualizar a disponibilidade.'),
                                   backgroundColor: AppTheme.danger,
                                 ),
                               );
@@ -157,10 +168,12 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.calendar_today_outlined, size: 56, color: Colors.grey[300]),
+                  Icon(Icons.calendar_today_outlined,
+                      size: 56, color: Colors.grey[300]),
                   const SizedBox(height: 16),
                   Text(l.noAssignedJobs,
-                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w600, fontSize: 16)),
                   const SizedBox(height: 6),
                   Text(l.stayAvailable,
                       style: TextStyle(color: Colors.grey[500], fontSize: 14)),
@@ -181,7 +194,10 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
+                _AgendaWelcome(),
+                const SizedBox(height: 20),
                 _SummaryStrip(jobs: jobs),
+                _NextJob(jobs: jobs),
                 const SizedBox(height: 16),
                 SegmentedButton<_View>(
                   segments: [
@@ -197,7 +213,8 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
                     ),
                   ],
                   selected: {_view},
-                  onSelectionChanged: (sel) => setState(() => _view = sel.first),
+                  onSelectionChanged: (sel) =>
+                      setState(() => _view = sel.first),
                 ),
                 const SizedBox(height: 16),
                 if (_view == _View.calendar)
@@ -271,7 +288,8 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 28),
           child: Center(
-            child: Text(l.noJobsOnDay, style: TextStyle(color: Colors.grey[500])),
+            child:
+                Text(l.noJobsOnDay, style: TextStyle(color: Colors.grey[500])),
           ),
         )
       else
@@ -336,7 +354,8 @@ class _SectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+        Text(title,
+            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
         const SizedBox(width: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -346,7 +365,10 @@ class _SectionHeader extends StatelessWidget {
           ),
           child: Text(
             '$count',
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey[700]),
+            style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[700]),
           ),
         ),
       ],
@@ -360,14 +382,20 @@ class _JobCard extends StatelessWidget {
 
   Color get _statusColor {
     switch (job.status) {
-      case ServiceStatus.ASSIGNED: return AppTheme.primary;
-      case ServiceStatus.IN_TRANSIT: return AppTheme.warning;
+      case ServiceStatus.ASSIGNED:
+        return AppTheme.primary;
+      case ServiceStatus.IN_TRANSIT:
+        return AppTheme.warning;
       case ServiceStatus.ARRIVED:
-      case ServiceStatus.IN_DIAGNOSIS: return const Color(0xFF7C3AED);
-      case ServiceStatus.QUOTE_SENT: return Colors.orange;
+      case ServiceStatus.IN_DIAGNOSIS:
+        return const Color(0xFF7C3AED);
+      case ServiceStatus.QUOTE_SENT:
+        return Colors.orange;
       case ServiceStatus.QUOTE_APPROVED:
-      case ServiceStatus.IN_EXECUTION: return AppTheme.success;
-      default: return Colors.grey;
+      case ServiceStatus.IN_EXECUTION:
+        return AppTheme.success;
+      default:
+        return Colors.grey;
     }
   }
 
@@ -392,7 +420,8 @@ class _JobCard extends StatelessWidget {
                   color: Colors.grey[100],
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Center(child: Text(icon, style: const TextStyle(fontSize: 22))),
+                child: Center(
+                    child: Text(icon, style: const TextStyle(fontSize: 22))),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -401,17 +430,22 @@ class _JobCard extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Text(label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                        Text(label,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w600, fontSize: 15)),
                         if (job.isPriority) ...[
                           const SizedBox(width: 6),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
                               color: Colors.amber[100],
                               borderRadius: BorderRadius.circular(6),
                             ),
-                            child: Text(AppLocalizations.of(context).priorityTag,
-                                style: const TextStyle(fontSize: 11, color: Color(0xFF92400E))),
+                            child: Text(
+                                AppLocalizations.of(context).priorityTag,
+                                style: const TextStyle(
+                                    fontSize: 11, color: Color(0xFF92400E))),
                           ),
                         ],
                       ],
@@ -425,24 +459,30 @@ class _JobCard extends StatelessWidget {
                       const SizedBox(height: 3),
                       Row(
                         children: [
-                          Icon(Icons.schedule, size: 13, color: Colors.grey[500]),
+                          Icon(Icons.schedule,
+                              size: 13, color: Colors.grey[500]),
                           const SizedBox(width: 4),
                           Text(
                             '${formatWeekdayShort(job.scheduledDate!)}, ${formatDateShort(job.scheduledDate!)} • ${formatTime(job.scheduledDate!)}',
-                            style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                            style: TextStyle(
+                                color: Colors.grey[500], fontSize: 12),
                           ),
                         ],
                       ),
                     ],
                     const SizedBox(height: 6),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
                         color: _statusColor.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(status,
-                          style: TextStyle(color: _statusColor, fontSize: 12, fontWeight: FontWeight.w500)),
+                          style: TextStyle(
+                              color: _statusColor,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500)),
                     ),
                   ],
                 ),
@@ -455,7 +495,6 @@ class _JobCard extends StatelessWidget {
     );
   }
 }
-
 
 /// Resumo do topo da agenda: quantos trabalhos hoje, quantos esta semana e
 /// quantos ja concluidos no mes. Contado a partir da lista ja carregada, sem
@@ -487,11 +526,23 @@ class _SummaryStrip extends StatelessWidget {
 
     return Row(
       children: [
-        Expanded(child: _SummaryCard(label: l.todaySection, value: '$nHoje', color: AppTheme.primary)),
+        Expanded(
+            child: _SummaryCard(
+                label: l.todaySection,
+                value: '$nHoje',
+                color: AppTheme.primary)),
         const SizedBox(width: 10),
-        Expanded(child: _SummaryCard(label: l.thisWeekSection, value: '$nSemana', color: AppTheme.warning)),
+        Expanded(
+            child: _SummaryCard(
+                label: l.thisWeekSection,
+                value: '$nSemana',
+                color: AppTheme.warning)),
         const SizedBox(width: 10),
-        Expanded(child: _SummaryCard(label: l.completedSection, value: '$nConcluidos', color: AppTheme.success)),
+        Expanded(
+            child: _SummaryCard(
+                label: l.completedSection,
+                value: '$nConcluidos',
+                color: AppTheme.success)),
       ],
     );
   }
@@ -501,19 +552,22 @@ class _SummaryCard extends StatelessWidget {
   final String label;
   final String value;
   final Color color;
-  const _SummaryCard({required this.label, required this.value, required this.color});
+  const _SummaryCard(
+      {required this.label, required this.value, required this.color});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         children: [
-          Text(value, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: color)),
+          Text(value,
+              style: TextStyle(
+                  fontSize: 22, fontWeight: FontWeight.w700, color: color)),
           const SizedBox(height: 2),
           Text(
             label,
@@ -524,6 +578,51 @@ class _SummaryCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _AgendaWelcome extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final name =
+        ref.watch(authProvider).valueOrNull?.name?.trim().split(' ').first;
+    final l = AppLocalizations.of(context);
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(
+          name != null && name.isNotEmpty
+              ? l.homeGreetingNamed(name)
+              : l.homeGreeting,
+          style: const TextStyle(color: AppTheme.muted, fontSize: 15)),
+      const SizedBox(height: 8),
+      Text(l.premiumAgendaTitle,
+          style: Theme.of(context).textTheme.headlineMedium),
+    ]);
+  }
+}
+
+class _NextJob extends StatelessWidget {
+  final List<ServiceRequest> jobs;
+  const _NextJob({required this.jobs});
+  @override
+  Widget build(BuildContext context) {
+    const closed = {
+      ServiceStatus.COMPLETED,
+      ServiceStatus.CANCELLED,
+      ServiceStatus.EXPIRED,
+      ServiceStatus.QUOTE_REJECTED
+    };
+    final active = jobs.where((j) => !closed.contains(j.status)).toList()
+      ..sort((a, b) => _effectiveDate(a).compareTo(_effectiveDate(b)));
+    if (active.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 20, bottom: 8),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(AppLocalizations.of(context).premiumNextJob,
+            style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 10),
+        _JobCard(job: active.first),
+      ]),
     );
   }
 }

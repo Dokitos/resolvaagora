@@ -10,6 +10,9 @@ import '../../../core/services/client_service.dart';
 import '../../../core/services/settings_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/services/catalog_content_service.dart';
+import '../../../core/models/service_request.dart' show ServiceStatus;
+import '../../../core/utils/formatters.dart';
+import '../services/service_status_ui.dart';
 import '../../../core/widgets/service_photo.dart';
 import '../../../core/widgets/pressable.dart';
 import '../../../data/services_data.dart';
@@ -17,7 +20,8 @@ import '../../../data/catalog_i18n.dart';
 
 const _red = Color(0xFF161616);
 const _blue = Color(0xFF161616); // acento em fundo claro → preto (legível)
-const _yellow = Color(0xFFF5B301); // amarelo de marca (preenchimentos/destaques)
+const _yellow =
+    Color(0xFFF5B301); // amarelo de marca (preenchimentos/destaques)
 
 class ClientHomeScreen extends StatelessWidget {
   const ClientHomeScreen({super.key});
@@ -25,28 +29,32 @@ class ClientHomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: AppTheme.surface,
       body: CustomScrollView(
         slivers: [
-          const SliverToBoxAdapter(child: OnboardingTrigger(role: OnboardingRole.client)),
+          const SliverToBoxAdapter(
+              child: OnboardingTrigger(role: OnboardingRole.client)),
           _buildAppBar(context),
           SliverToBoxAdapter(child: Consumer(builder: (context, ref, _) {
             final settings = ref.watch(appSettingsProvider).valueOrNull;
-            if (settings == null || !settings.maintenanceMode) return const SizedBox.shrink();
+            if (settings == null || !settings.maintenanceMode)
+              return const SizedBox.shrink();
             return Container(
               width: double.infinity,
               color: const Color(0xFFFFF3CD),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               child: Row(
                 children: [
-                  const Icon(Icons.build_circle_outlined, color: Color(0xFFB45309), size: 20),
+                  const Icon(Icons.build_circle_outlined,
+                      color: Color(0xFFB45309), size: 20),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       settings.maintenanceMessage?.isNotEmpty == true
                           ? settings.maintenanceMessage!
                           : 'Estamos em manutenção. Novos pedidos podem estar temporariamente indisponíveis.',
-                      style: const TextStyle(color: Color(0xFF92400E), fontSize: 13, height: 1.3),
+                      style: const TextStyle(
+                          color: Color(0xFF92400E), fontSize: 13, height: 1.3),
                     ),
                   ),
                 ],
@@ -54,11 +62,12 @@ class ClientHomeScreen extends StatelessWidget {
             );
           })),
           SliverToBoxAdapter(child: _HeroSection()),
+          const SliverToBoxAdapter(child: _ActiveService()),
+          SliverToBoxAdapter(child: _CategoryGrid()),
+          SliverToBoxAdapter(child: _FeaturedServices()),
           SliverToBoxAdapter(child: _BannersCarousel()),
           SliverToBoxAdapter(child: _StatsChips()),
           SliverToBoxAdapter(child: _SubscriptionBanner()),
-          SliverToBoxAdapter(child: _FeaturedServices()),
-          SliverToBoxAdapter(child: _CategoryGrid()),
           SliverToBoxAdapter(child: _HowItWorks()),
           SliverToBoxAdapter(child: _WhyChooseUs()),
           SliverToBoxAdapter(child: _JoinProviderBanner()),
@@ -71,34 +80,39 @@ class ClientHomeScreen extends StatelessWidget {
   SliverAppBar _buildAppBar(BuildContext context) {
     return SliverAppBar(
       pinned: true,
-      backgroundColor: _red,
-      surfaceTintColor: _red,
-      foregroundColor: Colors.white,
-      flexibleSpace: const DecoratedBox(decoration: BoxDecoration(gradient: AppTheme.brandGradient)),
+      backgroundColor: AppTheme.surface,
+      surfaceTintColor: AppTheme.surface,
+      foregroundColor: AppTheme.ink,
+      scrolledUnderElevation: 0,
       title: Row(
         children: [
-          const Text(
-            'ResolvaAgora',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-            ),
-          ),
+          const Text.rich(
+              TextSpan(children: [
+                TextSpan(
+                    text: 'Resolva', style: TextStyle(color: AppTheme.ink)),
+                TextSpan(
+                    text: 'Agora',
+                    style: TextStyle(color: AppTheme.brandYellowDark)),
+              ]),
+              style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.8)),
           const Spacer(),
           Consumer(
             builder: (context, ref, _) => IconButton(
-              icon: const Icon(Icons.language, color: Colors.white),
+              icon: const Icon(Icons.language, color: AppTheme.ink),
               tooltip: 'Idioma / Language',
               onPressed: () => showLanguageSelector(context, ref),
             ),
           ),
           Consumer(
             builder: (context, ref, _) {
-              final isAuth = ref.watch(authProvider).valueOrNull?.isAuthenticated ?? false;
+              final isAuth =
+                  ref.watch(authProvider).valueOrNull?.isAuthenticated ?? false;
               if (isAuth) {
                 return IconButton(
-                  icon: const Icon(Icons.person_outline, color: Colors.white),
+                  icon: const Icon(Icons.person_outline, color: AppTheme.ink),
                   onPressed: () => context.go('/client/account'),
                 );
               }
@@ -107,11 +121,14 @@ class ClientHomeScreen extends StatelessWidget {
                 style: TextButton.styleFrom(
                   foregroundColor: _red,
                   backgroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20)),
                 ),
                 child: Text(AppLocalizations.of(context).signInShort,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 13)),
               );
             },
           ),
@@ -129,73 +146,171 @@ class _HeroSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
     final auth = ref.watch(authProvider).valueOrNull;
-    final firstName = (auth?.isAuthenticated == true && (auth?.name?.isNotEmpty ?? false))
-        ? auth!.name!.split(' ').first
-        : null;
-    final greeting = firstName != null ? l.homeGreetingNamed(firstName) : l.homeGreeting;
+    final firstName =
+        (auth?.isAuthenticated == true && (auth?.name?.isNotEmpty ?? false))
+            ? auth!.name!.split(' ').first
+            : null;
+    final greeting =
+        firstName != null ? l.homeGreetingNamed(firstName) : l.homeGreeting;
 
-    return Container(
-      decoration: const BoxDecoration(gradient: AppTheme.brandGradient),
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            greeting,
-            style: const TextStyle(color: Colors.white70, fontSize: 15, fontWeight: FontWeight.w500),
-          ),
+          Text(greeting,
+              style: const TextStyle(color: AppTheme.muted, fontSize: 15)),
+          const SizedBox(height: 8),
+          Text(l.premiumHomeTitle,
+              style: Theme.of(context).textTheme.headlineLarge),
           const SizedBox(height: 10),
-          Text(
-            l.homeHeroLine1,
-            style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w300, height: 1.05),
-          ),
-          Text(
-            l.homeHeroLine2,
-            style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w800, height: 1.05),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            l.homeHeroSubtitle,
-            style: const TextStyle(color: Colors.white70, fontSize: 14, height: 1.4),
-          ),
-          const SizedBox(height: 22),
-          // Barra de pesquisa flutuante — sombra dá a sensação de "sobreposta" ao hero.
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(30),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.18),
-                  blurRadius: 18,
-                  offset: const Offset(0, 8),
-                ),
-              ],
+          Text(l.premiumHomeSubtitle,
+              style: const TextStyle(
+                  color: AppTheme.muted, fontSize: 14, height: 1.5)),
+          const SizedBox(height: 24),
+          TextField(
+            decoration: InputDecoration(
+              hintText: l.homeSearchHint,
+              prefixIcon: const Icon(Icons.search, color: AppTheme.ink),
+              suffixIcon: const Icon(Icons.arrow_forward,
+                  size: 20, color: AppTheme.muted),
             ),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: l.homeSearchHint,
-                hintStyle: TextStyle(color: Colors.grey[400]),
-                prefixIcon: const Icon(Icons.search, color: _red),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(30),
-                  borderSide: BorderSide.none,
-                ),
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-              ),
-              textInputAction: TextInputAction.search,
-              // Antes tinha `onSubmitted: (_) {}` e não fazia nada.
-              onSubmitted: (q) {
-                final query = q.trim();
-                if (query.isEmpty) return;
-                context.push('/booking/search?q=${Uri.encodeQueryComponent(query)}');
-              },
-            ),
+            textInputAction: TextInputAction.search,
+            onSubmitted: (q) {
+              if (q.trim().isEmpty) return;
+              context.push(
+                  '/booking/search?q=${Uri.encodeQueryComponent(q.trim())}');
+            },
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Auth is checked before watching the protected endpoint, so visitors never
+/// trigger a 401 just by browsing the public home page.
+class _ActiveService extends ConsumerWidget {
+  const _ActiveService();
+  static const _closed = {
+    ServiceStatus.COMPLETED,
+    ServiceStatus.CANCELLED,
+    ServiceStatus.QUOTE_REJECTED,
+    ServiceStatus.EXPIRED,
+    ServiceStatus.DRAFT,
+  };
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final auth = ref.watch(authProvider).valueOrNull;
+    if (auth?.isClient != true || auth?.isAuthenticated != true)
+      return const SizedBox.shrink();
+    final l = AppLocalizations.of(context);
+    final requests = ref.watch(clientServiceRequestsProvider);
+    return requests.when(
+      loading: () => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+        child: Semantics(
+            label: l.premiumLoadingRequest,
+            child: const LinearProgressIndicator(minHeight: 2)),
+      ),
+      error: (_, __) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+        child: Card(
+            child: ListTile(
+          leading: const Icon(Icons.info_outline),
+          title: Text(l.premiumRequestError),
+          trailing: IconButton(
+              tooltip: l.retry,
+              icon: const Icon(Icons.refresh),
+              onPressed: () => ref.invalidate(clientServiceRequestsProvider)),
+        )),
+      ),
+      data: (data) {
+        final jobs = data.where((r) => !_closed.contains(r.status)).toList()
+          ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+        if (jobs.isEmpty) return const SizedBox.shrink();
+        final job = jobs.first;
+        final ui = ServiceStatusUi.of(job.status);
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 16,
+                children: [
+                  Text(l.premiumActiveService,
+                      style: Theme.of(context).textTheme.titleMedium),
+                  TextButton(
+                      onPressed: () => context.go('/client/services'),
+                      child: Text(l.premiumAllRequests)),
+                ]),
+            Card(
+                margin: EdgeInsets.zero,
+                child: Padding(
+                  padding: const EdgeInsets.all(18),
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(children: [
+                          Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                  color: AppTheme.brandYellowSoft,
+                                  borderRadius: BorderRadius.circular(12)),
+                              child: Icon(
+                                  categoryIcon(job.specialty.name == 'HVAC'
+                                      ? 'AC'
+                                      : job.specialty.name),
+                                  color: AppTheme.brandYellowDark)),
+                          const SizedBox(width: 12),
+                          Expanded(
+                              child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                Text(
+                                    job.address?.city ?? l.premiumActiveService,
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 16)),
+                                if (job.scheduledDate != null)
+                                  Text(
+                                      '${formatDateShort(job.scheduledDate!)} · ${formatTime(job.scheduledDate!)}',
+                                      style: const TextStyle(
+                                          color: AppTheme.muted, fontSize: 13)),
+                                if (job.technicianName != null)
+                                  Text(job.technicianName!,
+                                      style: const TextStyle(
+                                          color: AppTheme.muted, fontSize: 13)),
+                              ])),
+                        ]),
+                        const SizedBox(height: 16),
+                        Row(children: [
+                          Icon(ui.icon, size: 16, color: ui.color),
+                          const SizedBox(width: 8),
+                          Expanded(
+                              child: Text(ui.label,
+                                  style: TextStyle(
+                                      color: ui.color,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600)))
+                        ]),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: () =>
+                                  context.push('/client/services/${job.id}'),
+                              icon: const Icon(Icons.arrow_forward, size: 18),
+                              label: Text(l.premiumTrackRequest),
+                            )),
+                      ]),
+                )),
+          ]),
+        );
+      },
     );
   }
 }
@@ -237,7 +352,8 @@ class _BannersCarouselState extends ConsumerState<_BannersCarousel> {
 
   @override
   Widget build(BuildContext context) {
-    final banners = ref.watch(homeBannersProvider).valueOrNull ?? const <HomeBanner>[];
+    final banners =
+        ref.watch(homeBannersProvider).valueOrNull ?? const <HomeBanner>[];
     if (banners.isEmpty) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
@@ -258,18 +374,25 @@ class _BannersCarouselState extends ConsumerState<_BannersCarousel> {
                     child: Stack(
                       fit: StackFit.expand,
                       children: [
-                        Image.network(b.imageUrl, fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(color: Colors.grey[200])),
+                        Image.network(b.imageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                Container(color: Colors.grey[200])),
                         if (b.title != null || b.subtitle != null)
                           Positioned(
-                            left: 0, right: 0, bottom: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
                             child: Container(
                               padding: const EdgeInsets.all(14),
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
                                   begin: Alignment.topCenter,
                                   end: Alignment.bottomCenter,
-                                  colors: [Colors.transparent, Colors.black.withOpacity(0.65)],
+                                  colors: [
+                                    Colors.transparent,
+                                    Colors.black.withOpacity(0.65)
+                                  ],
                                 ),
                               ),
                               child: Column(
@@ -278,10 +401,15 @@ class _BannersCarouselState extends ConsumerState<_BannersCarousel> {
                                 children: [
                                   if (b.title != null)
                                     Text(b.title!,
-                                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                                        style: const TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16)),
                                   if (b.subtitle != null)
                                     Text(b.subtitle!,
-                                        style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                                        style: const TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 12)),
                                 ],
                               ),
                             ),
@@ -301,7 +429,8 @@ class _BannersCarouselState extends ConsumerState<_BannersCarousel> {
                 children: [
                   for (int i = 0; i < banners.length; i++)
                     Container(
-                      width: 8, height: 8,
+                      width: 8,
+                      height: 8,
                       margin: const EdgeInsets.symmetric(horizontal: 3),
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
@@ -340,30 +469,49 @@ class _SubscriptionBanner extends ConsumerWidget {
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(18),
-            boxShadow: [BoxShadow(color: _yellow.withOpacity(0.30), blurRadius: 12, offset: const Offset(0, 4))],
+            boxShadow: [
+              BoxShadow(
+                  color: _yellow.withOpacity(0.30),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4))
+            ],
           ),
           child: Row(
             children: [
-              const Icon(Icons.workspace_premium, color: Colors.black87, size: 36),
+              const Icon(Icons.workspace_premium,
+                  color: Colors.black87, size: 36),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(title,
-                        style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 17),
-                        maxLines: 1, overflow: TextOverflow.ellipsis),
+                        style: const TextStyle(
+                            color: Colors.black,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 17),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis),
                     const SizedBox(height: 3),
                     Text(desc,
-                        style: const TextStyle(color: Colors.black87, fontSize: 13, height: 1.3),
-                        maxLines: 2, overflow: TextOverflow.ellipsis),
+                        style: const TextStyle(
+                            color: Colors.black87, fontSize: 13, height: 1.3),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis),
                   ],
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(20)),
-                child: Text(l.seeAction, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                    color: Colors.black,
+                    borderRadius: BorderRadius.circular(20)),
+                child: Text(l.seeAction,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13)),
               ),
             ],
           ),
@@ -379,11 +527,9 @@ class _StatsChips extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final items = [
-      (Icons.verified_outlined, l.statCertified),
-      (Icons.shield_outlined, l.statWarranty),
-      (Icons.location_on_outlined, l.statMunicipalities),
+      (Icons.info_outline, l.premiumClearScope),
+      (Icons.calendar_today_outlined, l.premiumEasyBooking),
       (Icons.bolt_outlined, l.statOnline),
-      (Icons.people_outline, l.statTechs),
     ];
     return SizedBox(
       height: 76,
@@ -392,7 +538,8 @@ class _StatsChips extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
         itemCount: items.length,
         separatorBuilder: (_, __) => const SizedBox(width: 10),
-        itemBuilder: (_, i) => _TrustCard(icon: items[i].$1, label: items[i].$2),
+        itemBuilder: (_, i) =>
+            _TrustCard(icon: items[i].$1, label: items[i].$2),
       ),
     );
   }
@@ -410,7 +557,7 @@ class _TrustCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: AppTheme.border),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -430,7 +577,8 @@ class _TrustCard extends StatelessWidget {
             child: Text(
               label,
               maxLines: 2,
-              style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, height: 1.2),
+              style: const TextStyle(
+                  fontSize: 12.5, fontWeight: FontWeight.w600, height: 1.2),
             ),
           ),
         ],
@@ -443,11 +591,19 @@ class _TrustCard extends StatelessWidget {
 class _FeaturedServices extends ConsumerWidget {
   // `id` tem de corresponder a ServiceCategory.id em services_data.dart — a
   // categoria real dá o nome, a descrição e o preço, sempre sincronizados.
-  static const _featuredIds = ['APPLIANCES', 'PLUMBING', 'AC', 'ELECTRICITY', 'FURNITURE', 'CLEANING'];
+  static const _featuredIds = [
+    'APPLIANCES',
+    'PLUMBING',
+    'AC',
+    'ELECTRICITY',
+    'FURNITURE',
+    'CLEANING'
+  ];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    ref.watch(catalogPricesLoadedProvider); // rebuild quando os preços do admin chegarem
+    ref.watch(
+        catalogPricesLoadedProvider); // rebuild quando os preços do admin chegarem
     final content = ref.watch(catalogContentProvider).valueOrNull ?? const {};
     final l = AppLocalizations.of(context);
     final featured = [
@@ -460,7 +616,9 @@ class _FeaturedServices extends ConsumerWidget {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
-          child: Text(l.exploreServices, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          child: Text(l.exploreServices,
+              style:
+                  const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         ),
         SizedBox(
           height: 262,
@@ -500,7 +658,10 @@ class _PhotoServiceCard extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.07), blurRadius: 14, offset: const Offset(0, 4)),
+            BoxShadow(
+                color: Colors.black.withValues(alpha: 0.07),
+                blurRadius: 14,
+                offset: const Offset(0, 4)),
           ],
         ),
         clipBehavior: Clip.antiAlias,
@@ -513,20 +674,25 @@ class _PhotoServiceCard extends StatelessWidget {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  ServicePhoto(categoryId: category.id, imageUrl: content.imageUrl),
+                  ServicePhoto(
+                      categoryId: category.id, imageUrl: content.imageUrl),
                   if (badge != null && badge.isNotEmpty)
                     Positioned(
                       left: 10,
                       top: 10,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
                           color: AppTheme.brandYellow,
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
                           badge,
-                          style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Colors.black),
+                          style: const TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.black),
                         ),
                       ),
                     ),
@@ -542,7 +708,10 @@ class _PhotoServiceCard extends StatelessWidget {
                     child: Text(
                       category.localizedName(locale),
                       maxLines: 2,
-                      style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w700, height: 1.2),
+                      style: const TextStyle(
+                          fontSize: 15.5,
+                          fontWeight: FontWeight.w700,
+                          height: 1.2),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -556,7 +725,8 @@ class _PhotoServiceCard extends StatelessWidget {
                 category.localizedDescription(locale),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 12.5, color: Colors.grey[600], height: 1.3),
+                style: TextStyle(
+                    fontSize: 12.5, color: Colors.grey[600], height: 1.3),
               ),
             ),
           ],
@@ -574,14 +744,17 @@ class _PricePill extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-      decoration: BoxDecoration(color: AppTheme.brandBlack, borderRadius: BorderRadius.circular(20)),
+      decoration: BoxDecoration(
+          color: AppTheme.brandBlack, borderRadius: BorderRadius.circular(20)),
       child: Text.rich(
         TextSpan(
           children: [
-            const TextSpan(text: 'desde ', style: TextStyle(fontWeight: FontWeight.w400)),
+            const TextSpan(
+                text: 'desde ', style: TextStyle(fontWeight: FontWeight.w400)),
             TextSpan(
               text: '€${price.toStringAsFixed(2)}',
-              style: const TextStyle(fontWeight: FontWeight.w800, color: AppTheme.brandYellow),
+              style: const TextStyle(
+                  fontWeight: FontWeight.w800, color: AppTheme.brandYellow),
             ),
           ],
         ),
@@ -602,11 +775,14 @@ class _CategoryGrid extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 28, 20, 4),
-          child: Text(l.servicesByCategory, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          child: Text(l.servicesByCategory,
+              style:
+                  const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
-          child: Text(l.servicesByCategorySub, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+          child: Text(l.servicesByCategorySub,
+              style: TextStyle(color: Colors.grey[600], fontSize: 13)),
         ),
         const SizedBox(height: 14),
         GridView.builder(
@@ -639,7 +815,7 @@ class _CategoryCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.grey.shade200),
+          border: Border.all(color: AppTheme.border),
         ),
         padding: const EdgeInsets.fromLTRB(12, 14, 12, 12),
         child: Column(
@@ -652,13 +828,15 @@ class _CategoryCard extends StatelessWidget {
                 color: AppTheme.brandYellowSoft,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(categoryIcon(category.id), color: AppTheme.brandBlack, size: 23),
+              child: Icon(categoryIcon(category.id),
+                  color: AppTheme.brandBlack, size: 23),
             ),
             const Spacer(),
             Text(
               category.localizedName(Localizations.localeOf(context)),
               maxLines: 2,
-              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, height: 1.2),
+              style: const TextStyle(
+                  fontWeight: FontWeight.w700, fontSize: 13, height: 1.2),
             ),
           ],
         ),
@@ -682,40 +860,46 @@ class _HowItWorks extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: AppTheme.border),
       ),
       padding: const EdgeInsets.all(24),
       child: Column(
         children: [
-          Text(l.howItWorks, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          Text(l.howItWorks,
+              style:
+                  const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 24),
           ...steps.map((s) => Padding(
-            padding: const EdgeInsets.only(bottom: 20),
-            child: Row(
-              children: [
-                Container(
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEEF2FF),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(s.$1, color: _blue, size: 26),
+                padding: const EdgeInsets.only(bottom: 20),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEEF2FF),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(s.$1, color: _blue, size: 26),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(s.$2,
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 15)),
+                          const SizedBox(height: 2),
+                          Text(s.$3,
+                              style: TextStyle(
+                                  color: Colors.grey[600], fontSize: 13)),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(s.$2, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                      const SizedBox(height: 2),
-                      Text(s.$3, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          )),
+              )),
         ],
       ),
     );
@@ -740,37 +924,42 @@ class _WhyChooseUs extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: AppTheme.border),
       ),
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(l.whyChooseUs, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          Text(l.whyChooseUs,
+              style:
+                  const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 6),
           Text(
             l.whyChooseUsSub,
-            style: TextStyle(color: Colors.grey[600], fontSize: 13, height: 1.4),
+            style:
+                TextStyle(color: Colors.grey[600], fontSize: 13, height: 1.4),
           ),
           const SizedBox(height: 20),
           ...points.map((p) => Padding(
-            padding: const EdgeInsets.only(bottom: 14),
-            child: Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEEF2FF),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(p.$1, color: _blue, size: 22),
+                padding: const EdgeInsets.only(bottom: 14),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEEF2FF),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(p.$1, color: _blue, size: 22),
+                    ),
+                    const SizedBox(width: 14),
+                    Text(p.$2,
+                        style: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w500)),
+                  ],
                 ),
-                const SizedBox(width: 14),
-                Text(p.$2, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-              ],
-            ),
-          )),
+              )),
         ],
       ),
     );
@@ -795,12 +984,17 @@ class _JoinProviderBanner extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             AppLocalizations.of(context).joinProviderTitle,
-            style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold, height: 1.3),
+            style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                height: 1.3),
           ),
           const SizedBox(height: 8),
           Text(
             AppLocalizations.of(context).joinProviderDesc,
-            style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
+            style: const TextStyle(
+                color: Colors.white70, fontSize: 13, height: 1.4),
           ),
           const SizedBox(height: 20),
           SizedBox(
@@ -811,9 +1005,11 @@ class _JoinProviderBanner extends StatelessWidget {
                 backgroundColor: AppTheme.brandYellow,
                 foregroundColor: Colors.black,
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30)),
               ),
-              child: Text(AppLocalizations.of(context).joinProviderButton, style: const TextStyle(fontWeight: FontWeight.bold)),
+              child: Text(AppLocalizations.of(context).joinProviderButton,
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
             ),
           ),
         ],
@@ -853,7 +1049,9 @@ Future<void> _applyAsProvider(BuildContext context) async {
   if (!opened && context.mounted) {
     // Sem app de email configurada: mostra o endereço para copiar à mão.
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Envie a sua candidatura para $_providerApplicationEmail')),
+      const SnackBar(
+          content:
+              Text('Envie a sua candidatura para $_providerApplicationEmail')),
     );
   }
 }

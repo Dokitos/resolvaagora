@@ -266,5 +266,16 @@
   "creditsCost": "{cost, plural, =1{1 crédito} other{{cost} créditos}}",
   "@creditsCost": { "placeholders": { "cost": { "type": "int" } } },
   "creditsRemaining": "{remaining, plural, =0{0 disponíveis} =1{1 disponível} other{{remaining} disponíveis}}",
-  "@creditsRemaining": { "placeholders": { "remaining": { "type": "int" } } }
+  "@creditsRemaining": { "placeholders": { "remaining": { "type": "int" } } },
+  "premiumHomeTitle": "De que precisa a sua casa?",
+  "premiumHomeSubtitle": "Um cuidado a menos no seu dia.",
+  "premiumActiveService": "O seu serviço ativo",
+  "premiumAllRequests": "Ver pedidos",
+  "premiumTrackRequest": "Acompanhar pedido",
+  "premiumRequestError": "Não foi possível carregar os pedidos.",
+  "premiumLoadingRequest": "A carregar o seu pedido",
+  "premiumClearScope": "Informação clara",
+  "premiumEasyBooking": "Marcação simples",
+  "premiumAgendaTitle": "A sua agenda",
+  "premiumNextJob": "Próximo serviço"
 }

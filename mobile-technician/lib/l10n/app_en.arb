@@ -255,5 +255,16 @@
   "creditsPaymentTitle": "Pay with plan credits",
   "creditsPaymentSubtitle": "This will use {cost} (you have {remaining})",
   "creditsCost": "{cost, plural, =1{1 credit} other{{cost} credits}}",
-  "creditsRemaining": "{remaining, plural, =0{0 left} =1{1 left} other{{remaining} left}}"
+  "creditsRemaining": "{remaining, plural, =0{0 left} =1{1 left} other{{remaining} left}}",
+  "premiumHomeTitle": "What does your home need?",
+  "premiumHomeSubtitle": "One less thing to worry about.",
+  "premiumActiveService": "Your active service",
+  "premiumAllRequests": "View requests",
+  "premiumTrackRequest": "Track request",
+  "premiumRequestError": "Could not load your requests.",
+  "premiumLoadingRequest": "Loading your request",
+  "premiumClearScope": "Clear service information",
+  "premiumEasyBooking": "Easy booking",
+  "premiumAgendaTitle": "Your schedule",
+  "premiumNextJob": "Next job"
 }

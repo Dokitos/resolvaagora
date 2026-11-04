@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class AppTheme {
   // ResolvaAgora — identidade PRETO + AMARELO (novo logótipo).
-  static const Color brandBlack = Color(0xFF161616);
+  static const Color brandBlack = Color(0xFF191B1A);
   static const Color brandBlackDark = Color(0xFF000000);
   static const Color brandYellow = Color(0xFFF5B301);
   static const Color brandYellowDark = Color(0xFFC98A00);
@@ -24,8 +24,11 @@ class AppTheme {
   static const Color success = Color(0xFF16A34A);
   static const Color warning = Color(0xFFD97706);
   static const Color danger = Color(0xFFDC2626);
-  static const Color surface = Color(0xFFF9FAFB);
-  static const Color border = Color(0xFFE5E7EB);
+  static const Color surface = Color(0xFFF7F6F2);
+  static const Color ink = brandBlack;
+  static const Color muted = Color(0xFF62655F);
+  static const Color positiveSurface = Color(0xFFEAF4EE);
+  static const Color border = Color(0xFFE5E5DE);
 
   /// Gradiente preto da marca (topo → hero da home, cabeçalhos de destaque).
   static const LinearGradient brandGradient = LinearGradient(
@@ -70,13 +73,50 @@ class AppTheme {
         colorScheme: ColorScheme.fromSeed(
           seedColor: primary,
           brightness: Brightness.light,
+        ).copyWith(
+          primary: brandBlack,
+          onPrimary: Colors.white,
+          secondary: brandYellow,
+          onSecondary: brandBlack,
+          surface: Colors.white,
+          onSurface: brandBlack,
+          outline: border,
+        ),
+        textTheme: const TextTheme(
+          headlineLarge: TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -1,
+              height: 1.15),
+          headlineMedium: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.8,
+              height: 1.2),
+          titleLarge: TextStyle(
+              fontSize: 21, fontWeight: FontWeight.w600, letterSpacing: -0.4),
+          titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          bodyLarge: TextStyle(fontSize: 16, height: 1.5),
+          bodyMedium: TextStyle(fontSize: 14, height: 1.5),
+          bodySmall: TextStyle(fontSize: 12, height: 1.4),
+        ),
+        navigationBarTheme: const NavigationBarThemeData(
+          backgroundColor: Colors.white,
+          indicatorColor: brandYellowSoft,
+          height: 76,
+        ),
+        snackBarTheme: SnackBarThemeData(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: brandBlack,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         scaffoldBackgroundColor: surface,
         appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.white,
-          foregroundColor: Color(0xFF111827),
+          backgroundColor: surface,
+          foregroundColor: brandBlack,
           elevation: 0,
-          scrolledUnderElevation: 1,
+          scrolledUnderElevation: 0,
           // Sem `color`: assim o título herda o `foregroundColor` da AppBar.
           // Com a cor fixa aqui, um ecrã que ponha a barra escura e peça
           // `foregroundColor: Colors.white` continuava a desenhar o título a
@@ -91,43 +131,53 @@ class AppTheme {
           color: Colors.white,
           elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(18),
             side: const BorderSide(color: border),
           ),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: primary,
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            backgroundColor: brandYellow,
+            foregroundColor: brandBlack,
+            minimumSize: const Size(44, 48),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-            textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+            textStyle:
+                const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
           ),
         ),
         outlinedButtonTheme: OutlinedButtonThemeData(
           style: OutlinedButton.styleFrom(
             foregroundColor: primary,
-            side: const BorderSide(color: primary),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            minimumSize: const Size(44, 48),
+            side: const BorderSide(color: border),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
           ),
         ),
         inputDecorationTheme: InputDecorationTheme(
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(12),
             borderSide: const BorderSide(color: border),
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(12),
             borderSide: const BorderSide(color: border),
           ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: danger),
+          ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: const BorderSide(color: brandYellow, width: 2),
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: brandYellowDark, width: 2),
           ),
           filled: true,
           fillColor: Colors.white,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         ),
       );
 }
