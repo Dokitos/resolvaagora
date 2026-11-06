@@ -72,12 +72,21 @@ export function AdminNotificationBell() {
     }
   }, [token])
 
+  useEffect(() => {
+    if (!open) return
+    const close = (event: KeyboardEvent) => { if (event.key === 'Escape') setOpen(false) }
+    document.addEventListener('keydown', close)
+    return () => document.removeEventListener('keydown', close)
+  }, [open])
+
   return (
     <div className="relative">
       <button
         onClick={() => { setOpen((o) => !o); setUnread(0) }}
-        className="relative h-10 w-10 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-600"
+        className="relative z-20 h-11 w-11 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-600"
         aria-label="Notificações"
+        aria-expanded={open}
+        aria-controls="admin-notification-feed"
       >
         <Bell className="h-5 w-5" />
         {unread > 0 && (
@@ -90,7 +99,7 @@ export function AdminNotificationBell() {
       {open && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-auto bg-white rounded-xl border border-gray-200 shadow-lg z-20">
+          <div id="admin-notification-feed" className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-2rem)] max-h-96 overflow-auto bg-white rounded-xl border border-gray-200 shadow-lg z-20">
             <div className="px-4 py-3 border-b border-gray-100 font-semibold text-sm">Notificações</div>
             {items.length === 0 ? (
               <p className="px-4 py-8 text-sm text-gray-400 text-center">Sem notificações em tempo real ainda.</p>

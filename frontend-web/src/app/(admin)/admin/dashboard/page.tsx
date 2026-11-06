@@ -1,15 +1,17 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
+import { AdminRequestBoard } from '@/components/layout/admin-request-board'
 import toast from 'react-hot-toast'
 import { adminApi } from '@/lib/api/admin'
-import type { DashboardMetrics, SlaAlert, AnalyticsData } from '@/lib/api/types'
+import type { DashboardMetrics, SlaAlert, AnalyticsData, ServiceRequest } from '@/lib/api/types'
 import { StatCard } from '@/components/ui/stat-card'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { StatusDonut, SpecialtyBars } from '@/components/charts/dashboard-charts'
 import { formatCurrency, formatDate, SLA_METRIC_LABELS } from '@/lib/utils'
-import { ClipboardList, Users, AlertTriangle, Euro, PieChart, BarChart3 } from 'lucide-react'
+import { ClipboardList, Users, AlertTriangle, Euro, PieChart, BarChart3, ArrowUpRight, RefreshCw } from 'lucide-react'
 
 export default function AdminDashboardPage() {
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null)
@@ -17,12 +19,32 @@ export default function AdminDashboardPage() {
   const [alerts, setAlerts] = useState<SlaAlert[]>([])
   const [loading, setLoading] = useState(true)
 
+  const [requests, setRequests] = useState<ServiceRequest[]>([])
+  const [boardError, setBoardError] = useState(false)
+  const [boardLoading, setBoardLoading] = useState(true)
+  const [refreshKey, setRefreshKey] = useState(0)
+  useEffect(() => {
+    const refresh = () => setRefreshKey(key => key + 1)
+    window.addEventListener('admin:new-request', refresh)
+    return () => window.removeEventListener('admin:new-request', refresh)
+  }, [])
+  useEffect(() => {
+    let live = true
+    setBoardLoading(true)
+    setBoardError(false)
+    adminApi.serviceRequests({ page: 1, limit: 20 })
+      .then(data => { if (live) setRequests(data) })
+      .catch(() => { if (live) setBoardError(true) })
+      .finally(() => { if (live) setBoardLoading(false) })
+    return () => { live = false }
+  }, [refreshKey])
+
   useEffect(() => {
     Promise.all([adminApi.dashboard(), adminApi.slaAlerts(), adminApi.analytics()])
       .then(([m, a, an]) => { setMetrics(m); setAlerts(a); setAnalytics(an) })
       .catch((err: any) => toast.error(err?.message ?? 'Erro ao carregar dashboard'))
       .finally(() => setLoading(false))
-  }, [])
+  }, [refreshKey])
 
   if (loading) return (
     <div className="flex items-center justify-center h-48">
@@ -32,9 +54,9 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard Operacional</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Visão em tempo real das operações</p>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div><p className="admin-muted mb-2 text-[10px] font-semibold uppercase tracking-[0.16em]">O seu centro de operações</p><h1 className="text-2xl font-bold text-gray-900">Visão geral</h1>
+        <p className="text-sm text-gray-500 mt-2">Pedidos, equipa e alertas, num só lugar.</p></div><Link href="/admin/service-requests" className="premium-button inline-flex min-h-11 items-center gap-3 rounded-xl bg-accent-500 px-5 text-sm font-semibold text-brand-900">Abrir pedidos <ArrowUpRight className="h-4 w-4" /></Link>
       </div>
 
       {/* Stats */}
@@ -65,6 +87,11 @@ export default function AdminDashboardPage() {
         />
       </div>
 
+      <section className="space-y-4" aria-labelledby="dashboard-board">
+        <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 id="dashboard-board" className="text-lg font-semibold">Pedidos a acompanhar</h2><p className="admin-muted mt-1 text-xs">Até 20 pedidos recentes. Abra um cartão para consultar os detalhes.</p></div><button type="button" aria-label="Atualizar quadro e indicadores" className="admin-icon-button border border-gray-200" disabled={boardLoading} onClick={() => setRefreshKey(key => key + 1)}><RefreshCw className={`h-4 w-4 ${boardLoading ? 'animate-spin' : ''}`} /></button></div>
+        {boardError ? <div role="alert" className="admin-panel p-5 text-sm">Não foi possível carregar o quadro. <button type="button" onClick={() => setRefreshKey(key => key + 1)} className="font-semibold underline">Tentar novamente</button></div>
+          : boardLoading ? <div role="status" className="admin-panel admin-muted p-8 text-center text-sm">A carregar pedidos…</div> : <AdminRequestBoard requests={requests} />}
+      </section>
       {/* Gráficos */}
       <div className="grid gap-4 lg:grid-cols-2">
         {metrics?.byStatus && metrics.byStatus.length > 0 && (
